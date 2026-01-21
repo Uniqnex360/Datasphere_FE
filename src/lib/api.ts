@@ -67,7 +67,7 @@ export const EnrichmentAPI={
 }
 export const DigitalAssetAPI = {
   getAll: async () => {
-    const response = await api.get('/assets');
+    const response = await api.get('/assets/');
     return response.data;
   },
   create: async (data: any) => {
@@ -85,11 +85,11 @@ export const DigitalAssetAPI = {
 
 export const UserAPI = {
   getAll: async () => {
-    const response = await api.get('/users');
+    const response = await api.get('/users/');
     return response.data;
   },
   create: async (data: any) => {
-    const response = await api.post('/users', data);
+    const response = await api.post('/users/', data);
     return response.data;
   },
   update: async (id: string, data: any) => {
@@ -131,11 +131,11 @@ export const RoleAPI = {
 };
 export const ChannelAPI = {
   getAll: async () => {
-    const response = await api.get('/channels');
+    const response = await api.get('/channels/');
     return response.data;
   },
   create: async (data: any) => {
-    const response = await api.post('/channels', data);
+    const response = await api.post('/channels/', data);
     return response.data;
   },
   delete: async (id: string) => {
