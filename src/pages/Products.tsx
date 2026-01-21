@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,24 +8,33 @@ import {
   Trash2,
   Copy,
   Package,
-} from 'lucide-react';
-import { Product, ProductWithVariantStatus, VariantStatus } from '../types/product';
-import { Brand } from '../types/brand';
-import { Vendor } from '../types/vendor';
-import { Category } from '../types/category';
-import { Industry } from '../types/industry';
-import { ProductVariant } from '../types/variant';
-import Drawer from '../components/Drawer';
-import Modal from '../components/Modal';
-import Toast from '../components/Toast';
-import DataTable from '../components/DataTable';
-import { exportToCSV, parseCSV } from '../utils/csvHelper';
-import { generateBreadcrumb } from '../utils/categoryHelper';
-import { calculateCompletenessScore, getScoreColorClasses } from '../utils/completenessHelper';
-import { MasterAPI, ProductAPI } from '../lib/api';
+} from "lucide-react";
+import {
+  Product,
+  ProductWithVariantStatus,
+  VariantStatus,
+} from "../types/product";
+import { Brand } from "../types/brand";
+import { Vendor } from "../types/vendor";
+import { Category } from "../types/category";
+import { Industry } from "../types/industry";
+import { ProductVariant } from "../types/variant";
+import Drawer from "../components/Drawer";
+import Modal from "../components/Modal";
+import Toast from "../components/Toast";
+import DataTable from "../components/DataTable";
+import { exportToCSV, parseCSV } from "../utils/csvHelper";
+import { generateBreadcrumb } from "../utils/categoryHelper";
+import {
+  calculateCompletenessScore,
+  getScoreColorClasses,
+} from "../utils/completenessHelper";
+import { MasterAPI, ProductAPI } from "../lib/api";
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<ProductWithVariantStatus[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<
+    ProductWithVariantStatus[]
+  >([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,44 +43,49 @@ export function Products() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<'basic' | 'descriptions' | 'attributes' | 'variants' | 'related' | 'assets'>('basic');
+  const [activeTab, setActiveTab] = useState<
+    "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets"
+  >("basic");
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     product: ProductWithVariantStatus | null;
   }>({ isOpen: false, product: null });
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [industryFilter, setIndustryFilter] = useState('');
-  const [brandFilter, setBrandFilter] = useState('');
-  const [vendorFilter, setVendorFilter] = useState('');
-  const [variantStatusFilter, setVariantStatusFilter] = useState('');
-  const [category1Filter, setCategory1Filter] = useState('');
-  const [productTypeFilter, setProductTypeFilter] = useState('');
-  const [sortKey, setSortKey] = useState('product_code');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [industryFilter, setIndustryFilter] = useState("");
+  const [brandFilter, setBrandFilter] = useState("");
+  const [vendorFilter, setVendorFilter] = useState("");
+  const [variantStatusFilter, setVariantStatusFilter] = useState("");
+  const [category1Filter, setCategory1Filter] = useState("");
+  const [productTypeFilter, setProductTypeFilter] = useState("");
+  const [sortKey, setSortKey] = useState("product_code");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [formData, setFormData] = useState<Partial<Product>>({
-    product_name: '',
-    brand_code: '',
-    brand_name: '',
-    mfg_code: '',
-    mfg_name: '',
-    vendor_code: '',
-    vendor_name: '',
-    industry_name: '',
-    category_code: '',
-    product_type: '',
-    sku: '',
-    variant_sku: '',
-    prod_short_desc: '',
-    prod_long_desc: '',
-    model_series: '',
-    mpn: '',
-    gtin: '',
-    upc: '',
-    unspsc: '',
-    meta_title: '',
-    meta_desc: '',
-    meta_keywords: '',
+    product_name: "",
+    brand_code: "",
+    brand_name: "",
+    mfg_code: "",
+    mfg_name: "",
+    vendor_code: "",
+    vendor_name: "",
+    industry_name: "",
+    category_code: "",
+    product_type: "",
+    sku: "",
+    variant_sku: "",
+    prod_short_desc: "",
+    prod_long_desc: "",
+    model_series: "",
+    mpn: "",
+    gtin: "",
+    upc: "",
+    unspsc: "",
+    meta_title: "",
+    meta_desc: "",
+    meta_keywords: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -79,42 +93,63 @@ export function Products() {
   }, []);
   useEffect(() => {
     filterAndSortProducts();
-  }, [products, searchTerm, industryFilter, brandFilter, vendorFilter, variantStatusFilter, category1Filter, productTypeFilter, sortKey, sortDirection]);
+  }, [
+    products,
+    searchTerm,
+    industryFilter,
+    brandFilter,
+    vendorFilter,
+    variantStatusFilter,
+    category1Filter,
+    productTypeFilter,
+    sortKey,
+    sortDirection,
+  ]);
   const loadData = async () => {
     try {
       setLoading(true);
       // Fetch everything in parallel
-      const [productsData, brandsData, vendorsData, categoriesData, industriesData] = await Promise.all([
+      const [
+        productsData,
+        brandsData,
+        vendorsData,
+        categoriesData,
+        industriesData,
+      ] = await Promise.all([
         ProductAPI.getAll(),
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
         MasterAPI.getIndustries(),
       ]);
-      const productsWithStatus = await calculateVariantStatus(productsData || []);
+      const productsWithStatus = await calculateVariantStatus(
+        productsData || [],
+      );
       setProducts(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
       setCategories(categoriesData || []);
       setIndustries(industriesData || []);
     } catch (error: any) {
-      setToast({ message: "Failed to load data", type: 'error' });
+      setToast({ message: "Failed to load data", type: "error" });
     } finally {
       setLoading(false);
     }
   };
   const calculateVariantStatus = async (
-    productList: Product[]
+    productList: Product[],
   ): Promise<ProductWithVariantStatus[]> => {
     return productList.map((product) => {
-      let variant_status: VariantStatus = 'Base';
+      let variant_status: VariantStatus = "Base";
       let variant_count = 0;
       if (product.parent_sku) {
-        variant_status = 'Variant';
+        variant_status = "Variant";
       } else {
-        const children = productList.filter((p) => p.parent_sku === product.product_code);
+        const children = productList.filter(
+          (p) => p.parent_sku === product.product_code,
+        );
         if (children.length > 0) {
-          variant_status = 'Parent';
+          variant_status = "Parent";
           variant_count = children.length;
         }
       }
@@ -130,20 +165,28 @@ export function Products() {
           p.product_code.toLowerCase().includes(term) ||
           p.product_name.toLowerCase().includes(term) ||
           p.brand_name.toLowerCase().includes(term) ||
-          generateBreadcrumb(p as any).toLowerCase().includes(term)
+          generateBreadcrumb(p as any)
+            .toLowerCase()
+            .includes(term),
       );
     }
     if (industryFilter) {
       filtered = filtered.filter((p) => p.industry_name === industryFilter);
     }
     if (brandFilter) {
-      filtered = filtered.filter((p) => p.brand_code === brandFilter || p.brand_name === brandFilter);
+      filtered = filtered.filter(
+        (p) => p.brand_code === brandFilter || p.brand_name === brandFilter,
+      );
     }
     if (vendorFilter) {
-      filtered = filtered.filter((p) => p.vendor_code === vendorFilter || p.vendor_name === vendorFilter);
+      filtered = filtered.filter(
+        (p) => p.vendor_code === vendorFilter || p.vendor_name === vendorFilter,
+      );
     }
     if (variantStatusFilter) {
-      filtered = filtered.filter((p) => p.variant_status === variantStatusFilter);
+      filtered = filtered.filter(
+        (p) => p.variant_status === variantStatusFilter,
+      );
     }
     if (category1Filter) {
       filtered = filtered.filter((p) => p.category_1 === category1Filter);
@@ -152,9 +195,9 @@ export function Products() {
       filtered = filtered.filter((p) => p.product_type === productTypeFilter);
     }
     filtered.sort((a, b) => {
-      const aVal = a[sortKey as keyof Product] || '';
-      const bVal = b[sortKey as keyof Product] || '';
-      if (sortDirection === 'asc') {
+      const aVal = a[sortKey as keyof Product] || "";
+      const bVal = b[sortKey as keyof Product] || "";
+      if (sortDirection === "asc") {
         return aVal > bVal ? 1 : -1;
       } else {
         return aVal < bVal ? 1 : -1;
@@ -165,7 +208,7 @@ export function Products() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.product_name?.trim()) {
-      newErrors.product_name = 'Product name is required';
+      newErrors.product_name = "Product name is required";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -214,25 +257,25 @@ export function Products() {
     if (!validateForm()) return;
     try {
       if (editingProduct) {
-        await ProductAPI.update(editingProduct.product_code,formData)
-        setToast({ message: 'Product updated successfully', type: 'success' });
+        await ProductAPI.update(editingProduct.product_code, formData);
+        setToast({ message: "Product updated successfully", type: "success" });
       } else {
-        await ProductAPI.create(formData)
-        setToast({ message: 'Product added successfully', type: 'success' });
+        await ProductAPI.create(formData);
+        setToast({ message: "Product added successfully", type: "success" });
       }
       setIsDrawerOpen(false);
       setEditingProduct(null);
       resetForm();
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message, type: 'error' });
+      setToast({ message: error.message, type: "error" });
     }
   };
   const handleEdit = (product: ProductWithVariantStatus) => {
     setEditingProduct(product);
     setFormData(product);
     setErrors({});
-    setActiveTab('basic');
+    setActiveTab("basic");
     setIsDrawerOpen(true);
   };
   const handleClone = (product: ProductWithVariantStatus) => {
@@ -244,91 +287,144 @@ export function Products() {
     setEditingProduct(null);
     setFormData(clonedData);
     setErrors({});
-    setActiveTab('basic');
+    setActiveTab("basic");
     setIsDrawerOpen(true);
-    setToast({ message: 'Product cloned. Update code and save.', type: 'success' });
+    setToast({
+      message: "Product cloned. Update code and save.",
+      type: "success",
+    });
   };
   const handleDelete = async () => {
     if (!deleteModal.product) return;
     try {
-      if (deleteModal.product.variant_status === 'Parent') {
+      if (deleteModal.product.variant_status === "Parent") {
         setToast({
           message: `Cannot delete. Child variants exist: ${deleteModal.product.variant_count} items.`,
-          type: 'error',
+          type: "error",
         });
         setDeleteModal({ isOpen: false, product: null });
         return;
       }
-      await ProductAPI.delete(deleteModal.product.product_code)
-      setToast({ message: 'Product deleted successfully', type: 'success' });
+      await ProductAPI.delete(deleteModal.product.product_code);
+      setToast({ message: "Product deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, product: null });
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message, type: 'error' });
+      setToast({ message: error.message, type: "error" });
     }
   };
   const resetForm = () => {
     setFormData({
-      product_code: '',
-      product_name: '',
-      brand_code: '',
-      brand_name: '',
-      mfg_code: '',
-      mfg_name: '',
-      vendor_code: '',
-      vendor_name: '',
-      industry_name: '',
-      category_code: '',
-      product_type: '',
-      sku: '',
-      variant_sku: '',
-      prod_short_desc: '',
-      prod_long_desc: '',
-      model_series: '',
-      mpn: '',
-      gtin: '',
-      upc: '',
-      unspsc: '',
-      meta_title: '',
-      meta_desc: '',
-      meta_keywords: '',
+      product_code: "",
+      product_name: "",
+      brand_code: "",
+      brand_name: "",
+      mfg_code: "",
+      mfg_name: "",
+      vendor_code: "",
+      vendor_name: "",
+      industry_name: "",
+      category_code: "",
+      product_type: "",
+      sku: "",
+      variant_sku: "",
+      prod_short_desc: "",
+      prod_long_desc: "",
+      model_series: "",
+      mpn: "",
+      gtin: "",
+      upc: "",
+      unspsc: "",
+      meta_title: "",
+      meta_desc: "",
+      meta_keywords: "",
     });
     setErrors({});
-    setActiveTab('basic');
+    setActiveTab("basic");
   };
   const handleExport = () => {
     if (filteredProducts.length === 0) {
-      setToast({ message: 'No data to export', type: 'error' });
+      setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredProducts, 'products.csv');
-    setToast({ message: 'Products exported successfully', type: 'success' });
+    exportToCSV(filteredProducts, "products.csv");
+    setToast({ message: "Products exported successfully", type: "success" });
   };
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setLoading(true);
-      const data = await parseCSV(file);
+      const rawData = await parseCSV(file);
+       if (rawData.length > 0) {
+          console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
+          console.log("FIRST ROW DATA:", rawData[0]);
+      } 
+      
       const validData: Partial<Product>[] = [];
       const importErrors: string[] = [];
-      
-      // 1. Prepare Data & Collect Brands
       const brandsToCreate = new Map<string, any>();
 
-      data.forEach((row, index) => {
-        if (!row.product_name?.trim()) {
-          importErrors.push(`Row ${index + 2}: product_name is required`);
-        } else {
-          const productData = { ...row };
-          // If no code provided, we will generate one later
-          if (!productData.product_code) delete productData.product_code;
-          validData.push(productData);
+            const data = rawData.map((row: any) => {
+        const mapped: any = { ...row };
 
-          if (row.brand_code && row.brand_name) {
-             brandsToCreate.set(row.brand_code, {
-                 brand_code: row.brand_code,
+        // --- Core Mapping ---
+        if (row.product_title) mapped.product_name = row.product_title;
+        if (row.product_id) mapped.product_code = row.product_id;
+        if (row.vendor_name) mapped.vendor_name = row.vendor_name;
+        if (row.description) mapped.prod_long_desc = row.description;
+        
+        mapped.features_1 = row.features_1 || row['Features 1'];
+        mapped.features_2 = row.features_2 || row['Features 2'];
+        mapped.image_url_1 = row.image_url_1 || row['Image URL 1'];
+        
+        const dynamicAttributes: Record<string, string> = {};
+        
+        for (let i = 1; i <= 50; i++) {
+            const name = 
+                row[`attribute_name_${i}`] || 
+                row[`attribute_name${i}`] || 
+                row[`Attribute Name ${i}`];
+            const val = 
+                row[`attribute_value_${i}`] || 
+                row[`attribute_value${i}`] || 
+                row[`Attribute Value ${i}`];
+            
+            if (name && val) {
+                dynamicAttributes[name] = String(val).trim();
+            }
+        }
+        
+        // Base pair
+        if (row.attribute_name && row.attribute_value) {
+            dynamicAttributes[row.attribute_name] = String(row.attribute_value).trim();
+        }
+        
+        mapped.attributes = dynamicAttributes;
+
+        // Cleanup ID
+        if (!mapped.product_code || String(mapped.product_code).trim() === '') {
+            delete mapped.product_code;
+        }
+
+        return mapped;
+      });
+
+      // 2. VALIDATION
+      data.forEach((row: any, index: number) => {
+        if (!row.product_name?.trim()) {
+          importErrors.push(`Row ${index + 2}: Product Name is required`);
+        } else {
+          validData.push(row);
+
+          // Collect unique brands to create
+          if (row.brand_name) {
+             // Generate a simple code if missing, e.g. "GARMIN" -> "BRND-GARMIN"
+             const code = row.brand_code || `BRND-${row.brand_name.substring(0, 6).toUpperCase()}`;
+             brandsToCreate.set(code, {
+                 brand_code: code,
                  brand_name: row.brand_name
              });
           }
@@ -336,52 +432,57 @@ export function Products() {
       });
 
       if (importErrors.length > 0) {
-        setToast({ message: `Import failed: ${importErrors.join('; ')}`, type: 'error' });
+        setToast({ 
+            message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`, 
+            type: 'error' 
+        });
         return;
       }
 
-      // 2. Create Brands (if missing)
+      // 3. SYNC BRANDS
       if (brandsToCreate.size > 0) {
           try {
             const existingBrands = await MasterAPI.getBrands();
             const existingCodes = new Set(existingBrands.map((b: any) => b.brand_code));
             
-            for(const brand of Array.from(brandsToCreate.values())) {
-                if(!existingCodes.has(brand.brand_code)) {
-                    await MasterAPI.create('brands', brand);
-                }
-            }
-          } catch (e) { console.error("Brand creation failed during import", e); }
+            const newBrands = Array.from(brandsToCreate.values()).filter(b => !existingCodes.has(b.brand_code));
+            
+            // In production, use a bulk create endpoint if available.
+            // For now, parallel requests are faster than serial.
+            await Promise.all(newBrands.map(b => MasterAPI.create('brands', b).catch(err => console.warn("Brand create failed", err))));
+            
+          } catch (e) { 
+              console.error("Brand sync error", e); 
+          }
       }
 
-      // 3. Create/Update Products
-      let insertedCount = 0;
-      let updatedCount = 0;
+      // 4. UPSERT PRODUCTS
+      let processedCount = 0;
+      let errorCount = 0;
 
+      // Use a for...of loop to avoid overwhelming the server (serial processing)
+      // Or use Promise.all with chunks for speed (e.g., batches of 10)
       for (const productData of validData) {
-        if (productData.product_code) {
-             try {
-                 await ProductAPI.update(productData.product_code, productData);
-                 updatedCount++;
-             } catch {
-                 try {
-                    await ProductAPI.create(productData);
-                    insertedCount++;
-                 } catch (e) { console.error("Failed to create product", productData.product_code); }
-             }
-        } else {
-             productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random()*1000)}`;
-             try {
-                await ProductAPI.create(productData);
-                insertedCount++;
-             } catch (e) { console.error("Failed to create new product"); }
+        
+        // Generate ID if missing
+        if (!productData.product_code) {
+             productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+        }
+
+        try {
+            await ProductAPI.upsert(productData);
+            processedCount++;
+        } catch (e) {
+            console.error("Failed to import product:", productData.product_name, e);
+            errorCount++;
         }
       }
 
       setToast({
-        message: `Import complete: ${insertedCount} new, ${updatedCount} updated`,
-        type: 'success',
+        message: `Import complete: ${processedCount} processed, ${errorCount} failed`,
+        type: errorCount === 0 ? 'success' : 'error',
       });
+      
       loadData();
     } catch (error: any) {
       setToast({ message: error.message || "Import failed", type: 'error' });
@@ -392,31 +493,33 @@ export function Products() {
   };
   const downloadTemplate = () => {
     const template: any = {
-      product_name: 'Example Product',
-      brand_code: 'BRAND001',
-      vendor_code: 'VENDOR001',
-      category_code: 'CAT001',
-      product_type: 'Standard',
-      sku: '',
-      variant_sku: '',
-      prod_short_desc: 'Short description',
-      prod_long_desc: 'Long description',
-      model_series: 'Series A',
-      mpn: 'MPN123',
-      gtin: '',
-      upc: '',
-      unspsc: '',
+      product_name: "Example Product",
+      brand_code: "BRAND001",
+      vendor_code: "VENDOR001",
+      category_code: "CAT001",
+      product_type: "Standard",
+      sku: "",
+      variant_sku: "",
+      prod_short_desc: "Short description",
+      prod_long_desc: "Long description",
+      model_series: "Series A",
+      mpn: "MPN123",
+      gtin: "",
+      upc: "",
+      unspsc: "",
     };
-    exportToCSV([template], 'product_import_template.csv');
+    exportToCSV([template], "product_import_template.csv");
   };
   const getVariantStatusBadge = (status: VariantStatus) => {
     const styles = {
-      Base: 'bg-blue-100 text-blue-800',
-      Variant: 'bg-green-100 text-green-800',
-      Parent: 'bg-orange-100 text-orange-800',
+      Base: "bg-blue-100 text-blue-800",
+      Variant: "bg-green-100 text-green-800",
+      Parent: "bg-orange-100 text-orange-800",
     };
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status]}`}>
+      <span
+        className={`px-2 py-1 rounded text-xs font-medium ${styles[status]}`}
+      >
         {status}
       </span>
     );
@@ -425,32 +528,37 @@ export function Products() {
     return generateBreadcrumb(product as any);
   };
   const columns = [
-    { key: 'product_code', label: 'Code', sortable: true },
-    { key: 'product_name', label: 'Name', sortable: true },
-    { key: 'brand_name', label: 'Brand', sortable: true },
-    { key: 'vendor_name', label: 'Vendor', sortable: true },
-    { key: 'industry_name', label: 'Industry', sortable: true },
+    { key: "product_code", label: "Code", sortable: true },
+    { key: "product_name", label: "Name", sortable: true },
+    { key: "brand_name", label: "Brand", sortable: true },
+    { key: "vendor_name", label: "Vendor", sortable: true },
+    { key: "industry_name", label: "Industry", sortable: true },
     {
-      key: 'category',
-      label: 'Category',
+      key: "category",
+      label: "Category",
       sortable: false,
       render: (_: any, row: Product) => (
-        <span className="text-sm text-gray-600">{getCategoryBreadcrumb(row)}</span>
+        <span className="text-sm text-gray-600">
+          {getCategoryBreadcrumb(row)}
+        </span>
       ),
     },
-    { key: 'product_type', label: 'Type', sortable: true },
+    { key: "product_type", label: "Type", sortable: true },
     {
-      key: 'variant_status',
-      label: 'Status',
+      key: "variant_status",
+      label: "Status",
       sortable: false,
-      render: (_: any, row: ProductWithVariantStatus) => getVariantStatusBadge(row.variant_status),
+      render: (_: any, row: ProductWithVariantStatus) =>
+        getVariantStatusBadge(row.variant_status),
     },
     {
-      key: 'completeness_score',
-      label: 'Quality Score',
+      key: "completeness_score",
+      label: "Quality Score",
       sortable: true,
       render: (_: any, row: Product) => {
-        const score = row.completeness_score || calculateCompletenessScore(row).overall_score;
+        const score =
+          row.completeness_score ||
+          calculateCompletenessScore(row).overall_score;
         const colors = getScoreColorClasses(score);
         return (
           <span
@@ -463,8 +571,8 @@ export function Products() {
       },
     },
     {
-      key: 'actions',
-      label: 'Actions',
+      key: "actions",
+      label: "Actions",
       sortable: false,
       render: (_: any, row: ProductWithVariantStatus) => (
         <div className="flex items-center gap-2">
@@ -494,19 +602,21 @@ export function Products() {
     },
   ];
   const tabs = [
-    { id: 'basic', label: 'Basic Info' },
-    { id: 'descriptions', label: 'Descriptions' },
-    { id: 'attributes', label: 'Attributes' },
-    { id: 'variants', label: 'Variants' },
-    { id: 'related', label: 'Related' },
-    { id: 'assets', label: 'Assets' },
+    { id: "basic", label: "Basic Info" },
+    { id: "descriptions", label: "Descriptions" },
+    { id: "attributes", label: "Attributes" },
+    { id: "variants", label: "Variants" },
+    { id: "related", label: "Related" },
+    { id: "assets", label: "Assets" },
   ];
   return (
     <div className="space-y-6">
       <div className="sticky top-0 z-40 bg-white py-6 -mx-6 px-6 shadows-sm flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Product Master</h1>
-          <p className="text-gray-600 mt-1">Manage your complete product catalog</p>
+          <p className="text-gray-600 mt-1">
+            Manage your complete product catalog
+          </p>
         </div>
         <button
           onClick={() => {
@@ -520,7 +630,7 @@ export function Products() {
           Add Product
         </button>
       </div>
-       <div className="sticky top-24 z-30   bg-white rounded-xl border border-slate-200 p-4">
+      <div className="sticky top-24 z-30   bg-white rounded-xl border border-slate-200 p-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="relative">
             <Search
@@ -542,7 +652,10 @@ export function Products() {
           >
             <option value="">All Industries</option>
             {industries.map((industry) => (
-              <option key={industry.industry_code} value={industry.industry_name}>
+              <option
+                key={industry.industry_code}
+                value={industry.industry_name}
+              >
                 {industry.industry_name}
               </option>
             ))}
@@ -553,11 +666,17 @@ export function Products() {
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Brands</option>
-            {Array.from(new Set(products.filter(p => p.brand_name).map(p => p.brand_name))).sort().map((brandName) => (
-              <option key={brandName} value={brandName}>
-                {brandName}
-              </option>
-            ))}
+            {Array.from(
+              new Set(
+                products.filter((p) => p.brand_name).map((p) => p.brand_name),
+              ),
+            )
+              .sort()
+              .map((brandName) => (
+                <option key={brandName} value={brandName}>
+                  {brandName}
+                </option>
+              ))}
           </select>
           <select
             value={vendorFilter}
@@ -565,11 +684,17 @@ export function Products() {
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Vendors</option>
-            {Array.from(new Set(products.filter(p => p.vendor_name).map(p => p.vendor_name))).sort().map((vendorName) => (
-              <option key={vendorName} value={vendorName}>
-                {vendorName}
-              </option>
-            ))}
+            {Array.from(
+              new Set(
+                products.filter((p) => p.vendor_name).map((p) => p.vendor_name),
+              ),
+            )
+              .sort()
+              .map((vendorName) => (
+                <option key={vendorName} value={vendorName}>
+                  {vendorName}
+                </option>
+              ))}
           </select>
           <select
             value={variantStatusFilter}
@@ -585,16 +710,22 @@ export function Products() {
             value={category1Filter}
             onChange={(e) => {
               setCategory1Filter(e.target.value);
-              setProductTypeFilter('');
+              setProductTypeFilter("");
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="">All Category 1</option>
-            {Array.from(new Set(categories.filter(c => c.category_1).map(c => c.category_1))).sort().map((cat1) => (
-              <option key={cat1} value={cat1}>
-                {cat1}
-              </option>
-            ))}
+            {Array.from(
+              new Set(
+                categories.filter((c) => c.category_1).map((c) => c.category_1),
+              ),
+            )
+              .sort()
+              .map((cat1) => (
+                <option key={cat1} value={cat1}>
+                  {cat1}
+                </option>
+              ))}
           </select>
           <select
             value={productTypeFilter}
@@ -603,15 +734,22 @@ export function Products() {
             disabled={!category1Filter}
           >
             <option value="">All Product Types</option>
-            {category1Filter && Array.from(new Set(
-              products
-                .filter(p => p.category_1 === category1Filter && p.product_type)
-                .map(p => p.product_type)
-            )).sort().map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
+            {category1Filter &&
+              Array.from(
+                new Set(
+                  products
+                    .filter(
+                      (p) => p.category_1 === category1Filter && p.product_type,
+                    )
+                    .map((p) => p.product_type),
+                ),
+              )
+                .sort()
+                .map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
           </select>
           <div className="flex gap-2">
             <button
@@ -624,7 +762,12 @@ export function Products() {
             <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
               <Upload size={20} />
               Import
-              <input type="file" accept=".csv,.xlsx,.xls" onChange={handleImport} className="hidden" />
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleImport}
+                className="hidden"
+              />
             </label>
             <button
               onClick={downloadTemplate}
@@ -643,10 +786,10 @@ export function Products() {
         sortDirection={sortDirection}
         onSort={(key) => {
           if (sortKey === key) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
           } else {
             setSortKey(key);
-            setSortDirection('asc');
+            setSortDirection("asc");
           }
         }}
         isLoading={loading}
@@ -658,7 +801,7 @@ export function Products() {
           setEditingProduct(null);
           resetForm();
         }}
-        title={editingProduct ? 'Edit Product' : 'Add Product'}
+        title={editingProduct ? "Edit Product" : "Add Product"}
       >
         <div className="flex border-b">
           {tabs.map((tab) => (
@@ -667,8 +810,8 @@ export function Products() {
               onClick={() => setActiveTab(tab.id as any)}
               className={`px-6 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
               }`}
             >
               {tab.label}
@@ -676,7 +819,7 @@ export function Products() {
           ))}
         </div>
         <div className="p-6 space-y-6">
-          {activeTab === 'basic' && (
+          {activeTab === "basic" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">Basic Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -687,11 +830,13 @@ export function Products() {
                     </label>
                     <input
                       type="text"
-                      value={formData.product_code || ''}
+                      value={formData.product_code || ""}
                       disabled
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Auto-generated upon creation</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Auto-generated upon creation
+                    </p>
                   </div>
                 )}
                 <div>
@@ -701,15 +846,21 @@ export function Products() {
                   <input
                     type="text"
                     value={formData.product_name}
-                    onChange={(e) => setFormData({ ...formData, product_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, product_name: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   {errors.product_name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.product_name}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.product_name}
+                    </p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Brand
+                  </label>
                   <select
                     value={formData.brand_code}
                     onChange={(e) => handleBrandChange(e.target.value)}
@@ -724,7 +875,9 @@ export function Products() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vendor
+                  </label>
                   <select
                     value={formData.vendor_code}
                     onChange={(e) => handleVendorChange(e.target.value)}
@@ -732,14 +885,19 @@ export function Products() {
                   >
                     <option value="">Select vendor</option>
                     {vendors.map((vendor) => (
-                      <option key={vendor.vendor_code} value={vendor.vendor_code}>
+                      <option
+                        key={vendor.vendor_code}
+                        value={vendor.vendor_code}
+                      >
                         {vendor.vendor_name}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
                   <select
                     value={formData.category_code}
                     onChange={(e) => handleCategoryChange(e.target.value)}
@@ -747,7 +905,10 @@ export function Products() {
                   >
                     <option value="">Select category</option>
                     {categories.map((category) => (
-                      <option key={category.category_code} value={category.category_code}>
+                      <option
+                        key={category.category_code}
+                        value={category.category_code}
+                      >
                         {category.breadcrumb}
                       </option>
                     ))}
@@ -759,12 +920,20 @@ export function Products() {
                   </label>
                   <select
                     value={formData.industry_name}
-                    onChange={(e) => setFormData({ ...formData, industry_name: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        industry_name: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select industry</option>
                     {industries.map((industry) => (
-                      <option key={industry.industry_code} value={industry.industry_name}>
+                      <option
+                        key={industry.industry_code}
+                        value={industry.industry_name}
+                      >
                         {industry.industry_name}
                       </option>
                     ))}
@@ -777,7 +946,9 @@ export function Products() {
                   <input
                     type="text"
                     value={formData.product_type}
-                    onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, product_type: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -788,14 +959,17 @@ export function Products() {
                   <input
                     type="text"
                     value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, sku: e.target.value })
+                    }
                     placeholder="Parent SKU for variants"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    MPN (Primary Identifier) <span className="text-red-500">*</span>
+                    MPN (Primary Identifier){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -805,7 +979,9 @@ export function Products() {
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  {errors.mpn && <p className="text-red-500 text-sm mt-1">{errors.mpn}</p>}
+                  {errors.mpn && (
+                    <p className="text-red-500 text-sm mt-1">{errors.mpn}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -814,52 +990,72 @@ export function Products() {
                   <input
                     type="text"
                     value={formData.model_no}
-                    onChange={(e) => setFormData({ ...formData, model_no: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, model_no: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">UPC</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    UPC
+                  </label>
                   <input
                     type="text"
                     value={formData.upc}
-                    onChange={(e) => setFormData({ ...formData, upc: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, upc: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">EAN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    EAN
+                  </label>
                   <input
                     type="text"
                     value={formData.ean}
-                    onChange={(e) => setFormData({ ...formData, ean: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, ean: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">UNSPSC</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    UNSPSC
+                  </label>
                   <input
                     type="text"
                     value={formData.unspsc}
-                    onChange={(e) => setFormData({ ...formData, unspsc: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, unspsc: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
             </div>
           )}
-          {activeTab === 'descriptions' && (
+          {activeTab === "descriptions" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Descriptions & Identifiers</h3>
+                <h3 className="font-semibold text-gray-900">
+                  Descriptions & Identifiers
+                </h3>
                 {formData.product_name && (
                   <div className="text-right">
                     {(() => {
                       const breakdown = calculateCompletenessScore(formData);
-                      const colors = getScoreColorClasses(breakdown.overall_score);
+                      const colors = getScoreColorClasses(
+                        breakdown.overall_score,
+                      );
                       return (
                         <div className="space-y-1">
-                          <div className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${colors.bg} ${colors.text} border ${colors.border}`}>
+                          <div
+                            className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${colors.bg} ${colors.text} border ${colors.border}`}
+                          >
                             Quality Score: {breakdown.overall_score}%
                           </div>
                           <div className="text-xs text-gray-500">
@@ -873,36 +1069,68 @@ export function Products() {
               </div>
               {formData.product_name && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Score Breakdown</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                    Score Breakdown
+                  </h4>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                     {(() => {
                       const breakdown = calculateCompletenessScore(formData);
                       return (
                         <>
                           <div>
-                            <div className="font-medium text-gray-700">Attributes</div>
-                            <div className="text-gray-900 font-semibold">{breakdown.attributes_score}%</div>
-                            <div className="text-xs text-gray-500">{breakdown.attributes_detail}</div>
+                            <div className="font-medium text-gray-700">
+                              Attributes
+                            </div>
+                            <div className="text-gray-900 font-semibold">
+                              {breakdown.attributes_score}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {breakdown.attributes_detail}
+                            </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-700">Features</div>
-                            <div className="text-gray-900 font-semibold">{breakdown.features_score}%</div>
-                            <div className="text-xs text-gray-500">{breakdown.features_detail}</div>
+                            <div className="font-medium text-gray-700">
+                              Features
+                            </div>
+                            <div className="text-gray-900 font-semibold">
+                              {breakdown.features_score}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {breakdown.features_detail}
+                            </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-700">Images</div>
-                            <div className="text-gray-900 font-semibold">{breakdown.images_score}%</div>
-                            <div className="text-xs text-gray-500">{breakdown.images_detail}</div>
+                            <div className="font-medium text-gray-700">
+                              Images
+                            </div>
+                            <div className="text-gray-900 font-semibold">
+                              {breakdown.images_score}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {breakdown.images_detail}
+                            </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-700">Title</div>
-                            <div className="text-gray-900 font-semibold">{breakdown.title_score}%</div>
-                            <div className="text-xs text-gray-500">{breakdown.title_detail}</div>
+                            <div className="font-medium text-gray-700">
+                              Title
+                            </div>
+                            <div className="text-gray-900 font-semibold">
+                              {breakdown.title_score}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {breakdown.title_detail}
+                            </div>
                           </div>
                           <div>
-                            <div className="font-medium text-gray-700">Description</div>
-                            <div className="text-gray-900 font-semibold">{breakdown.description_score}%</div>
-                            <div className="text-xs text-gray-500">{breakdown.description_detail}</div>
+                            <div className="font-medium text-gray-700">
+                              Description
+                            </div>
+                            <div className="text-gray-900 font-semibold">
+                              {breakdown.description_score}%
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {breakdown.description_detail}
+                            </div>
                           </div>
                         </>
                       );
@@ -916,7 +1144,12 @@ export function Products() {
                 </label>
                 <textarea
                   value={formData.prod_short_desc}
-                  onChange={(e) => setFormData({ ...formData, prod_short_desc: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      prod_short_desc: e.target.value,
+                    })
+                  }
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -927,7 +1160,9 @@ export function Products() {
                 </label>
                 <textarea
                   value={formData.prod_long_desc}
-                  onChange={(e) => setFormData({ ...formData, prod_long_desc: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, prod_long_desc: e.target.value })
+                  }
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -940,43 +1175,61 @@ export function Products() {
                   <input
                     type="text"
                     value={formData.model_series}
-                    onChange={(e) => setFormData({ ...formData, model_series: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, model_series: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">MPN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    MPN
+                  </label>
                   <input
                     type="text"
                     value={formData.mpn}
-                    onChange={(e) => setFormData({ ...formData, mpn: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, mpn: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GTIN</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    GTIN
+                  </label>
                   <input
                     type="text"
                     value={formData.gtin}
-                    onChange={(e) => setFormData({ ...formData, gtin: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, gtin: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">UPC</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    UPC
+                  </label>
                   <input
                     type="text"
                     value={formData.upc}
-                    onChange={(e) => setFormData({ ...formData, upc: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, upc: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">UNSPSC</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    UNSPSC
+                  </label>
                   <input
                     type="text"
                     value={formData.unspsc}
-                    onChange={(e) => setFormData({ ...formData, unspsc: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, unspsc: e.target.value })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -989,9 +1242,12 @@ export function Products() {
                   <input
                     key={num}
                     type="text"
-                    value={formData[`features_${num}` as keyof Product] || ''}
+                    value={formData[`features_${num}` as keyof Product] || ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, [`features_${num}`]: e.target.value })
+                      setFormData({
+                        ...formData,
+                        [`features_${num}`]: e.target.value,
+                      })
                     }
                     placeholder={`Feature ${num}`}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
@@ -1000,29 +1256,39 @@ export function Products() {
               </div>
             </div>
           )}
-          {activeTab === 'attributes' && (
+          {activeTab === "attributes" && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">Product Attributes</h3>
+              <h3 className="font-semibold text-gray-900">
+                Product Attributes
+              </h3>
               <p className="text-sm text-gray-600">
-                Attributes will be dynamically loaded based on selected category and product family.
+                Attributes will be dynamically loaded based on selected category
+                and product family.
               </p>
               <div className="border border-gray-200 rounded-lg p-4 text-center text-gray-500">
                 <p>Select a category to load relevant attributes</p>
               </div>
             </div>
           )}
-          {activeTab === 'variants' && (
+          {activeTab === "variants" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900">Product Variants</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Product Variants
+                  </h3>
                   <p className="text-sm text-gray-600 mt-1">
                     Manage product variants with different attributes
                   </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setToast({ message: 'Variant management coming soon!', type: 'success' })}
+                  onClick={() =>
+                    setToast({
+                      message: "Variant management coming soon!",
+                      type: "success",
+                    })
+                  }
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                 >
                   <Plus size={18} />
@@ -1034,7 +1300,8 @@ export function Products() {
                   <Package size={48} className="mx-auto text-gray-400 mb-3" />
                   <p className="text-gray-600 mb-2">No variants created yet</p>
                   <p className="text-sm text-gray-500">
-                    Click "Add Variant" to create variations of this product with different attributes
+                    Click "Add Variant" to create variations of this product
+                    with different attributes
                   </p>
                 </div>
               ) : (
@@ -1046,36 +1313,63 @@ export function Products() {
               )}
             </div>
           )}
-          {activeTab === 'related' && (
+          {activeTab === "related" && (
             <div className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Related Products (up to 5)</h3>
-                <p className="text-sm text-gray-600">Add product code, MPN, and name for related products</p>
+                <h3 className="font-semibold text-gray-900">
+                  Related Products (up to 5)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Add product code, MPN, and name for related products
+                </p>
                 {[1, 2, 3, 4, 5].map((num) => (
-                  <div key={num} className="grid grid-cols-3 gap-4 p-3 border border-gray-200 rounded-lg">
+                  <div
+                    key={num}
+                    className="grid grid-cols-3 gap-4 p-3 border border-gray-200 rounded-lg"
+                  >
                     <input
                       type="text"
-                      value={formData[`related_product_${num}` as keyof Product] || ''}
+                      value={
+                        formData[`related_product_${num}` as keyof Product] ||
+                        ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`related_product_${num}`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`related_product_${num}`]: e.target.value,
+                        })
                       }
                       placeholder="Product Code"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      value={formData[`related_product_${num}_mpn` as keyof Product] || ''}
+                      value={
+                        formData[
+                          `related_product_${num}_mpn` as keyof Product
+                        ] || ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`related_product_${num}_mpn`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`related_product_${num}_mpn`]: e.target.value,
+                        })
                       }
                       placeholder="MPN"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      value={formData[`related_product_${num}_name` as keyof Product] || ''}
+                      value={
+                        formData[
+                          `related_product_${num}_name` as keyof Product
+                        ] || ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`related_product_${num}_name`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`related_product_${num}_name`]: e.target.value,
+                        })
                       }
                       placeholder="Product Name"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1084,33 +1378,60 @@ export function Products() {
                 ))}
               </div>
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Pairs Well With (up to 5)</h3>
-                <p className="text-sm text-gray-600">Add product code, MPN, and name for complementary products</p>
+                <h3 className="font-semibold text-gray-900">
+                  Pairs Well With (up to 5)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Add product code, MPN, and name for complementary products
+                </p>
                 {[1, 2, 3, 4, 5].map((num) => (
-                  <div key={num} className="grid grid-cols-3 gap-4 p-3 border border-gray-200 rounded-lg">
+                  <div
+                    key={num}
+                    className="grid grid-cols-3 gap-4 p-3 border border-gray-200 rounded-lg"
+                  >
                     <input
                       type="text"
-                      value={formData[`pairs_well_with_${num}` as keyof Product] || ''}
+                      value={
+                        formData[`pairs_well_with_${num}` as keyof Product] ||
+                        ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`pairs_well_with_${num}`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`pairs_well_with_${num}`]: e.target.value,
+                        })
                       }
                       placeholder="Product Code"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      value={formData[`pairs_well_with_${num}_mpn` as keyof Product] || ''}
+                      value={
+                        formData[
+                          `pairs_well_with_${num}_mpn` as keyof Product
+                        ] || ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`pairs_well_with_${num}_mpn`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`pairs_well_with_${num}_mpn`]: e.target.value,
+                        })
                       }
                       placeholder="MPN"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <input
                       type="text"
-                      value={formData[`pairs_well_with_${num}_name` as keyof Product] || ''}
+                      value={
+                        formData[
+                          `pairs_well_with_${num}_name` as keyof Product
+                        ] || ""
+                      }
                       onChange={(e) =>
-                        setFormData({ ...formData, [`pairs_well_with_${num}_name`]: e.target.value })
+                        setFormData({
+                          ...formData,
+                          [`pairs_well_with_${num}_name`]: e.target.value,
+                        })
                       }
                       placeholder="Product Name"
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1120,13 +1441,19 @@ export function Products() {
               </div>
             </div>
           )}
-          {activeTab === 'assets' && (
+          {activeTab === "assets" && (
             <div className="space-y-6">
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Images (up to 5)</h3>
-                <p className="text-sm text-gray-600">Image names auto-generated from MPN</p>
+                <h3 className="font-semibold text-gray-900">
+                  Images (up to 5)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Image names auto-generated from MPN
+                </p>
                 {[1, 2, 3, 4, 5].map((num) => {
-                  const autoName = formData.mpn ? `${formData.mpn}-Image-${num}` : `Image-${num}`;
+                  const autoName = formData.mpn
+                    ? `${formData.mpn}-Image-${num}`
+                    : `Image-${num}`;
                   return (
                     <div key={num} className="grid grid-cols-2 gap-4">
                       <input
@@ -1137,7 +1464,9 @@ export function Products() {
                       />
                       <input
                         type="text"
-                        value={formData[`image_${num}_url` as keyof Product] || ''}
+                        value={
+                          formData[`image_${num}_url` as keyof Product] || ""
+                        }
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -1153,10 +1482,16 @@ export function Products() {
                 })}
               </div>
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Videos (up to 3)</h3>
-                <p className="text-sm text-gray-600">Video names auto-generated from MPN</p>
+                <h3 className="font-semibold text-gray-900">
+                  Videos (up to 3)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Video names auto-generated from MPN
+                </p>
                 {[1, 2, 3].map((num) => {
-                  const autoName = formData.mpn ? `${formData.mpn}-Video-${num}` : `Video-${num}`;
+                  const autoName = formData.mpn
+                    ? `${formData.mpn}-Video-${num}`
+                    : `Video-${num}`;
                   return (
                     <div key={num} className="grid grid-cols-2 gap-4">
                       <input
@@ -1167,7 +1502,9 @@ export function Products() {
                       />
                       <input
                         type="text"
-                        value={formData[`video_${num}_url` as keyof Product] || ''}
+                        value={
+                          formData[`video_${num}_url` as keyof Product] || ""
+                        }
                         onChange={(e) =>
                           setFormData({
                             ...formData,
@@ -1183,10 +1520,16 @@ export function Products() {
                 })}
               </div>
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Documents (up to 5)</h3>
-                <p className="text-sm text-gray-600">Document names auto-generated from MPN</p>
+                <h3 className="font-semibold text-gray-900">
+                  Documents (up to 5)
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Document names auto-generated from MPN
+                </p>
                 {[1, 2, 3, 4, 5].map((num) => {
-                  const autoName = formData.mpn ? `${formData.mpn}-Document-${num}` : `Document-${num}`;
+                  const autoName = formData.mpn
+                    ? `${formData.mpn}-Document-${num}`
+                    : `Document-${num}`;
                   return (
                     <div key={num} className="grid grid-cols-2 gap-4">
                       <input
@@ -1197,7 +1540,9 @@ export function Products() {
                       />
                       <input
                         type="text"
-                        value={formData[`document_${num}_url` as keyof Product] || ''}
+                        value={
+                          formData[`document_${num}_url` as keyof Product] || ""
+                        }
                         onChange={(e) => {
                           setFormData({
                             ...formData,
@@ -1229,7 +1574,7 @@ export function Products() {
               onClick={handleSubmit}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
-              {editingProduct ? 'Update' : 'Add'} Product
+              {editingProduct ? "Update" : "Add"} Product
             </button>
           </div>
         </div>
@@ -1256,12 +1601,20 @@ export function Products() {
         }
       >
         <p className="text-gray-600">
-          Are you sure you want to delete product{' '}
-          <span className="font-semibold">{deleteModal.product?.product_name}</span>? This action
-          cannot be undone.
+          Are you sure you want to delete product{" "}
+          <span className="font-semibold">
+            {deleteModal.product?.product_name}
+          </span>
+          ? This action cannot be undone.
         </p>
       </Modal>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

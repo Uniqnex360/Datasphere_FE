@@ -15,6 +15,10 @@ api.interceptors.request.use((config)=>{
     return config
 })
 export const ProductAPI={
+    upsert:async(data:any)=>{
+      const response=await api.post('/products/upsert',data)
+      return response.data
+    },
     getAll:async(skip=0,limit=100,filters={})=>{
         const response=await api.get('/products',{params:{skip,limit,...filters}})
         return response.data
