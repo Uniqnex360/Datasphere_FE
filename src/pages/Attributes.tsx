@@ -22,33 +22,38 @@ const findDuplicateAttribute = (
   allAttributes: Attribute[],
   attributeName: string,
   industryName: string,
-  excludeCode?: string
+  excludeCode?: string,
 ): Attribute | null => {
-  return allAttributes.find(attr => 
-    attr.attribute_name.trim().toLowerCase() === attributeName.trim().toLowerCase() &&
-    attr.industry_name.trim().toLowerCase() === industryName.trim().toLowerCase() &&
-    attr.attribute_code !== excludeCode
-  ) || null;
+  return (
+    allAttributes.find(
+      (attr) =>
+        attr.attribute_name.trim().toLowerCase() ===
+          attributeName.trim().toLowerCase() &&
+        attr.industry_name.trim().toLowerCase() ===
+          industryName.trim().toLowerCase() &&
+        attr.attribute_code !== excludeCode,
+    ) || null
+  );
 };
 
 const generateAttributeCode = (allAttributes: Attribute[]): string => {
-  if (!allAttributes || allAttributes.length === 0) return 'ATTR-000001';
+  if (!allAttributes || allAttributes.length === 0) return "ATTR-000001";
 
   // Sort descending by code to find the highest current number
   const sorted = [...allAttributes]
-    .filter(a => a.attribute_code && a.attribute_code.startsWith('ATTR-'))
+    .filter((a) => a.attribute_code && a.attribute_code.startsWith("ATTR-"))
     .sort((a, b) => b.attribute_code.localeCompare(a.attribute_code));
 
-  if (sorted.length === 0) return 'ATTR-000001';
+  if (sorted.length === 0) return "ATTR-000001";
 
   const lastCode = sorted[0].attribute_code;
   const match = lastCode.match(/ATTR-(\d+)/);
-  
-  if (!match) return 'ATTR-000001';
+
+  if (!match) return "ATTR-000001";
 
   const lastNumber = parseInt(match[1], 10);
   const nextNumber = lastNumber + 1;
-  return `ATTR-${String(nextNumber).padStart(6, '0')}`;
+  return `ATTR-${String(nextNumber).padStart(6, "0")}`;
 };
 const mergeAttributeValues = (
   existing: Attribute,
@@ -271,7 +276,7 @@ export function Attributes() {
     return Object.keys(newErrors).length === 0;
   };
 
-   const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     try {
@@ -314,14 +319,18 @@ export function Attributes() {
             ...dataToSubmit,
             usage_count: usageCount,
           };
-          delete updateData.attribute_code; 
-          
+          delete updateData.attribute_code;
+
           mergedValues.forEach((item, index) => {
             updateData[`attribute_value_${index + 1}`] = item.value;
             updateData[`attribute_uom_${index + 1}`] = item.uom;
           });
 
-          await MasterAPI.update("attributes", duplicate.attribute_code, updateData);
+          await MasterAPI.update(
+            "attributes",
+            duplicate.attribute_code,
+            updateData,
+          );
 
           setToast({
             message: `Values merged with existing attribute (Usage: ${usageCount})`,
@@ -333,7 +342,7 @@ export function Attributes() {
           dataToSubmit.usage_count = 1;
 
           await MasterAPI.create("attributes", dataToSubmit);
-          
+
           setToast({
             message: `Attribute ${attributeCode} added successfully`,
             type: "success",
@@ -375,7 +384,10 @@ export function Attributes() {
     if (!deleteModal.attribute) return;
 
     try {
-      await MasterAPI.delete("attributes", deleteModal.attribute.attribute_code);
+      await MasterAPI.delete(
+        "attributes",
+        deleteModal.attribute.attribute_code,
+      );
 
       setToast({ message: "Attribute deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, attribute: null });
@@ -415,7 +427,7 @@ export function Attributes() {
     setToast({ message: "Attributes exported successfully", type: "success" });
   };
 
- const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -429,10 +441,10 @@ export function Attributes() {
       // 1. Get initial code state from current list
       let nextCodeNumber = 1;
       const codes = attributes
-        .map(a => a.attribute_code)
-        .filter(c => c && c.startsWith("ATTR-"))
+        .map((a) => a.attribute_code)
+        .filter((c) => c && c.startsWith("ATTR-"))
         .sort((a, b) => b.localeCompare(a));
-      
+
       if (codes.length > 0) {
         const match = codes[0].match(/ATTR-(\d+)/);
         if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
@@ -449,12 +461,14 @@ export function Attributes() {
 
         const attributeData: any = {};
         // Map row to data object
-        Object.keys(row).forEach(k => attributeData[k] = row[k]);
+        Object.keys(row).forEach((k) => (attributeData[k] = row[k]));
 
         // Clean empty values 1-50
         for (let i = 1; i <= 50; i++) {
-          if (!attributeData[`attribute_value_${i}`]) attributeData[`attribute_value_${i}`] = "";
-          if (!attributeData[`attribute_uom_${i}`]) attributeData[`attribute_uom_${i}`] = "";
+          if (!attributeData[`attribute_value_${i}`])
+            attributeData[`attribute_value_${i}`] = "";
+          if (!attributeData[`attribute_uom_${i}`])
+            attributeData[`attribute_uom_${i}`] = "";
         }
 
         const duplicate = findDuplicateAttribute(
@@ -468,10 +482,10 @@ export function Attributes() {
           const newValues: AttributeValue[] = [];
           for (let i = 1; i <= 50; i++) {
             if (attributeData[`attribute_value_${i}`]) {
-                newValues.push({
-                    value: attributeData[`attribute_value_${i}`],
-                    uom: attributeData[`attribute_uom_${i}`] || ""
-                });
+              newValues.push({
+                value: attributeData[`attribute_value_${i}`],
+                uom: attributeData[`attribute_uom_${i}`] || "",
+              });
             }
           }
 
@@ -492,7 +506,11 @@ export function Attributes() {
             updateData[`attribute_uom_${idx + 1}`] = item.uom;
           });
 
-          await MasterAPI.update("attributes", duplicate.attribute_code, updateData);
+          await MasterAPI.update(
+            "attributes",
+            duplicate.attribute_code,
+            updateData,
+          );
           merged++;
         } else {
           // Create Logic
@@ -501,7 +519,7 @@ export function Attributes() {
           attributeData.usage_count = 1;
 
           await MasterAPI.create("attributes", attributeData);
-          
+
           // Update trackers
           nextCodeNumber++;
           currentAttributes.push(attributeData);
@@ -518,8 +536,8 @@ export function Attributes() {
     } catch (error: any) {
       setToast({ message: `Import error: ${error.message}`, type: "error" });
     } finally {
-        setLoading(false);
-        e.target.value = "";
+      setLoading(false);
+      e.target.value = "";
     }
   };
   const downloadTemplate = () => {
@@ -1144,5 +1162,4 @@ export function Attributes() {
       )}
     </div>
   );
-
 }

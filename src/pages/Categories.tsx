@@ -24,6 +24,7 @@ import {
   validateCategoryHierarchy,
 } from "../utils/categoryHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
+import { generateEntityCode } from "../utils/codeGenerator";
 
 interface Industry {
   code: string;
@@ -215,7 +216,6 @@ export function Categories() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -223,6 +223,7 @@ export function Categories() {
       const dataToSubmit: Partial<Category> = {
         ...formData,
         breadcrumb: generateBreadcrumb(formData as Category),
+        category_code: formData.category_code || generateEntityCode('category', formData.category_1 || '')
       };
 
       if (isEditing && selectedCategory) {
@@ -369,7 +370,7 @@ export function Categories() {
           categoryData.category_code === "" ||
           categoryData.category_code === undefined
         ) {
-          delete categoryData.category_code;
+          categoryData.category_code = generateEntityCode('category', categoryData.category_code || "")
         }
 
         const hierarchyErrors = validateCategoryHierarchy(categoryData);
@@ -442,15 +443,15 @@ export function Categories() {
         });
         return;
       }
-       const existingIndustries = await MasterAPI.getIndustries();
-        const existingCodes = new Set(existingIndustries.map((ind: any) => ind.industry_code));
+      const existingIndustries = await MasterAPI.getIndustries();
+      const existingCodes = new Set(existingIndustries.map((ind: any) => ind.industry_code));
       if (industriesToCreate.size > 0) {
         const newIndustries = Array.from(industriesToCreate.values())
-            .filter(ind => !existingCodes.has(ind.industry_code));
+          .filter(ind => !existingCodes.has(ind.industry_code));
 
         for (const ind of newIndustries) {
           try {
-             await MasterAPI.create("industries", ind);
+            await MasterAPI.create("industries", ind);
           } catch (error) {
             console.warn(`Industry ${ind.industry_code} likely exists, skipping.`);
           }
@@ -460,10 +461,9 @@ export function Categories() {
 
       const allCategories = Array.from(parentCategories.values());
       for (const cat of allCategories) {
-        
+
         if (!cat.category_code) {
-             const prefix = cat.industry_name ? cat.industry_name.substring(0,3).toUpperCase() : 'CAT';
-             cat.category_code = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          cat.category_code = generateEntityCode('category', cat.category_1 || cat.industry_name || '');
         }
 
         await MasterAPI.create("categories", cat);

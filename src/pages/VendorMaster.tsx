@@ -7,6 +7,7 @@ import Toast from '../components/Toast';
 import DataTable from '../components/DataTable';
 import { exportToCSV, parseCSV } from '../utils/csvHelper';
 import { MasterAPI, ProductAPI } from '../lib/api';
+import { generateEntityCode } from '../utils/codeGenerator';
 
 export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -127,7 +128,7 @@ export function VendorMaster() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
+  
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -138,7 +139,11 @@ export function VendorMaster() {
 
         setToast({ message: 'Vendor updated successfully', type: 'success' });
       } else {
-        await MasterAPI.create('vendors',formData)
+        const dataToSubmit={
+          ...formData,
+          vendor_code:formData.vendor_code||generateEntityCode('brand',formData.vendor_name||'')
+        }
+        await MasterAPI.create('vendors',dataToSubmit)
         setToast({ message: 'Vendor added successfully', type: 'success' });
       }
 
@@ -277,7 +282,7 @@ export function VendorMaster() {
           });
 
           if (vendorData.vendor_code === '' || vendorData.vendor_code === undefined) {
-            delete vendorData.vendor_code;
+             vendorData.vendor_code = generateEntityCode('brand',vendorData.vendor_name || '');
           }
           validData.push(vendorData);
         }

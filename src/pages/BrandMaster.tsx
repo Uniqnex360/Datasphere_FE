@@ -15,6 +15,7 @@ import Toast from "../components/Toast";
 import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
+import { generateEntityCode } from "../utils/codeGenerator";
 
 export function BrandMaster() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -110,6 +111,10 @@ export function BrandMaster() {
         await MasterAPI.update('brands',editingBrand.brand_code,formData)
         setToast({ message: "Brand updated successfully", type: "success" });
       } else {
+        const dataToSubmit={
+          ...formData,
+          brand_code:formData.brand_code||generateEntityCode('brand',formData.brand_name||"")
+        }
         await MasterAPI.create('brands',formData)
         setToast({ message: "Brand added successfully", type: "success" });
       }
@@ -223,7 +228,7 @@ export function BrandMaster() {
             brandData.brand_code === "" ||
             brandData.brand_code === undefined
           ) {
-            delete brandData.brand_code;
+            brandData.brand_code = generateEntityCode('brand',brandData.brand_name || '');
           }
           validData.push(brandData);
         }
