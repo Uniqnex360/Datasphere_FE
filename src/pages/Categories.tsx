@@ -386,28 +386,37 @@ export function Categories() {
       "product_type",
       "breadcrumb"
     ];
-    if(data.length>0)
-    {
-      const firstRow=data[0]
-      const actualColumns=Object.keys(firstRow)
-      const missingColumns=expectedColumns.filter(col=>!actualColumns.includes(col))
-      const unexpectedColumns=actualColumns.filter(col=>!expectedColumns.includes(col))
-      if(missingColumns.length>0 || unexpectedColumns.length>0)
-      {
-        let errorMessage="Import failed;The file format doesn't match the expected template!"
-        if(missingColumns.length>0)
-        {
-          errorMessage+=`Missing columns ${missingColumns.join('')}`
-        }
-        if(unexpectedColumns.length>0)
-        {
-          errorMessage+=`Unexpected columns ${unexpectedColumns.join('')}`
-        }
-        errorMessage+=`Please use the template provided by the 'Download Template' button`
-        setToast({message:errorMessage,type:'error'})
-        return
+    if (data.length > 0) {
+  const firstRow = data[0];
+  const actualColumns = Object.keys(firstRow);
+  const missingColumns = expectedColumns.filter(col => !actualColumns.includes(col));
+  const unexpectedColumns = actualColumns.filter(col => !expectedColumns.includes(col));
+  
+  if (missingColumns.length > 0 || unexpectedColumns.length > 0) {
+    let errorMessage = "Import failed: The file format doesn't match the expected template.";
+    
+    if (missingColumns.length > 0) {
+      const exampleCount = Math.min(3, missingColumns.length);
+      const examples = missingColumns.slice(0, exampleCount).join(", ");
+      
+      errorMessage += ` Missing ${missingColumns.length} column${missingColumns.length > 1 ? 's' : ''}`;
+      
+      if (exampleCount > 0) {
+        errorMessage += ` (e.g., ${examples}${missingColumns.length > exampleCount ? '...' : ''})`;
       }
+      errorMessage += ".";
     }
+    
+    if (unexpectedColumns.length > 0) {
+      errorMessage += ` Found ${unexpectedColumns.length} unexpected column${unexpectedColumns.length > 1 ? 's' : ''}.`;
+    }
+    
+    errorMessage += " Please use the template provided by the 'Download Template' button.";
+    
+    setToast({ message: errorMessage, type: 'error' });
+    return;
+  }
+}
     
       const validData: Partial<Category>[] = [];
       const importErrors: string[] = [];
