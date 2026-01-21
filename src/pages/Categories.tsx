@@ -442,25 +442,30 @@ export function Categories() {
         });
         return;
       }
-
+       const existingIndustries = await MasterAPI.getIndustries();
+        const existingCodes = new Set(existingIndustries.map((ind: any) => ind.industry_code));
       if (industriesToCreate.size > 0) {
-        const newIndustries = Array.from(industriesToCreate.values()).map(
-          (ind) => ({
-            industry_code: ind.industry_code,
-            industry_name: ind.industry_name,
-            description: ind.industry_name,
-            is_active: true,
-          }),
-        );
+        const newIndustries = Array.from(industriesToCreate.values())
+            .filter(ind => !existingCodes.has(ind.industry_code));
 
         for (const ind of newIndustries) {
-          await MasterAPI.create("industries", ind);
+          try {
+             await MasterAPI.create("industries", ind);
+          } catch (error) {
+            console.warn(`Industry ${ind.industry_code} likely exists, skipping.`);
+          }
         }
         loadIndustries();
       }
 
       const allCategories = Array.from(parentCategories.values());
       for (const cat of allCategories) {
+        
+        if (!cat.category_code) {
+             const prefix = cat.industry_name ? cat.industry_name.substring(0,3).toUpperCase() : 'CAT';
+             cat.category_code = `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        }
+
         await MasterAPI.create("categories", cat);
       }
 
