@@ -16,6 +16,7 @@ import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { generateEntityCode } from "../utils/codeGenerator";
+import { validateImportFormat } from "../utils/importValidator";
 
 export function BrandMaster() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -206,7 +207,16 @@ export function BrandMaster() {
         "mfg_name",
         "mfg_logo",
       ];
-
+       const validation = validateImportFormat(data, validColumns);
+                if (!validation.isValid) {
+                  setToast({
+                    message: validation.errorMessage || "Import failed!",
+                    type: "error",
+                  });
+                  e.target.value = "";
+                  return;
+                }
+          
       data.forEach((row, index) => {
         const rowErrors: string[] = [];
 

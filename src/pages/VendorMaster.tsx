@@ -8,6 +8,7 @@ import DataTable from '../components/DataTable';
 import { exportToCSV, parseCSV } from '../utils/csvHelper';
 import { MasterAPI, ProductAPI } from '../lib/api';
 import { generateEntityCode } from '../utils/codeGenerator';
+import { validateImportFormat } from '../utils/importValidator';
 
 export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -247,6 +248,15 @@ export function VendorMaster() {
         'dept4_poc_name', 'dept4_email', 'dept4_phone',
         'dept5_poc_name', 'dept5_email', 'dept5_phone'
       ];
+      const validation=validateImportFormat(data,validColumns)
+      if (!validation.isValid) {
+            setToast({
+              message: validation.errorMessage || "Import failed!",
+              type: "error",
+            });
+            e.target.value = "";
+            return;
+          }
 
       data.forEach((row, index) => {
         const rowErrors: string[] = [];
@@ -282,7 +292,7 @@ export function VendorMaster() {
           });
 
           if (vendorData.vendor_code === '' || vendorData.vendor_code === undefined) {
-             vendorData.vendor_code = generateEntityCode('brand',vendorData.vendor_name || '');
+             vendorData.vendor_code = generateEntityCode('vendor',vendorData.vendor_name || '');
           }
           validData.push(vendorData);
         }
@@ -312,6 +322,7 @@ export function VendorMaster() {
   const downloadTemplate = () => {
     const template = [
       {
+        vendor_code: '', 
         vendor_name: 'Example Vendor',
         contact_email: 'contact@example.com',
         contact_phone: '555-1234',

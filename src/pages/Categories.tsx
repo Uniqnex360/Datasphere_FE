@@ -25,6 +25,7 @@ import {
 } from "../utils/categoryHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { generateEntityCode } from "../utils/codeGenerator";
+import { validateImportFormat } from "../utils/importValidator";
 
 interface Industry {
   code: string;
@@ -268,10 +269,12 @@ export function Categories() {
         const existingCategory = categories.find(
           (c) => c.breadcrumb === breadCrumb,
         );
-        if(existingCategory)
-        {
-          setToast({message:"A category with this hierarchy already exists!",type:'error'})
-          return
+        if (existingCategory) {
+          setToast({
+            message: "A category with this hierarchy already exists!",
+            type: "error",
+          });
+          return;
         }
         await MasterAPI.create("categories", dataToSubmit);
 
@@ -372,52 +375,29 @@ export function Categories() {
 
     try {
       const data = await parseCSV(file);
-        const expectedColumns = [
-      "industry_code",
-      "industry_name",
-      "category_1",
-      "category_2",
-      "category_3",
-      "category_4",
-      "category_5",
-      "category_6",
-      "category_7",
-      "category_8",
-      "product_type",
-      "breadcrumb"
-    ];
-    if (data.length > 0) {
-  const firstRow = data[0];
-  const actualColumns = Object.keys(firstRow);
-  const missingColumns = expectedColumns.filter(col => !actualColumns.includes(col));
-  const unexpectedColumns = actualColumns.filter(col => !expectedColumns.includes(col));
-  
-  if (missingColumns.length > 0 || unexpectedColumns.length > 0) {
-    let errorMessage = "Import failed: The file format doesn't match the expected template.";
-    
-    if (missingColumns.length > 0) {
-      const exampleCount = Math.min(3, missingColumns.length);
-      const examples = missingColumns.slice(0, exampleCount).join(", ");
-      
-      errorMessage += ` Missing ${missingColumns.length} column${missingColumns.length > 1 ? 's' : ''}`;
-      
-      if (exampleCount > 0) {
-        errorMessage += ` (e.g., ${examples}${missingColumns.length > exampleCount ? '...' : ''})`;
+      const expectedColumns = [
+        "industry_code",
+        "industry_name",
+        "category_1",
+        "category_2",
+        "category_3",
+        "category_4",
+        "category_5",
+        "category_6",
+        "category_7",
+        "category_8",
+        "product_type",
+        "breadcrumb",
+      ];
+      const validation = validateImportFormat(data, expectedColumns);
+      if (!validation.isValid) {
+        setToast({
+          message: validation.errorMessage || "Import failed!",
+          type: "error",
+        });
+        e.target.value = "";
+        return;
       }
-      errorMessage += ".";
-    }
-    
-    if (unexpectedColumns.length > 0) {
-      errorMessage += ` Found ${unexpectedColumns.length} unexpected column${unexpectedColumns.length > 1 ? 's' : ''}.`;
-    }
-    
-    errorMessage += " Please use the template provided by the 'Download Template' button.";
-    
-    setToast({ message: errorMessage, type: 'error' });
-    return;
-  }
-}
-    
       const validData: Partial<Category>[] = [];
       const importErrors: string[] = [];
       const parentCategories = new Map<string, Partial<Category>>();

@@ -30,6 +30,7 @@ import {
   getScoreColorClasses,
 } from "../utils/completenessHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
+import { validateImportFormat } from "../utils/importValidator";
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<
@@ -362,7 +363,32 @@ export function Products() {
           console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
           console.log("FIRST ROW DATA:", rawData[0]);
       } 
+      const expectedColumns=[
+        "product_name",
+      "brand_code",
+      "vendor_code",
+      "category_code",
+     "product_type",
+      "sku",
+      "variant_sku",
+      "prod_short_desc",
+      "prod_long_desc",
+      "model_series",
+      "mpn",
+      "gtin",
+      "upc",
+      "unspsc",
+      ]
       
+      const validation=validateImportFormat(rawData,expectedColumns)
+      if (!validation.isValid) {
+        setToast({
+          message: validation.errorMessage || "Import failed!",
+          type: "error",
+        });
+        e.target.value = "";
+        return;
+      }
       const validData: Partial<Product>[] = [];
       const importErrors: string[] = [];
       const brandsToCreate = new Map<string, any>();

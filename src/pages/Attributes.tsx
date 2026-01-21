@@ -18,6 +18,7 @@ import Toast from "../components/Toast";
 import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI } from "../lib/api";
+import { validateImportFormat } from "../utils/importValidator";
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
   attributeName: string,
@@ -433,7 +434,35 @@ export function Attributes() {
 
     try {
       setLoading(true);
+      
+
       const data = await parseCSV(file);
+      const expectedColumns = [
+      "attribute_name",
+      "industry_name",
+      "industry_attribute_name",
+      "description",
+      "applicable_categories",
+      "attribute_type",
+      "data_type",
+      "unit",
+      "filter",
+      "filter_display_name"
+    ];
+    for (let i = 1; i <= 50; i++) {
+        expectedColumns.push(`attribute_value_${i}`);
+        expectedColumns.push(`attribute_uom_${i}`);
+      }
+     const validation = validateImportFormat(data, expectedColumns);
+          if (!validation.isValid) {
+            setToast({
+              message: validation.errorMessage || "Import failed!",
+              type: "error",
+            });
+            e.target.value = "";
+            return;
+          }
+    
       let added = 0;
       let merged = 0;
       let errors = 0;
