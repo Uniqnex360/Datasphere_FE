@@ -108,7 +108,7 @@ export const UserAPI = {
 
 export const RoleAPI = {
   getAll: async () => {
-    const response = await api.get('/roles');
+    const response = await api.get('/roles/');
     return response.data;
   },
   getPermissions: async () => {
@@ -116,7 +116,7 @@ export const RoleAPI = {
     return response.data;
   },
   create: async (data: any) => {
-    const response = await api.post('/roles', data);
+    const response = await api.post('/roles/', data);
     return response.data;
   },
   update: async (id: string, data: any) => {
