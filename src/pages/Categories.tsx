@@ -372,6 +372,43 @@ export function Categories() {
 
     try {
       const data = await parseCSV(file);
+        const expectedColumns = [
+      "industry_code",
+      "industry_name",
+      "category_1",
+      "category_2",
+      "category_3",
+      "category_4",
+      "category_5",
+      "category_6",
+      "category_7",
+      "category_8",
+      "product_type",
+      "breadcrumb"
+    ];
+    if(data.length>0)
+    {
+      const firstRow=data[0]
+      const actualColumns=Object.keys(firstRow)
+      const missingColumns=expectedColumns.filter(col=>!actualColumns.includes(col))
+      const unexpectedColumns=actualColumns.filter(col=>!expectedColumns.includes(col))
+      if(missingColumns.length>0 || unexpectedColumns.length>0)
+      {
+        let errorMessage="Import failed;The file format doesn't match the expected template!"
+        if(missingColumns.length>0)
+        {
+          errorMessage+=`Missing columns ${missingColumns.join('')}`
+        }
+        if(unexpectedColumns.length>0)
+        {
+          errorMessage+=`Unexpected columns ${unexpectedColumns.join('')}`
+        }
+        errorMessage+=`Please use the template provided by the 'Download Template' button`
+        setToast({message:errorMessage,type:'error'})
+        return
+      }
+    }
+    
       const validData: Partial<Category>[] = [];
       const importErrors: string[] = [];
       const parentCategories = new Map<string, Partial<Category>>();
