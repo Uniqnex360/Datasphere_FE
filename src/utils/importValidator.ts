@@ -35,7 +35,8 @@ export const validateImportFormat = (
     }
     
     errorMessage += " Please use the template provided by the 'Download Template' button.";
-    
+    console.log('unexpectedColumns',unexpectedColumns.join(''))
+    console.log('missingColumns',missingColumns.join(''))
     return { isValid: false, errorMessage };
   }
   
