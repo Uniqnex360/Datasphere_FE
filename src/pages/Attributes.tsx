@@ -437,21 +437,23 @@ export function Attributes() {
       
 
       const data = await parseCSV(file);
-      const expectedColumns = [
-      "attribute_name",
-      "industry_name",
-      "industry_attribute_name",
-      "description",
-      "applicable_categories",
-      "attribute_type",
-      "data_type",
-      "unit",
-      "filter",
-      "filter_display_name"
-    ];
-     expectedColumns.push('attribute_value_1');
-    expectedColumns.push('attribute_uom_1');
-     const validation = validateImportFormat(data, expectedColumns);
+    //   const expectedColumns = [
+    //   "attribute_name",
+    //   "industry_name",
+    //   "industry_attribute_name",
+    //   "description",
+    //   "applicable_categories",
+    //   "attribute_type",
+    //   "data_type",
+    //   "unit",
+    //   "filter",
+    //   "filter_display_name"
+    // ];
+      const requiredColumns = [
+        "attribute_name",
+        "industry_name"
+      ];
+     const validation = validateImportFormat(data, requiredColumns);
           if (!validation.isValid) {
             setToast({
               message: validation.errorMessage || "Import failed!",
