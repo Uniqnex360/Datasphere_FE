@@ -23,7 +23,7 @@ export const ProductAPI={
       return response.data
     },
     getAll:async(skip=0,limit=100,filters={})=>{
-        const response=await api.get('/products',{params:{skip,limit,...filters}})
+        const response=await api.get('/products/',{params:{skip,limit,...filters}})
         return response.data
     },
     getOne:async(code:string)=>{
@@ -31,7 +31,7 @@ export const ProductAPI={
         return response.data
     },
     create:async(data:any)=>{
-        const response=await api.post('/products',data)
+        const response=await api.post('/products/',data)
         return response.data
 
     },
