@@ -8,6 +8,8 @@ const api = axios.create({
 });
 console.log("API",API_URL)
 api.interceptors.request.use((config)=>{
+   console.log("REQUEST CONFIG:", config); 
+   console.log("REQUEST URL:", config.baseURL, config.url); 
     const token=localStorage.getItem('token')
     if(token)
     {
