@@ -101,98 +101,84 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+    const loadDashboardData = async () => {
     try {
-      const [productsRes, brands, vendors, categories] = await Promise.all([
-        ProductAPI.getAll(),
+      setLoading(true);
+      // NEW: Fetch all data from API in parallel
+      const [products, brands, vendors, categories] = await Promise.all([
+        ProductAPI.getAll(0, 1000), // Get enough products for stats
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories()
-
       ]);
 
-
-      if (productsRes.data) {
-        const products = productsRes.data;
+      if (products) {
         const totalProducts = products.length;
 
-        const missingAttributes = products.filter((p) => {
-          for (let i = 1; i <= 40; i++) {
-            const attrName = p[`attribute_name_${i}`];
-            if (attrName && attrName.trim()) {
-              const attrValue = p[`attribute_value_${i}`];
-              if (!attrValue || !attrValue.trim()) {
-                return true;
-              }
-            }
-          }
-          return false;
+        // --- Calculate Stats Logic (Adapted for API response) ---
+        const missingAttributes = products.filter((p: any) => {
+            const attrs = p.attributes || {};
+            return Object.keys(attrs).length === 0;
         }).length;
 
-        const missingImages = products.filter((p) => {
-          return !p.image_url_1 || !p.image_url_1.trim();
-        }).length;
+        const missingImages = products.filter((p: any) => !p.image_url_1).length;
 
-        const unassignedCategories = products.filter((p) => (!p.category_code || !p.category_code.trim()) && (!p.category_1 || !p.category_1.trim())).length;
+        const unassignedCategories = products.filter((p: any) => 
+            !p.category_code && !p.category_1
+        ).length;
 
         const oneDayAgo = new Date();
         oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        const recentlyUpdated = products.filter((p) => {
+        const recentlyUpdated = products.filter((p: any) => {
           return p.updated_at && new Date(p.updated_at) > oneDayAgo;
         }).length;
 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const productsLastWeek = products.filter((p) => {
+        const productsLastWeek = products.filter((p: any) => {
           return p.created_at && new Date(p.created_at) > sevenDaysAgo;
         }).length;
 
-        const totalCompletenessScore = products.reduce((sum, p) => sum + (p.completeness_score || 0), 0);
+        const totalCompletenessScore = products.reduce((sum: number, p: any) => sum + (p.completeness_score || 0), 0);
         const completeness = totalProducts > 0 ? Math.round(totalCompletenessScore / totalProducts) : 0;
-        const requiredFields = ['product_name', 'brand_code', 'category_code', 'prod_short_desc'];
 
-        const basicInfoComplete = products.filter(p =>
-          p.product_name && (p.brand_code || p.brand_name) && (p.category_code || p.category_1)
+        // Basic Info Score
+        const basicInfoComplete = products.filter((p: any) =>
+          p.product_name && p.brand_name && (p.category_code || p.category_1)
         ).length;
         const basicInfo = totalProducts > 0 ? Math.round((basicInfoComplete / totalProducts) * 100) : 0;
 
-        const attrComplete = products.filter(p => {
-          let hasAttr = false;
-          for (let i = 1; i <= 40; i++) {
-            if (p[`attribute_name_${i}`] && p[`attribute_value_${i}`]) {
-              hasAttr = true;
-              break;
-            }
-          }
-          return hasAttr;
-        }).length;
-        const attributes = totalProducts > 0 ? Math.round((attrComplete / totalProducts) * 100) : 0;
+        // Attributes Score
+        const attrComplete = products.filter((p: any) => p.attributes && Object.keys(p.attributes).length > 0).length;
+        const attributesScoreVal = totalProducts > 0 ? Math.round((attrComplete / totalProducts) * 100) : 0;
 
-        const imagesComplete = products.filter(p => p.image_url_1 && p.image_url_1.trim()).length;
-        const images = totalProducts > 0 ? Math.round((imagesComplete / totalProducts) * 100) : 0;
+        // Images Score
+        const imagesComplete = products.filter((p: any) => p.image_url_1).length;
+        const imagesScoreVal = totalProducts > 0 ? Math.round((imagesComplete / totalProducts) * 100) : 0;
 
         setStats({
           totalProducts,
           productsMissingAttributes: missingAttributes,
           productsMissingImages: missingImages,
           unassignedCategories,
-          totalBrands: brandsRes.data?.length || 0,
-          totalVendors: vendorsRes.data?.length || 0,
+          totalBrands: brands?.length || 0,
+          totalVendors: vendors?.length || 0,
           recentlyUpdated,
           trend: {
             products: productsLastWeek,
-            brands: 0,
-            vendors: 0,
+            brands: 0, 
+            vendors: 0, 
           },
         });
 
         setCompletenessScore(completeness);
         setBasicInfoScore(basicInfo);
-        setAttributesScore(attributes);
-        setImagesScore(images);
+        setAttributesScore(attributesScoreVal);
+        setImagesScore(imagesScoreVal);
 
+        // --- Industry Health ---
         const industryMap = new Map<string, any>();
-        products.forEach((p) => {
+        products.forEach((p: any) => {
           const industry = p.industry_name || 'Unassigned';
           if (!industryMap.has(industry)) {
             industryMap.set(industry, {
@@ -205,24 +191,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           }
           const entry = industryMap.get(industry);
           entry.product_count++;
-
-          const productCompleteness = p.completeness_score || 0;
-          entry.totalCompleteness += productCompleteness;
-
-          let hasMissingAttr = false;
-          for (let i = 1; i <= 40; i++) {
-            const attrName = p[`attribute_name_${i}`];
-            if (attrName && attrName.trim()) {
-              const attrValue = p[`attribute_value_${i}`];
-              if (!attrValue || !attrValue.trim()) {
-                hasMissingAttr = true;
-                break;
-              }
-            }
-          }
-          if (hasMissingAttr) entry.missingAttr++;
-
-          if (!p.image_url_1 || !p.image_url_1.trim()) entry.missingImg++;
+          entry.totalCompleteness += (p.completeness_score || 0);
+          
+          if (!p.attributes || Object.keys(p.attributes).length === 0) entry.missingAttr++;
+          if (!p.image_url_1) entry.missingImg++;
         });
 
         const healthData: IndustryHealth[] = Array.from(industryMap.values()).map((entry) => ({
@@ -232,22 +204,22 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           missing_attributes_percentage: entry.product_count > 0 ? Math.round((entry.missingAttr / entry.product_count) * 100) : 0,
           missing_images_percentage: entry.product_count > 0 ? Math.round((entry.missingImg / entry.product_count) * 100) : 0,
         }));
-
         setIndustryHealth(healthData);
 
+        // --- Recent Activity ---
         const activities: RecentActivity[] = products
           .slice(0, 20)
-          .map((p, idx) => ({
+          .map((p: any, idx: number) => ({
             id: `${p.product_code}-${idx}`,
-            action: `Product ${p.product_code} - ${p.product_name} updated`,
-            timestamp: p.updated_at || p.created_at || new Date().toISOString(),
-            user: 'System',
+            action: `Product ${p.product_code} updated`,
+            timestamp: p.updated_at || new Date().toISOString(),
+            user: 'System', 
           }));
-
         setRecentActivities(activities);
 
+        // --- Category Coverage ---
         const categoryMap = new Map<string, CategoryData>();
-        products.forEach((p) => {
+        products.forEach((p: any) => {
           const parent = p.category_1 || 'Uncategorized';
           const productType = p.product_type || 'General';
 
@@ -258,10 +230,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
               subcategories: [],
             });
           }
-
           const catData = categoryMap.get(parent)!;
           catData.total_products++;
-
+          
           const existingSub = catData.subcategories.find((s) => s.subcategory === productType);
           if (existingSub) {
             existingSub.product_count++;
@@ -272,67 +243,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             });
           }
         });
-
         setCategoryData(Array.from(categoryMap.values()));
 
-        const brandMap = new Map<string, number>();
-        products.forEach((p) => {
-          const brandName = p.brand_name || 'Unknown';
-          brandMap.set(brandName, (brandMap.get(brandName) || 0) + 1);
-        });
-
-        const brandDataArray: BrandData[] = Array.from(brandMap.entries()).map(([brand_name, product_count]) => ({
-          brand_name,
-          product_count,
-        }));
-
+const brandCounts: any = {};
+products.forEach((p: any) => {
+     console.log("Product brand data:", p.brand_name, p.brand_code);
+     const b = p.brand_name || 'Unknown';
+     brandCounts[b] = (brandCounts[b] || 0) + 1;
+});
+        const brandDataArray = Object.keys(brandCounts).map(k => ({ brand_name: k, product_count: brandCounts[k] }));
         setBrandData(brandDataArray);
-
-        const brandCompletenessMap = new Map<string, { total: number; totalScore: number }>();
-        products.forEach((p) => {
-          const brandName = p.brand_name || 'Unknown';
-          if (!brandCompletenessMap.has(brandName)) {
-            brandCompletenessMap.set(brandName, { total: 0, totalScore: 0 });
-          }
-          const entry = brandCompletenessMap.get(brandName)!;
-          entry.total++;
-          entry.totalScore += (p.completeness_score || 0);
-        });
-
-        const brandCompletenessArray: CompletenessData[] = Array.from(brandCompletenessMap.entries()).map(([name, data]) => {
-          const avgCompleteness = data.total > 0 ? Math.round(data.totalScore / data.total) : 0;
-          return {
-            name,
-            completeness: avgCompleteness,
-            total_products: data.total,
-            complete_products: Math.round((data.total * avgCompleteness) / 100),
-          };
-        });
-
-        setBrandCompleteness(brandCompletenessArray);
-
-        const industryCompletenessMap = new Map<string, { total: number; totalScore: number }>();
-        products.forEach((p) => {
-          const industryName = p.industry_name || 'Unknown';
-          if (!industryCompletenessMap.has(industryName)) {
-            industryCompletenessMap.set(industryName, { total: 0, totalScore: 0 });
-          }
-          const entry = industryCompletenessMap.get(industryName)!;
-          entry.total++;
-          entry.totalScore += (p.completeness_score || 0);
-        });
-
-        const industryCompletenessArray: CompletenessData[] = Array.from(industryCompletenessMap.entries()).map(([name, data]) => {
-          const avgCompleteness = data.total > 0 ? Math.round(data.totalScore / data.total) : 0;
-          return {
-            name,
-            completeness: avgCompleteness,
-            total_products: data.total,
-            complete_products: Math.round((data.total * avgCompleteness) / 100),
-          };
-        });
-
-        setIndustryCompleteness(industryCompletenessArray);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
