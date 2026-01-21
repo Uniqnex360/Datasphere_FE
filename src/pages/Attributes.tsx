@@ -449,10 +449,8 @@ export function Attributes() {
       "filter",
       "filter_display_name"
     ];
-    for (let i = 1; i <= 50; i++) {
-        expectedColumns.push(`attribute_value_${i}`);
-        expectedColumns.push(`attribute_uom_${i}`);
-      }
+     expectedColumns.push('attribute_value_1');
+    expectedColumns.push('attribute_uom_1');
      const validation = validateImportFormat(data, expectedColumns);
           if (!validation.isValid) {
             setToast({
