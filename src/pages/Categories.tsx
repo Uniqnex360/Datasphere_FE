@@ -223,10 +223,24 @@ export function Categories() {
       const dataToSubmit: Partial<Category> = {
         ...formData,
         breadcrumb: generateBreadcrumb(formData as Category),
-        category_code: formData.category_code || generateEntityCode('category', formData.category_1 || '')
+        category_code:
+          formData.category_code ||
+          generateEntityCode("category", formData.category_1 || ""),
       };
 
       if (isEditing && selectedCategory) {
+        const conflictingCategory = categories.find(
+          (c) =>
+            c.breadcrumb === dataToSubmit.breadcrumb &&
+            c.category_code !== selectedCategory.category_code,
+        );
+        if (conflictingCategory) {
+          setToast({
+            message: "A category with this hierarchy already exists",
+            type: "error",
+          });
+          return;
+        }
         await MasterAPI.update(
           "categories",
           selectedCategory.category_code,
@@ -250,7 +264,15 @@ export function Categories() {
             Object.assign(dataToSubmit, updates);
           }
         }
-
+        const breadCrumb = generateBreadcrumb(dataToSubmit as Category);
+        const existingCategory = categories.find(
+          (c) => c.breadcrumb === breadCrumb,
+        );
+        if(existingCategory)
+        {
+          setToast({message:"A category with this hierarchy already exists!",type:'error'})
+          return
+        }
         await MasterAPI.create("categories", dataToSubmit);
 
         setToast({ message: "Category added successfully", type: "success" });
@@ -370,7 +392,10 @@ export function Categories() {
           categoryData.category_code === "" ||
           categoryData.category_code === undefined
         ) {
-          categoryData.category_code = generateEntityCode('category', categoryData.category_code || "")
+          categoryData.category_code = generateEntityCode(
+            "category",
+            categoryData.category_code || "",
+          );
         }
 
         const hierarchyErrors = validateCategoryHierarchy(categoryData);
@@ -399,29 +424,33 @@ export function Categories() {
               });
             }
           }
-
+          const nonEmptyLevels = [];
           for (let level = 1; level <= 8; level++) {
             const catValue =
               categoryData[`category_${level}` as keyof Category];
-            if (!catValue || !String(catValue).trim()) break;
+            if (catValue && String(catValue).trim()) {
+              nonEmptyLevels.push(level);
+            }
+          }
 
+          for (const level of nonEmptyLevels) {
             const parentData: Partial<Category> = {
               industry_code: categoryData.industry_code,
               industry_name: categoryData.industry_name,
             };
 
-            for (let i = 1; i <= level; i++) {
-              parentData[`category_${i}` as keyof Category] = categoryData[
-                `category_${i}` as keyof Category
-              ] as any;
-            }
-
-            for (let i = level + 1; i <= 8; i++) {
-              parentData[`category_${i}` as keyof Category] = "" as any;
+            for (let i = 1; i <= 8; i++) {
+              if (i <= level && nonEmptyLevels.includes(i)) {
+                parentData[`category_${i}` as keyof Category] = categoryData[
+                  `category_${i}` as keyof Category
+                ] as any;
+              } else {
+                parentData[`category_${i}` as keyof Category] = "" as any;
+              }
             }
 
             parentData.product_type =
-              level === getCategoryLevel(categoryData as Category)
+              level === Math.max(...nonEmptyLevels)
                 ? categoryData.product_type
                 : "";
             parentData.breadcrumb = generateBreadcrumb(parentData as Category);
@@ -431,6 +460,48 @@ export function Categories() {
               parentCategories.set(key!, parentData);
             }
           }
+          // for (let level = 1; level <= 8; level++) {
+          //   const catValue =
+          //     categoryData[`category_${level}` as keyof Category];
+          //   if (!catValue || !String(catValue).trim()) {
+          //     nonEmptyLevels.push(level);
+          //   }
+          //   for (const level of nonEmptyLevels) {
+          //     const parentData: Partial<Category> = {
+          //       industry_code: categoryData.industry_code,
+          //       industry_name: categoryData.industry_name,
+          //     };
+          //   }
+          //   const parentData: Partial<Category> = {
+          //     industry_code: categoryData.industry_code,
+          //     industry_name: categoryData.industry_name,
+          //   };
+
+          //   for (let i = 1; i <= 8; i++) {
+          //     if (i <= level && nonEmptyLevels.includes(i)) {
+          //       parentData[`category_${i}` as keyof Category] = categoryData[
+          //         `category_${i}` as keyof Category
+          //       ] as any;
+          //     } else {
+          //       parentData[`category_${i}` as keyof Category] = "" as any;
+          //     }
+          //   }
+
+          //   // for (let i = level + 1; i <= 8; i++) {
+          //   //   parentData[`category_${i}` as keyof Category] = "" as any;
+          //   // }
+
+          //   parentData.product_type =
+          //     level === Math.max(...nonEmptyLevels)
+          //       ? categoryData.product_type
+          //       : "";
+          //   parentData.breadcrumb = generateBreadcrumb(parentData as Category);
+
+          //   const key = parentData.breadcrumb;
+          //   if (!parentCategories.has(key!)) {
+          //     parentCategories.set(key!, parentData);
+          //   }
+          // }
 
           validData.push(categoryData);
         }
@@ -444,29 +515,45 @@ export function Categories() {
         return;
       }
       const existingIndustries = await MasterAPI.getIndustries();
-      const existingCodes = new Set(existingIndustries.map((ind: any) => ind.industry_code));
+      const existingCodes = new Set(
+        existingIndustries.map((ind: any) => ind.industry_code),
+      );
       if (industriesToCreate.size > 0) {
-        const newIndustries = Array.from(industriesToCreate.values())
-          .filter(ind => !existingCodes.has(ind.industry_code));
+        const newIndustries = Array.from(industriesToCreate.values()).filter(
+          (ind) => !existingCodes.has(ind.industry_code),
+        );
 
         for (const ind of newIndustries) {
           try {
             await MasterAPI.create("industries", ind);
           } catch (error) {
-            console.warn(`Industry ${ind.industry_code} likely exists, skipping.`);
+            console.warn(
+              `Industry ${ind.industry_code} likely exists, skipping.`,
+            );
           }
         }
         loadIndustries();
       }
-
+      const existingCategories = new Set(
+        categories.map((cat) => cat.breadcrumb),
+      );
       const allCategories = Array.from(parentCategories.values());
+      let createdCount = 0;
+      let skippedCount = 0;
       for (const cat of allCategories) {
-
         if (!cat.category_code) {
-          cat.category_code = generateEntityCode('category', cat.category_1 || cat.industry_name || '');
+          cat.category_code = generateEntityCode(
+            "category",
+            cat.category_1 || cat.industry_name || "",
+          );
         }
-
+        if (existingCategories.has(cat.breadcrumb)) {
+          console.log(`Skipping breadcrumbs :${cat.breadcrumb}`);
+          skippedCount++;
+          continue;
+        }
         await MasterAPI.create("categories", cat);
+        createdCount++;
       }
 
       setToast({
