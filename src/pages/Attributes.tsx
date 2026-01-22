@@ -428,14 +428,14 @@ export function Attributes() {
     setToast({ message: "Attributes exported successfully", type: "success" });
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
   if (!file) return;
 
   try {
     setLoading(true);
     const data = await parseCSV(file);
-    
+
     // Debug logging
     if (data.length > 0) {
       console.log("CSV Column Names:", Object.keys(data[0]));
@@ -456,6 +456,9 @@ export function Attributes() {
     let added = 0;
     let merged = 0;
     let errors = 0;
+    let totalNewValues = 0;
+    let totalIgnoredValues = 0;
+    const importDetails: string[] = [];
 
     let nextCodeNumber = 1;
     const codes = attributes
@@ -476,90 +479,180 @@ export function Attributes() {
         continue;
       }
 
-      const attributeData: any = {};
-      attributeData.attribute_name = row.attribute_name;
-      attributeData.industry_name = row.industry_name;
-      attributeData.industry_attribute_name = row.industry_attribute_name;
-      attributeData.description = row.description;
-      attributeData.applicable_categories = row.applicable_categories;
-      attributeData.attribute_type = row.attribute_type;
-      attributeData.data_type = row.data_type;
-      attributeData.unit = row.unit;
-      attributeData.filter = row.filter;
-      attributeData.filter_display_name = row.filter_display_name;
-      console.log("Received attributeData:", attributeData);
-      // Extract all 50 attribute values and UOMs
-      for (let i = 1; i <= 50; i++) {
-        // Direct access - CSV parser should preserve exact column names
-        const val = row[`attribute_value_${i}`] || "";
-        const uom = row[`attribute_uom_${i}`] || "";
-        
-        attributeData[`attribute_value_${i}`] = val ? String(val).trim() : "";
-        attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
-      }
+      try {
+        const attributeData: any = {};
+        attributeData.attribute_name = row.attribute_name;
+        attributeData.industry_name = row.industry_name || "";
+        attributeData.industry_attribute_name = row.industry_attribute_name || "";
+        attributeData.description = row.description || "";
+        attributeData.applicable_categories = row.applicable_categories || "";
+        attributeData.attribute_type = row.attribute_type || "";
+        attributeData.data_type = row.data_type || "";
+        attributeData.unit = row.unit || "";
+        attributeData.filter = row.filter || "No";
+        attributeData.filter_display_name = row.filter_display_name || "";
 
-      const duplicate = findDuplicateAttribute(
-        currentAttributes,
-        row.attribute_name,
-        row.industry_name || "",
-      );
-
-      if (duplicate) {
-        // Merge Logic
+        // Extract all 50 attribute values and UOMs from CSV
         const newValues: AttributeValue[] = [];
         for (let i = 1; i <= 50; i++) {
-          if (attributeData[`attribute_value_${i}`]) {
+          const val = row[`attribute_value_${i}`] || "";
+          const uom = row[`attribute_uom_${i}`] || "";
+
+          if (val && String(val).trim()) {
             newValues.push({
-              value: attributeData[`attribute_value_${i}`],
-              uom: attributeData[`attribute_uom_${i}`] || "",
+              value: String(val).trim(),
+              uom: String(uom || "").trim(),
             });
+          }
+
+          attributeData[`attribute_value_${i}`] = val ? String(val).trim() : "";
+          attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
+        }
+
+        const duplicate = findDuplicateAttribute(
+          currentAttributes,
+          row.attribute_name,
+          row.industry_name || "",
+        );
+
+        if (duplicate) {
+          // **MERGE LOGIC - Enhanced**
+          console.log(`Merging values for existing attribute: ${duplicate.attribute_name}`);
+
+          // Get existing values from the duplicate attribute
+          const existingValues: AttributeValue[] = [];
+          for (let i = 1; i <= 50; i++) {
+            const value = duplicate[`attribute_value_${i}` as keyof Attribute];
+            const uom = duplicate[`attribute_uom_${i}` as keyof Attribute];
+            if (value && String(value).trim()) {
+              existingValues.push({
+                value: String(value).trim(),
+                uom: String(uom || "").trim(),
+              });
+            }
+          }
+
+          // Merge logic: Add only new values that don't exist
+          const mergedValues = [...existingValues];
+          let newValuesAdded = 0;
+          let ignoredValuesCount = 0;
+
+          newValues.forEach((newVal) => {
+            if (newVal.value.trim()) {
+              // Check if this exact value+uom combination already exists
+              const isDuplicate = existingValues.some(
+                (existing) =>
+                  existing.value.toLowerCase().trim() === newVal.value.toLowerCase().trim() &&
+                  existing.uom.toLowerCase().trim() === newVal.uom.toLowerCase().trim(),
+              );
+
+              if (!isDuplicate && mergedValues.length < 50) {
+                mergedValues.push(newVal);
+                newValuesAdded++;
+              } else if (isDuplicate) {
+                ignoredValuesCount++;
+              }
+            }
+          });
+
+          // Pad to 50 values
+          while (mergedValues.length < 50) {
+            mergedValues.push({ value: "", uom: "" });
+          }
+
+          // Prepare update data
+          const updateData: any = {
+            ...duplicate,
+            ...attributeData,
+            usage_count: (duplicate.usage_count || 1) + 1,
+          };
+          delete updateData.attribute_code;
+
+          // Set merged values
+          mergedValues.forEach((item, idx) => {
+            updateData[`attribute_value_${idx + 1}`] = item.value;
+            updateData[`attribute_uom_${idx + 1}`] = item.uom;
+          });
+
+          await MasterAPI.update("attributes", duplicate.attribute_code, updateData);
+
+          merged++;
+          totalNewValues += newValuesAdded;
+          totalIgnoredValues += ignoredValuesCount;
+
+          if (newValuesAdded > 0 || ignoredValuesCount > 0) {
+            importDetails.push(
+              `${duplicate.attribute_name}: +${newValuesAdded} values, ${ignoredValuesCount} ignored`
+            );
+          }
+
+          // Update local array for subsequent checks
+          const index = currentAttributes.findIndex(
+            (attr) => attr.attribute_code === duplicate.attribute_code
+          );
+          if (index !== -1) {
+            currentAttributes[index] = { ...updateData, attribute_code: duplicate.attribute_code };
+          }
+
+        } else {
+          // **CREATE NEW ATTRIBUTE**
+          console.log(`Creating new attribute: ${attributeData.attribute_name}`);
+
+          const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
+          attributeData.attribute_code = attributeCode;
+          attributeData.usage_count = 1;
+
+          await MasterAPI.create("attributes", attributeData);
+
+          nextCodeNumber++;
+          currentAttributes.push(attributeData);
+          added++;
+
+          const valueCount = newValues.filter(v => v.value.trim()).length;
+          if (valueCount > 0) {
+            importDetails.push(`${attributeData.attribute_name}: new attribute with ${valueCount} values`);
           }
         }
 
-        const { values: mergedValues, usageCount } = mergeAttributeValues(
-          duplicate,
-          newValues,
-        );
-
-        const updateData: any = {
-          ...duplicate,
-          ...attributeData,
-          usage_count: usageCount,
-        };
-        delete updateData.attribute_code;
-
-        mergedValues.forEach((item, idx) => {
-          updateData[`attribute_value_${idx + 1}`] = item.value;
-          updateData[`attribute_uom_${idx + 1}`] = item.uom;
-        });
-
-        await MasterAPI.update(
-          "attributes",
-          duplicate.attribute_code,
-          updateData,
-        );
-        merged++;
-      } else {
-        // Create Logic
-        const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
-        attributeData.attribute_code = attributeCode;
-        attributeData.usage_count = 1;
-
-        await MasterAPI.create("attributes", attributeData);
-
-        nextCodeNumber++;
-        currentAttributes.push(attributeData);
-        added++;
+      } catch (error: any) {
+        console.error(`Error processing row for ${row.attribute_name}:`, error);
+        errors++;
+        importDetails.push(`${row.attribute_name}: ERROR - ${error.message}`);
       }
     }
 
+    let message = "";
+    if (errors === 0) {
+      if (added > 0 && merged > 0) {
+        message = ` Import completed! ${added} new attributes added, ${merged} existing attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
+      } else if (added > 0) {
+        message = ` Import successful! ${added} new attributes added`;
+      } else if (merged > 0) {
+        message = ` Import completed! ${merged} attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
+      } else {
+        message = `ℹ No changes made - all attributes and values already exist`;
+      }
+    } else {
+      message = ` Import completed with issues: ${added} added, ${merged} merged, ${errors} errors`;
+    }
+
+    console.log("Import Summary:", {
+      added,
+      merged,
+      errors,
+      totalNewValues,
+      totalIgnoredValues,
+      details: importDetails,
+    });
+
     setToast({
-      message: `Import: ${added} added, ${merged} merged${errors > 0 ? `, ${errors} errors` : ""}`,
-      type: "success",
+      message,
+      type: errors > 0 ? "error" : "success",
     });
 
     loadAttributes();
   } catch (error: any) {
+    console.error("Import error:", error);
     setToast({ message: `Import error: ${error.message}`, type: "error" });
   } finally {
     setLoading(false);

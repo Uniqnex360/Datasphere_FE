@@ -59,7 +59,7 @@ export function BrandMaster() {
 
   const loadBrands = async () => {
     try {
-      const data=await MasterAPI.getBrands()
+      const data = await MasterAPI.getBrands();
 
       setBrands(data || []);
     } catch (error: any) {
@@ -108,15 +108,28 @@ export function BrandMaster() {
     if (!validateForm()) return;
 
     try {
+      const name = formData.brand_name?.trim().toLowerCase();
+      const duplicate = brands.find(
+        (b) =>
+          b.brand_name.trim().toLowerCase() === name &&
+          (!editingBrand || b.brand_code !== editingBrand.brand_code),
+      );
+      if (duplicate) {
+        setToast({ message: "Brand name already exists!", type: "error" });
+        return;
+      }
       if (editingBrand) {
-        await MasterAPI.update('brands',editingBrand.brand_code,formData)
+        await MasterAPI.update("brands", editingBrand.brand_code, formData);
         setToast({ message: "Brand updated successfully", type: "success" });
       } else {
-        const dataToSubmit={
+        const dataToSubmit = {
           ...formData,
-          brand_code:formData.brand_code||generateEntityCode('brand',formData.brand_name||"")
-        }
-        await MasterAPI.create('brands',formData)
+          brand_code:
+            formData.brand_code ||
+            generateEntityCode("brand", formData.brand_name || ""),
+        };
+
+        await MasterAPI.create("brands", dataToSubmit);
         setToast({ message: "Brand added successfully", type: "success" });
       }
 
@@ -125,10 +138,16 @@ export function BrandMaster() {
       resetForm();
       loadBrands();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      console.log("Error data:", error.response?.data);
+
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        error.message ||
+        "Request failed";
+      setToast({ message: errorMessage, type: "error" });
     }
   };
-
   const handleEdit = (brand: Brand) => {
     setEditingBrand(brand);
     setFormData(brand);
@@ -145,8 +164,10 @@ export function BrandMaster() {
       //   .select("product_code")
       //   .eq("brand_code", deleteModal.brand.brand_code)
       //   .limit(1);
-      const products=await ProductAPI.getAll(0,1,{brand_name:deleteModal.brand.brand_name})
-       if (Array.isArray(products) && products.length > 0) {
+      const products = await ProductAPI.getAll(0, 1, {
+        brand_name: deleteModal.brand.brand_name,
+      });
+      if (Array.isArray(products) && products.length > 0) {
         setToast({
           message: "Cannot delete brand. It is linked to products.",
           type: "error",
@@ -154,6 +175,7 @@ export function BrandMaster() {
         setDeleteModal({ isOpen: false, brand: null });
         return;
       }
+      await MasterAPI.delete("brands", deleteModal.brand.brand_code);
 
       // const { error } = await supabase
       //   .from("brand_master")
@@ -198,6 +220,7 @@ export function BrandMaster() {
     try {
       const data = await parseCSV(file);
       const validData: Partial<Brand>[] = [];
+      const ignoredItems:string[]=[]
       const importErrors: string[] = [];
       const validColumns = [
         "brand_code",
@@ -207,23 +230,39 @@ export function BrandMaster() {
         "mfg_name",
         "mfg_logo",
       ];
-       const validation = validateImportFormat(data, validColumns);
-                if (!validation.isValid) {
-                  setToast({
-                    message: validation.errorMessage || "Import failed!",
-                    type: "error",
-                  });
-                  e.target.value = "";
-                  return;
-                }
-          
+      const validation = validateImportFormat(data, validColumns);
+      if (!validation.isValid) {
+        setToast({
+          message: validation.errorMessage || "Import failed!",
+          type: "error",
+        });
+        e.target.value = "";
+        return;
+      }
+
       data.forEach((row, index) => {
         const rowErrors: string[] = [];
 
         if (!row.brand_name?.trim()) {
           rowErrors.push("brand_name is required");
         }
-
+        const existingBrand = brands.find(
+          (b) =>
+            b.brand_name.trim().toLowerCase() ===
+            row.brand_name?.trim().toLowerCase(),
+        );
+        if (existingBrand) {
+          ignoredItems.push(`Row ${index+2}:"${row.brand_name}"(already exists!)`)
+        }
+        const duplicateInImport = validData.find(
+          (item) =>
+            item.brand_name?.trim().toLowerCase() ===
+            row.brand_name?.trim().toLowerCase(),
+        );
+        if (duplicateInImport) {
+          ignoredItems.push(`Row ${index+2}:"${row.brand_name}"(duplicate in file!)`);
+          return
+        }
         if (rowErrors.length > 0) {
           importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
         } else {
@@ -234,11 +273,11 @@ export function BrandMaster() {
             }
           });
 
-          if (
-            brandData.brand_code === "" ||
-            brandData.brand_code === undefined
-          ) {
-            brandData.brand_code = generateEntityCode('brand',brandData.brand_name || '');
+          if (brandData.brand_code === "" ||brandData.brand_code === undefined  ) {
+            brandData.brand_code = generateEntityCode(
+              "brand",
+              brandData.brand_name || "",
+            );
           }
           validData.push(brandData);
         }
@@ -251,18 +290,61 @@ export function BrandMaster() {
         });
         return;
       }
-      let count=0
-      for (const brand of validData)
+      if(validData.length===0)
       {
-        await MasterAPI.create('brands',brand)
-        count++
+        const totalRows=data.length 
+        const ignoredCount=ignoredItems.length 
+        setToast({
+          message:`No new brands to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,type:'error'
+        })
+        e.target.value=''
+        return
+
       }
+      let successCount=0
+      let failedCount=0
+      const failedItems:string[]=[]
+      for(let i=0;i<validData.length;i++)
+      {
+        const brand=validData[i]
+        try {
+          await MasterAPI.create('brands',brand)
+        } catch (error) {
+          failedCount++
+          const errorDetail=error.response?.data?.detail||error.response?.data?.message||error.message||"Unknown error"
+          failedItems.push(`${brand.brand_name}:${errorDetail}`)
+        }
+      }
+      
 
-
-      setToast({
-        message: `${count} brands imported successfully`,
+      const totalRows=data.length
+      const ignoredCount=ignoredItems.length
+      const processedCount=validData.length
+      if(failedCount===0 && ignoredCount===0)
+      {
+        setToast({message:`Import successful!${successCount} brands added from ${totalRows} rows!`,type:'success'})
+      }
+      else if (failedCount===0 && ignoredCount>0)
+      {
+         setToast({
+        message: `Import completed! ${successCount} brands added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
         type: "success",
       });
+      }
+      else if (successCount>0)
+      {
+        setToast({
+        message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join("; ")}`,
+        type: "error",
+      });
+      }
+      else
+      {
+         setToast({
+        message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join("; ")}`,
+        type: "error",
+      });
+      }
       loadBrands();
     } catch (error: any) {
       setToast({ message: error.message, type: "error" });

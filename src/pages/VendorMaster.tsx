@@ -9,7 +9,6 @@ import { exportToCSV, parseCSV } from '../utils/csvHelper';
 import { MasterAPI, ProductAPI } from '../lib/api';
 import { generateEntityCode } from '../utils/codeGenerator';
 import { validateImportFormat } from '../utils/importValidator';
-
 export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
@@ -26,7 +25,6 @@ export function VendorMaster() {
   const [industryFilter, setIndustryFilter] = useState('');
   const [sortKey, setSortKey] = useState('vendor_code');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
   const [formData, setFormData] = useState<Partial<Vendor>>({
     vendor_name: '',
     contact_email: '',
@@ -55,21 +53,16 @@ export function VendorMaster() {
     dept5_email: '',
     dept5_phone: '',
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
-
   useEffect(() => {
     loadVendors();
   }, []);
-
   useEffect(() => {
     filterAndSortVendors();
   }, [vendors, searchTerm, businessTypeFilter, industryFilter, sortKey, sortDirection]);
-
   const loadVendors = async () => {
     try {
       setLoading(true)
-    
       const data=await MasterAPI.getVendors()
       setVendors(data || []);
     } catch (error: any) {
@@ -78,10 +71,8 @@ export function VendorMaster() {
       setLoading(false);
     }
   };
-
   const filterAndSortVendors = () => {
     let filtered = [...vendors];
-
     if (searchTerm) {
       filtered = filtered.filter(
         (v) =>
@@ -89,15 +80,12 @@ export function VendorMaster() {
           v.vendor_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     if (businessTypeFilter) {
       filtered = filtered.filter((v) => v.business_type === businessTypeFilter);
     }
-
     if (industryFilter) {
       filtered = filtered.filter((v) => v.industry === industryFilter);
     }
-
     filtered.sort((a, b) => {
       const aVal = a[sortKey as keyof Vendor] || '';
       const bVal = b[sortKey as keyof Vendor] || '';
@@ -107,13 +95,10 @@ export function VendorMaster() {
         return aVal < bVal ? 1 : -1;
       }
     });
-
     setFilteredVendors(filtered);
   };
-
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (!formData.vendor_name?.trim()) {
       newErrors.vendor_name = 'Vendor name is required';
     }
@@ -125,29 +110,23 @@ export function VendorMaster() {
     if (!formData.contact_phone?.trim()) {
       newErrors.contact_phone = 'Contact phone is required';
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
     try {
       if (editingVendor) {
         await MasterAPI.update('vendors',editingVendor.vendor_code,formData)
-
-
         setToast({ message: 'Vendor updated successfully', type: 'success' });
       } else {
         const dataToSubmit={
           ...formData,
-          vendor_code:formData.vendor_code||generateEntityCode('brand',formData.vendor_name||'')
+          vendor_code:formData.vendor_code||generateEntityCode('vendor',formData.vendor_name||'')
         }
         await MasterAPI.create('vendors',dataToSubmit)
         setToast({ message: 'Vendor added successfully', type: 'success' });
       }
-
       setIsDrawerOpen(false);
       setEditingVendor(null);
       resetForm();
@@ -156,20 +135,16 @@ export function VendorMaster() {
       setToast({ message: error.message, type: 'error' });
     }
   };
-
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
     setFormData(vendor);
     setErrors({});
     setIsDrawerOpen(true);
   };
-
   const handleDelete = async () => {
     if (!deleteModal.vendor) return;
-
     try {
      const products=await ProductAPI.getAll(0,1,{vendor_name:deleteModal.vendor.vendor_name})
-
       if (products && products.length > 0) {
         setToast({
           message: 'Cannot delete vendor. It is linked to products.',
@@ -178,9 +153,7 @@ export function VendorMaster() {
         setDeleteModal({ isOpen: false, vendor: null });
         return;
       }
-
-
-
+      await MasterAPI.delete('vendors',deleteModal.vendor.vendor_code)
       setToast({ message: 'Vendor deleted successfully', type: 'success' });
       setDeleteModal({ isOpen: false, vendor: null });
       loadVendors();
@@ -188,7 +161,6 @@ export function VendorMaster() {
       setToast({ message: error.message, type: 'error' });
     }
   };
-
   const resetForm = () => {
     setFormData({
       vendor_code: '',
@@ -221,7 +193,6 @@ export function VendorMaster() {
     });
     setErrors({});
   };
-
   const handleExport = () => {
     if (filteredVendors.length === 0) {
       setToast({ message: 'No data to export', type: 'error' });
@@ -230,15 +201,14 @@ export function VendorMaster() {
     exportToCSV(filteredVendors, 'vendors.csv');
     setToast({ message: 'Vendors exported successfully', type: 'success' });
   };
-
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     try {
       const data = await parseCSV(file);
       const validData: Partial<Vendor>[] = [];
       const importErrors: string[] = [];
+      const ignoredItems:string[]=[]
       const validColumns = [
         'vendor_code', 'vendor_name', 'contact_email', 'contact_phone', 'vendor_website',
         'business_type', 'industry', 'description', 'address', 'city', 'tax_info', 'vendor_logo_url',
@@ -257,14 +227,26 @@ export function VendorMaster() {
             e.target.value = "";
             return;
           }
-
       data.forEach((row, index) => {
         const rowErrors: string[] = [];
-
+        const existingVendor=vendors.find((v)=>v.vendor_name.trim().toLowerCase()===row.vendor_name?.trim().toLowerCase())
+        const duplicateInImport = validData.find(
+          (item) =>
+            item.vendor_name?.trim().toLowerCase() ===
+            row.vendor_name?.trim().toLowerCase(),
+        );
+        if(existingVendor)
+        {
+          ignoredItems.push(`Row ${index+2}:"${row.vendor_name}"(already exists!)`)
+          return
+        }
+         if (duplicateInImport) {
+          ignoredItems.push(`Row ${index+2}:"${row.vendor_name}"(duplicate in file!)`);
+          return
+        }
         const vendor_name = row.vendor_name ? String(row.vendor_name).trim() : '';
         const contact_email = row.contact_email ? String(row.contact_email).trim() : '';
         const contact_phone = row.contact_phone ? String(row.contact_phone).trim() : '';
-
         if (!vendor_name) {
           rowErrors.push('vendor_name is required');
         }
@@ -276,7 +258,6 @@ export function VendorMaster() {
         if (!contact_phone) {
           rowErrors.push('contact_phone is required');
         }
-
         if (rowErrors.length > 0) {
           importErrors.push(`Row ${index + 2}: ${rowErrors.join(', ')}`);
         } else {
@@ -290,35 +271,75 @@ export function VendorMaster() {
               vendorData[col] = value;
             }
           });
-
           if (vendorData.vendor_code === '' || vendorData.vendor_code === undefined) {
              vendorData.vendor_code = generateEntityCode('vendor',vendorData.vendor_name || '');
           }
           validData.push(vendorData);
         }
       });
-
       if (importErrors.length > 0) {
         setToast({ message: `Import failed: ${importErrors.join('; ')}`, type: 'error' });
         return;
       }
-
-      let count=0
-      for (const vendor of validData)
+      if(validData.length===0)
       {
-        await MasterAPI.create('vendors',vendor)
-        count++
+        const totalRows=data.length 
+        const ignoredCount=ignoredItems.length 
+        setToast({
+          message:`No new vendors to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,type:'error'
+        })
+        e.target.value=''
+        return
       }
-
-       setToast({ message: `${count} vendors imported successfully`, type: 'success' });
+      let successCount=0
+      let failedCount=0
+      const failedItems:string[]=[]
+       for(let i=0;i<validData.length;i++)
+      {
+        const vendor=validData[i]
+        try {
+          await MasterAPI.create('vendors',vendor)
+          successCount++  
+        } catch (error) {
+          failedCount++
+          const errorDetail=error.response?.data?.detail||error.response?.data?.message||error.message||"Unknown error"
+          failedItems.push(`${vendor.vendor_name}:${errorDetail}`)
+        }
+      }
+       const totalRows=data.length
+      const ignoredCount=ignoredItems.length
+      const processedCount=validData.length
+      if(failedCount===0 && ignoredCount===0)
+      {
+        setToast({message:`Import successful!${successCount} vendors added from ${totalRows} rows!`,type:'success'})
+      }
+      else if (failedCount===0 && ignoredCount>0)
+      {
+         setToast({
+        message: `Import completed! ${successCount} vendors added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
+        type: "success",
+      });
+      }
+      else if (successCount>0)
+      {
+        setToast({
+        message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join("; ")}`,
+        type: "error",
+      });
+      }
+      else
+      {
+         setToast({
+        message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join("; ")}`,
+        type: "error",
+      });
+      }
       loadVendors();
     } catch (error: any) {
       setToast({ message: error.message, type: 'error' });
     }
-
     e.target.value = '';
   };
-
   const downloadTemplate = () => {
     const template = [
       {
@@ -353,7 +374,6 @@ export function VendorMaster() {
     ];
     exportToCSV(template, 'vendor_import_template.csv');
   };
-
   const getDepartmentCount = (vendor: Vendor) => {
     let count = 0;
     if (vendor.dept1_poc_name) count++;
@@ -363,7 +383,6 @@ export function VendorMaster() {
     if (vendor.dept5_poc_name) count++;
     return count;
   };
-
   const columns = [
     { key: 'vendor_code', label: 'Vendor Code', sortable: true },
     { key: 'vendor_name', label: 'Vendor Name', sortable: true },
@@ -395,7 +414,6 @@ export function VendorMaster() {
       ),
     },
   ];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -415,7 +433,6 @@ export function VendorMaster() {
           Add Vendor
         </button>
       </div>
-
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative">
@@ -480,7 +497,6 @@ export function VendorMaster() {
           </div>
         </div>
       </div>
-
       <DataTable
         columns={columns}
         data={filteredVendors}
@@ -496,7 +512,6 @@ export function VendorMaster() {
         }}
         isLoading={loading}
       />
-
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => {
@@ -651,7 +666,6 @@ export function VendorMaster() {
               </div>
             </div>
           </div>
-
           {[1, 2, 3, 4, 5].map((dept) => (
             <div key={dept} className="space-y-4">
               <h3 className="font-semibold text-gray-900">Department {dept} Contact</h3>
@@ -692,7 +706,6 @@ export function VendorMaster() {
               </div>
             </div>
           ))}
-
           <div className="flex gap-3 pt-4 border-t">
             <button
               onClick={() => {
@@ -713,7 +726,6 @@ export function VendorMaster() {
           </div>
         </div>
       </Drawer>
-
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, vendor: null })}
@@ -741,7 +753,6 @@ export function VendorMaster() {
           cannot be undone.
         </p>
       </Modal>
-
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
