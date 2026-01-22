@@ -13,9 +13,9 @@ export const validateImportFormat = (
   const firstRow = data[0];
   const actualColumns = Object.keys(firstRow);
   const missingColumns = expectedColumns.filter(col => !actualColumns.includes(col));
-  const unexpectedColumns = actualColumns.filter(col => !expectedColumns.includes(col));
+  // const unexpectedColumns = actualColumns.filter(col => !expectedColumns.includes(col));
   
-  if (missingColumns.length > 0 || unexpectedColumns.length > 0) {
+  if (missingColumns.length > 0 ) {
     let errorMessage = "Import failed: The file format doesn't match the expected template.";
     
     if (missingColumns.length > 0) {
@@ -30,12 +30,12 @@ export const validateImportFormat = (
       errorMessage += ".";
     }
     
-    if (unexpectedColumns.length > 0) {
-      errorMessage += ` Found ${unexpectedColumns.length} unexpected column${unexpectedColumns.length > 1 ? 's' : ''}.`;
-    }
+    // if (unexpectedColumns.length > 0) {
+    //   errorMessage += ` Found ${unexpectedColumns.length} unexpected column${unexpectedColumns.length > 1 ? 's' : ''}.`;
+    // }
     
     errorMessage += " Please use the template provided by the 'Download Template' button.";
-    console.log('unexpectedColumns',unexpectedColumns.join(''))
+    // console.log('unexpectedColumns',unexpectedColumns.join(''))
     console.log('missingColumns',missingColumns.join(''))
     return { isValid: false, errorMessage };
   }

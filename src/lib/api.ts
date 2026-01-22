@@ -185,6 +185,7 @@ export const MasterAPI={
         return response.data
     },
     create:async(type:'brands'|'vendors'|'categories'|'industries'|"attributes",data:any)=>{
+      
         const response=await api.post(`/master/${type}`,data)
         return response.data
     }

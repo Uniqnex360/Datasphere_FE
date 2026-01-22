@@ -429,146 +429,143 @@ export function Attributes() {
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    try {
-      setLoading(true);
-      
-
-      const data = await parseCSV(file);
-    //   const expectedColumns = [
-    //   "attribute_name",
-    //   "industry_name",
-    //   "industry_attribute_name",
-    //   "description",
-    //   "applicable_categories",
-    //   "attribute_type",
-    //   "data_type",
-    //   "unit",
-    //   "filter",
-    //   "filter_display_name"
-    // ];
-      const requiredColumns = [
-        "attribute_name",
-        "industry_name"
-      ];
-     const validation = validateImportFormat(data, requiredColumns);
-          if (!validation.isValid) {
-            setToast({
-              message: validation.errorMessage || "Import failed!",
-              type: "error",
-            });
-            e.target.value = "";
-            return;
-          }
+  try {
+    setLoading(true);
+    const data = await parseCSV(file);
     
-      let added = 0;
-      let merged = 0;
-      let errors = 0;
+    // Debug logging
+    if (data.length > 0) {
+      console.log("CSV Column Names:", Object.keys(data[0]));
+      console.log("First Row Sample:", data[0]);
+    }
 
-      // 1. Get initial code state from current list
-      let nextCodeNumber = 1;
-      const codes = attributes
-        .map((a) => a.attribute_code)
-        .filter((c) => c && c.startsWith("ATTR-"))
-        .sort((a, b) => b.localeCompare(a));
+    const requiredColumns = ["attribute_name", "industry_name"];
+    const validation = validateImportFormat(data, requiredColumns);
+    if (!validation.isValid) {
+      setToast({
+        message: validation.errorMessage || "Import failed!",
+        type: "error",
+      });
+      e.target.value = "";
+      return;
+    }
 
-      if (codes.length > 0) {
-        const match = codes[0].match(/ATTR-(\d+)/);
-        if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
+    let added = 0;
+    let merged = 0;
+    let errors = 0;
+
+    let nextCodeNumber = 1;
+    const codes = attributes
+      .map((a) => a.attribute_code)
+      .filter((c) => c && c.startsWith("ATTR-"))
+      .sort((a, b) => b.localeCompare(a));
+
+    if (codes.length > 0) {
+      const match = codes[0].match(/ATTR-(\d+)/);
+      if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
+    }
+
+    const currentAttributes = [...attributes];
+
+    for (const row of data) {
+      if (!row.attribute_name?.trim()) {
+        errors++;
+        continue;
       }
 
-      // Clone attributes to track updates within the loop
-      const currentAttributes = [...attributes];
+      const attributeData: any = {};
+      attributeData.attribute_name = row.attribute_name;
+      attributeData.industry_name = row.industry_name;
+      attributeData.industry_attribute_name = row.industry_attribute_name;
+      attributeData.description = row.description;
+      attributeData.applicable_categories = row.applicable_categories;
+      attributeData.attribute_type = row.attribute_type;
+      attributeData.data_type = row.data_type;
+      attributeData.unit = row.unit;
+      attributeData.filter = row.filter;
+      attributeData.filter_display_name = row.filter_display_name;
+      console.log("Received attributeData:", attributeData);
+      // Extract all 50 attribute values and UOMs
+      for (let i = 1; i <= 50; i++) {
+        // Direct access - CSV parser should preserve exact column names
+        const val = row[`attribute_value_${i}`] || "";
+        const uom = row[`attribute_uom_${i}`] || "";
+        
+        attributeData[`attribute_value_${i}`] = val ? String(val).trim() : "";
+        attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
+      }
 
-      for (const row of data) {
-        if (!row.attribute_name?.trim()) {
-          errors++;
-          continue;
-        }
+      const duplicate = findDuplicateAttribute(
+        currentAttributes,
+        row.attribute_name,
+        row.industry_name || "",
+      );
 
-        const attributeData: any = {};
-        // Map row to data object
-        Object.keys(row).forEach((k) => (attributeData[k] = row[k]));
-
-        // Clean empty values 1-50
+      if (duplicate) {
+        // Merge Logic
+        const newValues: AttributeValue[] = [];
         for (let i = 1; i <= 50; i++) {
-          if (!attributeData[`attribute_value_${i}`])
-            attributeData[`attribute_value_${i}`] = "";
-          if (!attributeData[`attribute_uom_${i}`])
-            attributeData[`attribute_uom_${i}`] = "";
+          if (attributeData[`attribute_value_${i}`]) {
+            newValues.push({
+              value: attributeData[`attribute_value_${i}`],
+              uom: attributeData[`attribute_uom_${i}`] || "",
+            });
+          }
         }
 
-        const duplicate = findDuplicateAttribute(
-          currentAttributes,
-          row.attribute_name,
-          row.industry_name || "",
+        const { values: mergedValues, usageCount } = mergeAttributeValues(
+          duplicate,
+          newValues,
         );
 
-        if (duplicate) {
-          // Merge Logic
-          const newValues: AttributeValue[] = [];
-          for (let i = 1; i <= 50; i++) {
-            if (attributeData[`attribute_value_${i}`]) {
-              newValues.push({
-                value: attributeData[`attribute_value_${i}`],
-                uom: attributeData[`attribute_uom_${i}`] || "",
-              });
-            }
-          }
+        const updateData: any = {
+          ...duplicate,
+          ...attributeData,
+          usage_count: usageCount,
+        };
+        delete updateData.attribute_code;
 
-          const { values: mergedValues, usageCount } = mergeAttributeValues(
-            duplicate,
-            newValues,
-          );
+        mergedValues.forEach((item, idx) => {
+          updateData[`attribute_value_${idx + 1}`] = item.value;
+          updateData[`attribute_uom_${idx + 1}`] = item.uom;
+        });
 
-          const updateData: any = {
-            ...duplicate,
-            ...attributeData,
-            usage_count: usageCount,
-          };
-          delete updateData.attribute_code;
+        await MasterAPI.update(
+          "attributes",
+          duplicate.attribute_code,
+          updateData,
+        );
+        merged++;
+      } else {
+        // Create Logic
+        const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
+        attributeData.attribute_code = attributeCode;
+        attributeData.usage_count = 1;
 
-          mergedValues.forEach((item, idx) => {
-            updateData[`attribute_value_${idx + 1}`] = item.value;
-            updateData[`attribute_uom_${idx + 1}`] = item.uom;
-          });
+        await MasterAPI.create("attributes", attributeData);
 
-          await MasterAPI.update(
-            "attributes",
-            duplicate.attribute_code,
-            updateData,
-          );
-          merged++;
-        } else {
-          // Create Logic
-          const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
-          attributeData.attribute_code = attributeCode;
-          attributeData.usage_count = 1;
-
-          await MasterAPI.create("attributes", attributeData);
-
-          // Update trackers
-          nextCodeNumber++;
-          currentAttributes.push(attributeData);
-          added++;
-        }
+        nextCodeNumber++;
+        currentAttributes.push(attributeData);
+        added++;
       }
-
-      setToast({
-        message: `Import: ${added} added, ${merged} merged`,
-        type: "success",
-      });
-
-      loadAttributes();
-    } catch (error: any) {
-      setToast({ message: `Import error: ${error.message}`, type: "error" });
-    } finally {
-      setLoading(false);
-      e.target.value = "";
     }
-  };
+
+    setToast({
+      message: `Import: ${added} added, ${merged} merged${errors > 0 ? `, ${errors} errors` : ""}`,
+      type: "success",
+    });
+
+    loadAttributes();
+  } catch (error: any) {
+    setToast({ message: `Import error: ${error.message}`, type: "error" });
+  } finally {
+    setLoading(false);
+    e.target.value = "";
+  }
+};
   const downloadTemplate = () => {
     const template: any = {
       attribute_name: "Example Attribute",
