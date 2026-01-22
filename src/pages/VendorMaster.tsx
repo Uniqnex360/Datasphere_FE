@@ -11,14 +11,21 @@ import { generateEntityCode } from '../utils/codeGenerator';
 import { validateImportFormat } from '../utils/importValidator';
 export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
+const [isSubmitting, setIsSubmitting] = useState(false);
+const [deleteModal, setDeleteModal] = useState<{ 
+  isOpen: boolean; 
+  vendor: Vendor | null;
+  isDeleting: boolean; 
+}>({
+  isOpen: false,
+  vendor: null,
+  isDeleting: false, 
+});
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; vendor: Vendor | null }>({
-    isOpen: false,
-    vendor: null,
-  });
+  
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [businessTypeFilter, setBusinessTypeFilter] = useState('');
@@ -97,22 +104,42 @@ export function VendorMaster() {
     });
     setFilteredVendors(filtered);
   };
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.vendor_name?.trim()) {
-      newErrors.vendor_name = 'Vendor name is required';
+const validateForm = () => {
+  const newErrors: Record<string, string> = {};
+
+  if (!formData.vendor_name?.trim()) {
+    newErrors.vendor_name = 'Vendor name is required';
+  }
+
+  if (!formData.contact_email?.trim()) {
+    newErrors.contact_email = 'Contact email is required';
+  } else if (!/\S+@\S+\.\S+/.test(formData.contact_email)) {
+    newErrors.contact_email = 'Invalid email format';
+  }
+
+  if (!formData.contact_phone?.trim()) {
+    newErrors.contact_phone = 'Contact phone is required';
+  }
+
+  const duplicateVendor = vendors.find(v => 
+    v.vendor_name.trim().toLowerCase() === formData.vendor_name?.trim().toLowerCase() &&
+    (!editingVendor || v.vendor_code !== editingVendor.vendor_code)
+  );
+
+  if (duplicateVendor) {
+    newErrors.vendor_name = 'A vendor with this name already exists';
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    const email = formData[`dept${i}_email` as keyof Vendor];
+    if (email && !/\S+@\S+\.\S+/.test(String(email))) {
+      newErrors[`dept${i}_email`] = 'Invalid email format';
     }
-    if (!formData.contact_email?.trim()) {
-      newErrors.contact_email = 'Contact email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.contact_email)) {
-      newErrors.contact_email = 'Invalid email format';
-    }
-    if (!formData.contact_phone?.trim()) {
-      newErrors.contact_phone = 'Contact phone is required';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }
+
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
   const handleSubmit = async () => {
     if (!validateForm()) return;
     try {
@@ -141,26 +168,33 @@ export function VendorMaster() {
     setErrors({});
     setIsDrawerOpen(true);
   };
-  const handleDelete = async () => {
-    if (!deleteModal.vendor) return;
-    try {
-     const products=await ProductAPI.getAll(0,1,{vendor_name:deleteModal.vendor.vendor_name})
-      if (products && products.length > 0) {
-        setToast({
-          message: 'Cannot delete vendor. It is linked to products.',
-          type: 'error',
-        });
-        setDeleteModal({ isOpen: false, vendor: null });
-        return;
-      }
-      await MasterAPI.delete('vendors',deleteModal.vendor.vendor_code)
-      setToast({ message: 'Vendor deleted successfully', type: 'success' });
-      setDeleteModal({ isOpen: false, vendor: null });
-      loadVendors();
-    } catch (error: any) {
-      setToast({ message: error.message, type: 'error' });
+const handleDelete = async () => {
+  if (!deleteModal.vendor) return;
+
+  setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+
+  try {
+    const products = await ProductAPI.getAll(0, 1, { vendor_name: deleteModal.vendor.vendor_name });
+    
+    if (products && products.length > 0) {
+      setToast({
+        message: 'Cannot delete vendor. It is linked to products.',
+        type: 'error',
+      });
+      setDeleteModal({ isOpen: false, vendor: null, isDeleting: false });
+      return;
     }
-  };
+
+    await MasterAPI.delete('vendors', deleteModal.vendor.vendor_code);
+    
+    setToast({ message: 'Vendor deleted successfully', type: 'success' });
+    setDeleteModal({ isOpen: false, vendor: null, isDeleting: false });
+    loadVendors();
+  } catch (error: any) {
+    setToast({ message: error.message, type: 'error' });
+    setDeleteModal(prev => ({ ...prev, isDeleting: false }));
+  }
+};
   const resetForm = () => {
     setFormData({
       vendor_code: '',

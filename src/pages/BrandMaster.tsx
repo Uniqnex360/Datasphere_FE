@@ -309,6 +309,7 @@ export function BrandMaster() {
         const brand=validData[i]
         try {
           await MasterAPI.create('brands',brand)
+          successCount++
         } catch (error) {
           failedCount++
           const errorDetail=error.response?.data?.detail||error.response?.data?.message||error.message||"Unknown error"
