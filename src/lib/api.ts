@@ -69,8 +69,6 @@ export const DigitalAssetAPI = {
     return response.data;
   },
   create: async (data: any) => {
-    // You likely want an endpoint that accepts metadata after Cloudinary upload
-    // OR an endpoint that handles the upload itself.
     const response = await api.post('/assets', data);
     return response.data;
   },
@@ -79,7 +77,6 @@ export const DigitalAssetAPI = {
     return response.data;
   }
 };
-// Add to src/lib/api.ts
 
 export const UserAPI = {
   getAll: async () => {
@@ -199,4 +196,4 @@ export const AuthAPI = {
     return response.data;
   }
 };
-export default api// Cache bust Wed 21 Jan 2026 01:35:38 PM IST
+export default api

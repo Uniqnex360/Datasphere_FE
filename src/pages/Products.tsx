@@ -294,8 +294,16 @@ export function Products() {
       type: "success",
     });
   };
-  const handleDelete = async () => {
+    const handleDelete = async () => {
     if (!deleteModal.product) return;
+
+    const code = deleteModal.product.product_code?.trim();
+
+    if (!code) {
+      setToast({ message: "Error: Product Code is missing", type: "error" });
+      return;
+    }
+
     try {
       if (deleteModal.product.variant_status === "Parent") {
         setToast({
@@ -305,12 +313,14 @@ export function Products() {
         setDeleteModal({ isOpen: false, product: null });
         return;
       }
-      await ProductAPI.delete(deleteModal.product.product_code);
+      
+      await ProductAPI.delete(code);
+      
       setToast({ message: "Product deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, product: null });
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      setToast({ message: error.message || "Failed to delete product", type: "error" });
     }
   };
   const resetForm = () => {
