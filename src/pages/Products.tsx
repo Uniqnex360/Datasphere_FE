@@ -109,7 +109,6 @@ export function Products() {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Fetch everything in parallel
       const [
         productsData,
         brandsData,
@@ -359,181 +358,606 @@ export function Products() {
     try {
       setLoading(true);
       const rawData = await parseCSV(file);
-       if (rawData.length > 0) {
-          console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
-          console.log("FIRST ROW DATA:", rawData[0]);
-      } 
-      const expectedColumns=[
-        "product_name",
-      "brand_code",
-      "vendor_code",
-      "category_code",
-     "product_type",
-      "sku",
-      "variant_sku",
-      "prod_short_desc",
-      "prod_long_desc",
-      "model_series",
-      "mpn",
-      "gtin",
-      "upc",
-      "unspsc",
-      ]
-      
-      const validation=validateImportFormat(rawData,expectedColumns)
-      if (!validation.isValid) {
+
+      if (rawData.length > 0) {
+        console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
+        console.log("FIRST ROW DATA:", rawData[0]);
+      }
+
+      const requiredColumns = ["product_name"];
+
+      const hasProductName =
+        rawData.length > 0 &&
+        (rawData[0].product_name ||
+          rawData[0].product_title ||
+          rawData[0].title ||
+          rawData[0].name);
+
+      if (!hasProductName) {
         setToast({
-          message: validation.errorMessage || "Import failed!",
+          message:
+            "Import failed: Product name column is required (product_name, product_title, title, or name)",
           type: "error",
         });
         e.target.value = "";
         return;
       }
+
       const validData: Partial<Product>[] = [];
       const importErrors: string[] = [];
       const brandsToCreate = new Map<string, any>();
+      const vendorsToCreate = new Map<string, any>();
+      const categoriesToCreate = new Map<string, any>();
 
-            const data = rawData.map((row: any) => {
-        const mapped: any = { ...row };
+      const data = rawData
+        .map((row: any, index: number) => {
+          const mapped: any = {};
 
-        // --- Core Mapping ---
-        if (row.product_title) mapped.product_name = row.product_title;
-        if (row.product_id) mapped.product_code = row.product_id;
-        if (row.vendor_name) mapped.vendor_name = row.vendor_name;
-        if (row.description) mapped.prod_long_desc = row.description;
-        
-        mapped.features_1 = row.features_1 || row['Features 1'];
-        mapped.features_2 = row.features_2 || row['Features 2'];
-        mapped.image_url_1 = row.image_url_1 || row['Image URL 1'];
-        
-        const dynamicAttributes: Record<string, string> = {};
-        
-        for (let i = 1; i <= 50; i++) {
-            const name = 
-                row[`attribute_name_${i}`] || 
-                row[`attribute_name${i}`] || 
-                row[`Attribute Name ${i}`];
-            const val = 
-                row[`attribute_value_${i}`] || 
-                row[`attribute_value${i}`] || 
-                row[`Attribute Value ${i}`];
-            
-            if (name && val) {
-                dynamicAttributes[name] = String(val).trim();
+          try {
+            mapped.product_name = row.product_name?.trim();
+            mapped.product_code = row.product_code?.trim() || null;
+            mapped.sku = row.sku?.trim() || "";
+            mapped.variant_sku = row.variant_sku?.trim() || "";
+            mapped.mpn = row.mpn?.trim() || "";
+            mapped.model_series = row.model_series?.trim() || "";
+            mapped.ean = row.ean?.trim() || "";
+            mapped.upc = row.upc?.trim() || "";
+            mapped.unspsc = row.unspc?.trim() || row.unspsc?.trim() || "";
+            mapped.gtin = row.gtin?.trim() || "";
+            mapped.product_type = row.product_type?.trim() || "";
+            mapped.prod_short_desc = row.prod_short_desc?.trim() || "";
+            mapped.prod_long_desc = row.prod_long_desc?.trim() || "";
+            mapped.meta_title = row.meta_title?.trim() || "";
+            mapped.meta_desc = row.meta_desc?.trim() || "";
+            mapped.meta_keywords = row.meta_keywords?.trim() || "";
+
+            const brandName = row.brand_name?.trim();
+            const mfgName = row.mfg_name?.trim();
+
+            if (brandName) {
+              mapped.brand_name = brandName;
+              mapped.mfg_name = mfgName || brandName;
+
+              const existingBrand = brands.find(
+                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
+              );
+
+              if (existingBrand) {
+                mapped.brand_code = existingBrand.brand_code;
+              } else {
+                const brandCode = `BRND-${brandName
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
+                mapped.brand_code = brandCode;
+
+                brandsToCreate.set(brandCode, {
+                  brand_code: brandCode,
+                  brand_name: brandName,
+                  mfg_name: mfgName || brandName,
+                });
+              }
             }
-        }
-        
-        // Base pair
-        if (row.attribute_name && row.attribute_value) {
-            dynamicAttributes[row.attribute_name] = String(row.attribute_value).trim();
-        }
-        
-        mapped.attributes = dynamicAttributes;
 
-        // Cleanup ID
-        if (!mapped.product_code || String(mapped.product_code).trim() === '') {
-            delete mapped.product_code;
-        }
+            const vendorName = row.vendor_name?.trim();
+            if (vendorName) {
+              mapped.vendor_name = vendorName;
 
-        return mapped;
-      });
+              const existingVendor = vendors.find(
+                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
+              );
 
-      // 2. VALIDATION
+              if (existingVendor) {
+                mapped.vendor_code = existingVendor.vendor_code;
+              } else {
+                const vendorCode = `VEND-${vendorName
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
+                mapped.vendor_code = vendorCode;
+
+                vendorsToCreate.set(vendorCode, {
+                  vendor_code: vendorCode,
+                  vendor_name: vendorName,
+                  contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+                  contact_phone: "000-000-0000",
+                });
+              }
+            }
+
+            const industryName = row.industry_name?.trim();
+            mapped.industry_name = industryName || "";
+
+            const categoryLevels = [];
+            Object.keys(row).forEach((key) => {
+              const categoryMatch = key.match(/^category[_\s]*(\d+)$/i);
+
+              if (categoryMatch) {
+                const level = parseInt(categoryMatch[1]);
+                const value = row[key]?.trim();
+                if (value) {
+                  categoryLevels[level - 1] = value;
+                  mapped[`category_${level}`] = value;
+                }
+              }
+            });
+
+            if (categoryLevels.length > 0) {
+              const cat1 = categoryLevels[0];
+              const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
+
+              const existingCategory = categories.find(
+                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
+              );
+
+              if (existingCategory) {
+                mapped.category_code = existingCategory.category_code;
+              } else {
+                const categoryCode = `CAT-${cat1
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
+                mapped.category_code = categoryCode;
+
+                const categoryData: any = {
+                  category_code: categoryCode,
+                  industry_name: industryName || "General",
+                  breadcrumb: breadcrumb,
+                };
+
+                categoryLevels.forEach((cat, index) => {
+                  if (cat) {
+                    categoryData[`category_${index + 1}`] = cat;
+                  }
+                });
+
+                categoriesToCreate.set(categoryCode, categoryData);
+              }
+            }
+
+            Object.keys(row).forEach((key) => {
+              const featureMatch = key.match(/^features?_?(\d+)$/i);
+              if (featureMatch) {
+                const num = featureMatch[1];
+                const value = row[key]?.trim();
+                if (value) {
+                  mapped[`features_${num}`] = value;
+                }
+              }
+            });
+
+            const attributeData = new Map();
+           
+            Object.keys(row).forEach((key) => {
+              const nameMatch = key.match(/^attribute_?names?_?(\d+)$/i);
+              const valueMatch = key.match(/^attribute_?values?_?(\d+)$/i);
+              const uomMatch = key.match(/^attribute_?uoms?_?(\d+)$/i);
+
+              if (nameMatch) {
+                const num = nameMatch[1];
+                const value = row[key]?.trim();
+                if (value) {
+                  if (!attributeData.has(num)) attributeData.set(num, {});
+                  attributeData.get(num).name = value;
+                }
+              }
+
+              if (valueMatch) {
+                const num = valueMatch[1];
+                const value = row[key]?.trim();
+                if (value) {
+                  if (!attributeData.has(num)) attributeData.set(num, {});
+                  attributeData.get(num).value = value;
+                }
+              }
+
+              if (uomMatch) {
+                const num = uomMatch[1];
+                const value = row[key]?.trim();
+                if (value) {
+                  if (!attributeData.has(num)) attributeData.set(num, {});
+                  attributeData.get(num).uom = value;
+                }
+              }
+            });
+            const attributesJson: Record<string, any> = {};
+attributeData.forEach((attr, num) => {
+  if (attr.name && attr.value) {
+    attributesJson[num] = {
+      name: attr.name,
+      value: attr.value,
+      uom: attr.uom || null
+    };
+  }
+});
+if (Object.keys(attributesJson).length > 0) {
+  mapped.attributes = attributesJson;
+}
+           
+
+            const imageData = new Map();
+
+            Object.keys(row).forEach((key) => {
+              const imageMatch = key.match(
+                /^image_?names?_?(\d+)$|^image_?urls?_?(\d+)$/i,
+              );
+              if (imageMatch) {
+                const num = imageMatch[1] || imageMatch[2];
+                const isName = key.toLowerCase().includes("name");
+                const value = row[key]?.trim();
+
+                if (value) {
+                  if (!imageData.has(num)) imageData.set(num, {});
+                  if (isName) {
+                    imageData.get(num).name = value;
+                  } else {
+                    imageData.get(num).url = value;
+                  }
+                }
+              }
+            });
+
+            imageData.forEach((img, num) => {
+              if (img.url) {
+                mapped[`image_name_${num}`] = img.name || (mapped.mpn ? `${mapped.mpn}-Image-${num}` : `Image-${num}`);
+                mapped[`image_url_${num}`] = img.url;
+              }
+            });
+
+            const videoData = new Map();
+
+            Object.keys(row).forEach((key) => {
+              const videoMatch = key.match(
+                /^video_?names?_?(\d+)$|^video_?urls?_?(\d+)$/i,
+              );
+              if (videoMatch) {
+                const num = videoMatch[1] || videoMatch[2];
+                const isName = key.toLowerCase().includes("name");
+                const value = row[key]?.trim();
+
+                if (value) {
+                  if (!videoData.has(num)) videoData.set(num, {});
+                  if (isName) {
+                    videoData.get(num).name = value;
+                  } else {
+                    videoData.get(num).url = value;
+                  }
+                }
+              }
+            });
+
+            videoData.forEach((video, num) => {
+              if (video.url) {
+                mapped[`video_name_${num}`] = video.name || (mapped.mpn ? `${mapped.mpn}-Video-${num}` : `Video-${num}`);
+                mapped[`video_url_${num}`] = video.url;
+              }
+            });
+
+            const documentData = new Map();
+
+            Object.keys(row).forEach((key) => {
+              const docMatch = key.match(
+                /^documents?_?names?_?(\d+)$|^documents?_?urls?_?(\d+)$/i,
+              );
+              if (docMatch) {
+                const num = docMatch[1] || docMatch[2];
+                const isName = key.toLowerCase().includes("name");
+                const value = row[key]?.trim();
+
+                if (value) {
+                  if (!documentData.has(num)) documentData.set(num, {});
+                  if (isName) {
+                    documentData.get(num).name = value;
+                  } else {
+                    documentData.get(num).url = value;
+                  }
+                }
+              }
+            });
+
+            documentData.forEach((doc, num) => {
+              if (doc.url) {
+                mapped[`document_name_${num}`] = doc.name || (mapped.mpn ? `${mapped.mpn}-Document-${num}` : `Document-${num}`);
+                mapped[`document_url_${num}`] = doc.url;
+              }
+            });
+
+            Object.keys(row).forEach((key) => {
+              const relatedMatch = key.match(
+                /^related_?products?_?(\d+)(_?(mpn|name))?$/i,
+              );
+              if (relatedMatch) {
+                const value = row[key]?.trim();
+                if (value) {
+                  mapped[key.toLowerCase()] = value;
+                }
+              }
+            });
+
+            Object.keys(row).forEach((key) => {
+              const pairsMatch = key.match(
+                /^pairs_?well_?with_?(\d+)(_?(mpn|name))?$/i,
+              );
+              if (pairsMatch) {
+                const value = row[key]?.trim();
+                if (value) {
+                  mapped[key.toLowerCase()] = value;
+                }
+              }
+            });
+
+            if (!mapped.product_code || mapped.product_code === "") {
+              delete mapped.product_code;
+            }
+
+            return mapped;
+          } catch (error) {
+            console.error(`Error processing row ${index + 1}:`, error);
+            importErrors.push(
+              `Row ${index + 2}: Error processing data - ${error.message}`,
+            );
+            return null;
+          }
+        })
+        .filter(Boolean);
+
       data.forEach((row: any, index: number) => {
         if (!row.product_name?.trim()) {
           importErrors.push(`Row ${index + 2}: Product Name is required`);
         } else {
           validData.push(row);
-
-          // Collect unique brands to create
-          if (row.brand_name) {
-             // Generate a simple code if missing, e.g. "GARMIN" -> "BRND-GARMIN"
-             const code = row.brand_code || `BRND-${row.brand_name.substring(0, 6).toUpperCase()}`;
-             brandsToCreate.set(code, {
-                 brand_code: code,
-                 brand_name: row.brand_name
-             });
-          }
         }
       });
 
       if (importErrors.length > 0) {
-        setToast({ 
-            message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`, 
-            type: 'error' 
+        setToast({
+          message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`,
+          type: "error",
         });
         return;
       }
 
-      // 3. SYNC BRANDS
+      let createdBrands = 0;
+      let createdVendors = 0;
+      let createdCategories = 0;
+
       if (brandsToCreate.size > 0) {
-          try {
-            const existingBrands = await MasterAPI.getBrands();
-            const existingCodes = new Set(existingBrands.map((b: any) => b.brand_code));
-            
-            const newBrands = Array.from(brandsToCreate.values()).filter(b => !existingCodes.has(b.brand_code));
-            
-            // In production, use a bulk create endpoint if available.
-            // For now, parallel requests are faster than serial.
-            await Promise.all(newBrands.map(b => MasterAPI.create('brands', b).catch(err => console.warn("Brand create failed", err))));
-            
-          } catch (e) { 
-              console.error("Brand sync error", e); 
+        try {
+          const existingBrands = await MasterAPI.getBrands();
+          const existingCodes = new Set(
+            existingBrands.map((b: any) => b.brand_code),
+          );
+
+          const newBrands = Array.from(brandsToCreate.values()).filter(
+            (b) => !existingCodes.has(b.brand_code),
+          );
+
+          for (const brand of newBrands) {
+            try {
+              await MasterAPI.create("brands", brand);
+              createdBrands++;
+            } catch (err) {
+              console.warn("Brand create failed", err);
+            }
           }
+        } catch (e) {
+          console.error("Brand sync error", e);
+        }
       }
 
-      // 4. UPSERT PRODUCTS
+      if (vendorsToCreate.size > 0) {
+        try {
+          const existingVendors = await MasterAPI.getVendors();
+          const existingCodes = new Set(
+            existingVendors.map((v: any) => v.vendor_code),
+          );
+
+          const newVendors = Array.from(vendorsToCreate.values()).filter(
+            (v) => !existingCodes.has(v.vendor_code),
+          );
+
+          for (const vendor of newVendors) {
+            try {
+              await MasterAPI.create("vendors", vendor);
+              createdVendors++;
+            } catch (err) {
+              console.warn("Vendor create failed", err);
+            }
+          }
+        } catch (e) {
+          console.error("Vendor sync error", e);
+        }
+      }
+
+      if (categoriesToCreate.size > 0) {
+        try {
+          const existingCategories = await MasterAPI.getCategories();
+          const existingCodes = new Set(
+            existingCategories.map((c: any) => c.category_code),
+          );
+
+          const newCategories = Array.from(categoriesToCreate.values()).filter(
+            (c) => !existingCodes.has(c.category_code),
+          );
+
+          for (const category of newCategories) {
+            try {
+              await MasterAPI.create("categories", category);
+              createdCategories++;
+            } catch (err) {
+              console.warn("Category create failed", err);
+            }
+          }
+        } catch (e) {
+          console.error("Category sync error", e);
+        }
+      }
+
       let processedCount = 0;
       let errorCount = 0;
+      const existingProductMap = new Map(
+      products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]));
 
-      // Use a for...of loop to avoid overwhelming the server (serial processing)
-      // Or use Promise.all with chunks for speed (e.g., batches of 10)
       for (const productData of validData) {
-        
-        // Generate ID if missing
         if (!productData.product_code) {
-             productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random()*10000)}`;
+          const mpnKey = productData.mpn?.trim().toLowerCase();
+          if(mpnKey && existingProductMap.map(mpnKey))
+          {
+            productData.product_code = existingProductMap.get(mpnKey);
+          }
+          else
+          {
+            productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+          }
         }
 
         try {
-            await ProductAPI.upsert(productData);
-            processedCount++;
+          await ProductAPI.upsert(productData);
+          processedCount++;
         } catch (e) {
-            console.error("Failed to import product:", productData.product_name, e);
-            errorCount++;
+          console.error(
+            "Failed to import product:",
+            productData.product_name,
+            e,
+          );
+          errorCount++;
         }
       }
 
+      const masterDataMessage = [];
+      if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
+      if (createdVendors > 0)
+        masterDataMessage.push(`${createdVendors} vendors`);
+      if (createdCategories > 0)
+        masterDataMessage.push(`${createdCategories} categories`);
+
+      const masterDataText =
+        masterDataMessage.length > 0
+          ? ` (Auto-created: ${masterDataMessage.join(", ")})`
+          : "";
+
       setToast({
-        message: `Import complete: ${processedCount} processed, ${errorCount} failed`,
-        type: errorCount === 0 ? 'success' : 'error',
+        message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
+        type: errorCount === 0 ? "success" : "error",
       });
-      
+
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message || "Import failed", type: 'error' });
+      setToast({ message: error.message || "Import failed", type: "error" });
     } finally {
-        setLoading(false);
-        e.target.value = '';
+      setLoading(false);
+      e.target.value = "";
     }
   };
   const downloadTemplate = () => {
     const template: any = {
-      product_name: "Example Product",
-      brand_code: "BRAND001",
-      vendor_code: "VENDOR001",
-      category_code: "CAT001",
-      product_type: "Standard",
-      sku: "",
+      product_name: "Garmin GPSMAP 8617 Chartplotter",
+      brand_name: "Garmin",
+      mfg_name: "Garmin Ltd.",
+      vendor_name: "Marine Electronics Distributor",
+      industry_name: "Marine",
+
+      "category 1": "Electronics",
+      "category 2": "Marine Electronics",
+      "category 3": "GPS & Chartplotters",
+      "category 4": "17-inch Models",
+
+      product_type: "Chartplotter",
+      product_code: "",
+      sku: "GPSMAP-8617",
       variant_sku: "",
-      prod_short_desc: "Short description",
-      prod_long_desc: "Long description",
-      model_series: "Series A",
-      mpn: "MPN123",
-      gtin: "",
-      upc: "",
-      unspsc: "",
+      mpn: "010-02092-00",
+      model_series: "GPSMAP 8600 Series",
+      ean: "0753759197087",
+      upc: "753759197087",
+      unspc: "43191501",
+      gtin: "00753759197087",
+      prod_short_desc:
+        "17-inch touchscreen chartplotter with worldwide basemap",
+      prod_long_desc:
+        "The GPSMAP 8617 features a 17-inch multi-touch widescreen display with worldwide basemap, built-in Wi-Fi and support for premium charts. Includes NMEA 2000 and NMEA 0183 network support for easy integration with compatible marine instruments.",
+
+      features_1: "17-inch multi-touch widescreen display",
+      features_2: "Worldwide basemap included",
+      features_3: "Built-in Wi-Fi connectivity",
+      features_4: "NMEA 2000 and NMEA 0183 network support",
+      features_5: "Premium chart compatibility",
+      features_6: "Garmin Marine Network compatible",
+      features_7: "IPX7 waterproof rating",
+      features_8: "Auto guidance technology",
+      features_9: "Sonar support",
+      features_10: "Radar integration",
+
+      attribute_name1: "Screen Size",
+      attribute_value1: "17",
+      attribute_uom1: "inches",
+      attribute_name2: "Display Type",
+      attribute_value2: "Multi-touch LCD",
+      attribute_uom2: "",
+      attribute_name3: "Power Consumption",
+      attribute_value3: "24",
+      attribute_uom3: "watts",
+      attribute_name4: "Operating Temperature",
+      attribute_value4: "-15 to 55",
+      attribute_uom4: "°C",
+      attribute_name5: "Waterproof Rating",
+      attribute_value5: "IPX7",
+      attribute_uom5: "",
+      attribute_name6: "Display Resolution",
+      attribute_value6: "1920 x 1200",
+      attribute_uom6: "pixels",
+      attribute_name7: "Weight",
+      attribute_value7: "4.2",
+      attribute_uom7: "kg",
+
+      meta_title:
+        "Garmin GPSMAP 8617 17-inch Marine Chartplotter | Marine Electronics",
+      meta_desc:
+        "Professional 17-inch marine chartplotter with worldwide basemap, Wi-Fi, and premium chart support. Perfect for serious boaters and commercial vessels.",
+      meta_keywords:
+        "marine GPS, chartplotter, Garmin, navigation, marine electronics",
+
+      related_products_1: "010-02091-00",
+      related_products_2: "010-02093-00",
+      related_products_3: "010-02094-00",
+
+      pairs_well_with_1: "010-12234-00",
+      pairs_well_with_2: "010-12345-00",
+      pairs_well_with_3: "010-12456-00",
+
+      image_name_1: "010-02092-00-Image-1",
+      image_url_1: "https://example.com/images/gpsmap-8617-front.jpg",
+      image_name_2: "010-02092-00-Image-2",
+      image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
+      image_name_3: "010-02092-00-Image-3",
+      image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_4: "010-02092-00-Image-4",
+      image_url_4: "https://example.com/images/gpsmap-8617-screen.jpg",
+      image_name_5: "010-02092-00-Image-5",
+      image_url_5: "https://example.com/images/gpsmap-8617-installation.jpg",
+
+      video_name_1: "010-02092-00-Video-1",
+      video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
+      video_name_2: "010-02092-00-Video-2",
+      video_url_2: "https://example.com/videos/gpsmap-8617-installation.mp4",
+      video_name_3: "010-02092-00-Video-3",
+      video_url_3: "https://example.com/videos/gpsmap-8617-features.mp4",
+
+      document_name_1: "010-02092-00-Manual",
+      document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
+      document_name_2: "010-02092-00-Installation-Guide",
+      document_url_2: "https://example.com/docs/gpsmap-8617-install.pdf",
+      document_name_3: "010-02092-00-Specifications",
+      document_url_3: "https://example.com/docs/gpsmap-8617-specs.pdf",
+      document_name_4: "010-02092-00-Quick-Start",
+      document_url_4: "https://example.com/docs/gpsmap-8617-quickstart.pdf",
+      document_name_5: "010-02092-00-Warranty",
+      document_url_5: "https://example.com/docs/gpsmap-8617-warranty.pdf",
+
+      "// INSTRUCTIONS":
+        "You can add unlimited fields by incrementing numbers: features_11, features_12, attribute_name8, image_name_6, etc. Remove this instruction row before importing.",
     };
+
     exportToCSV([template], "product_import_template.csv");
   };
   const getVariantStatusBadge = (status: VariantStatus) => {
@@ -834,11 +1258,10 @@ export function Products() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-b-2 border-blue-600 text-blue-600"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-600 hover:text-gray-900"
+                }`}
             >
               {tab.label}
             </button>
@@ -1372,7 +1795,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `related_product_${num}_mpn` as keyof Product
+                        `related_product_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1388,7 +1811,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `related_product_${num}_name` as keyof Product
+                        `related_product_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1434,7 +1857,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `pairs_well_with_${num}_mpn` as keyof Product
+                        `pairs_well_with_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1450,7 +1873,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `pairs_well_with_${num}_name` as keyof Product
+                        `pairs_well_with_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
