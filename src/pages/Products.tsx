@@ -1715,18 +1715,56 @@ if (Object.keys(attributesJson).length > 0) {
               </div>
             </div>
           )}
-          {activeTab === "attributes" && (
+                    {activeTab === "attributes" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">
                 Product Attributes
               </h3>
-              <p className="text-sm text-gray-600">
-                Attributes will be dynamically loaded based on selected category
-                and product family.
-              </p>
-              <div className="border border-gray-200 rounded-lg p-4 text-center text-gray-500">
-                <p>Select a category to load relevant attributes</p>
-              </div>
+              
+              {formData.attributes && Object.keys(formData.attributes).length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {Object.entries(formData.attributes).map(([key, attr]: any) => (
+                    <div key={key} className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center">
+                      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+                        {key}
+                      </div>
+                      <div className="flex-1 grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Name</label>
+                          <input 
+                            type="text" 
+                            value={attr.name} 
+                            readOnly 
+                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">Value</label>
+                          <input 
+                            type="text" 
+                            value={attr.value} 
+                            readOnly 
+                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">UOM</label>
+                          <input 
+                            type="text" 
+                            value={attr.uom || '-'} 
+                            readOnly 
+                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+                  <p>No dynamic attributes found for this product.</p>
+                </div>
+              )}
             </div>
           )}
           {activeTab === "variants" && (
@@ -1900,76 +1938,75 @@ if (Object.keys(attributesJson).length > 0) {
               </div>
             </div>
           )}
-          {activeTab === "assets" && (
+                   {activeTab === "assets" && (
             <div className="space-y-6">
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-900">
                   Images (up to 5)
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Image names auto-generated from MPN
+                  URLs referenced in Product Master
                 </p>
                 {[1, 2, 3, 4, 5].map((num) => {
-                  const autoName = formData.mpn
-                    ? `${formData.mpn}-Image-${num}`
-                    : `Image-${num}`;
+                  // MATCH DATABASE COLUMN NAMES (image_name_1, image_url_1)
+                  const nameKey = `image_name_${num}` as keyof Product;
+                  const urlKey = `image_url_${num}` as keyof Product;
+                  
                   return (
-                    <div key={num} className="grid grid-cols-2 gap-4">
+                    <div key={num} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-4 items-start border p-3 rounded-lg">
                       <input
                         type="text"
-                        value={autoName}
+                        value={formData[nameKey] || `Image ${num}`}
                         disabled
                         className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                       />
                       <input
                         type="text"
-                        value={
-                          formData[`image_${num}_url` as keyof Product] || ""
-                        }
+                        value={formData[urlKey] || ""}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            [`image_${num}_name`]: autoName,
-                            [`image_${num}_url`]: e.target.value,
+                            [urlKey]: e.target.value,
                           })
                         }
                         placeholder={`Image ${num} URL`}
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
+                      {/* PREVIEW THUMBNAIL */}
+                      {formData[urlKey] && (
+                        <div className="w-10 h-10 border rounded overflow-hidden">
+                          <img 
+                            src={formData[urlKey] as string} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
+
+              {/* Videos Section - Same Fix */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">
-                  Videos (up to 3)
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Video names auto-generated from MPN
-                </p>
+                <h3 className="font-semibold text-gray-900">Videos</h3>
                 {[1, 2, 3].map((num) => {
-                  const autoName = formData.mpn
-                    ? `${formData.mpn}-Video-${num}`
-                    : `Video-${num}`;
+                  const nameKey = `video_name_${num}` as keyof Product;
+                  const urlKey = `video_url_${num}` as keyof Product;
                   return (
                     <div key={num} className="grid grid-cols-2 gap-4">
                       <input
                         type="text"
-                        value={autoName}
+                        value={formData[nameKey] || `Video ${num}`}
                         disabled
                         className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                       />
                       <input
                         type="text"
-                        value={
-                          formData[`video_${num}_url` as keyof Product] || ""
-                        }
+                        value={formData[urlKey] || ""}
                         onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            [`video_${num}_name`]: autoName,
-                            [`video_${num}_url`]: e.target.value,
-                          })
+                          setFormData({ ...formData, [urlKey]: e.target.value })
                         }
                         placeholder={`Video ${num} URL`}
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1978,37 +2015,26 @@ if (Object.keys(attributesJson).length > 0) {
                   );
                 })}
               </div>
+
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">
-                  Documents (up to 5)
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Document names auto-generated from MPN
-                </p>
+                <h3 className="font-semibold text-gray-900">Documents</h3>
                 {[1, 2, 3, 4, 5].map((num) => {
-                  const autoName = formData.mpn
-                    ? `${formData.mpn}-Document-${num}`
-                    : `Document-${num}`;
+                  const nameKey = `document_name_${num}` as keyof Product;
+                  const urlKey = `document_url_${num}` as keyof Product;
                   return (
                     <div key={num} className="grid grid-cols-2 gap-4">
                       <input
                         type="text"
-                        value={autoName}
+                        value={formData[nameKey] || `Document ${num}`}
                         disabled
                         className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
                       />
                       <input
                         type="text"
-                        value={
-                          formData[`document_${num}_url` as keyof Product] || ""
+                        value={formData[urlKey] || ""}
+                        onChange={(e) =>
+                           setFormData({ ...formData, [urlKey]: e.target.value })
                         }
-                        onChange={(e) => {
-                          setFormData({
-                            ...formData,
-                            [`document_${num}_name`]: autoName,
-                            [`document_${num}_url`]: e.target.value,
-                          });
-                        }}
                         placeholder={`Document ${num} URL`}
                         className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
