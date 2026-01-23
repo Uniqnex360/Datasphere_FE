@@ -801,7 +801,7 @@ if (Object.keys(attributesJson).length > 0) {
       for (const productData of validData) {
         if (!productData.product_code) {
           const mpnKey = productData.mpn?.trim().toLowerCase();
-          if(mpnKey && existingProductMap.map(mpnKey))
+          if (mpnKey && existingProductMap.has(mpnKey)) 
           {
             productData.product_code = existingProductMap.get(mpnKey);
           }
