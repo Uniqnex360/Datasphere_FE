@@ -8,6 +8,9 @@ import {
   Trash2,
   Copy,
   Package,
+  ImageIcon,
+  Film,
+  FileText,
 } from "lucide-react";
 import {
   Product,
@@ -30,7 +33,6 @@ import {
   getScoreColorClasses,
 } from "../utils/completenessHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
-import { validateImportFormat } from "../utils/importValidator";
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<
@@ -72,6 +74,10 @@ export function Products() {
     mfg_name: "",
     vendor_code: "",
     vendor_name: "",
+    images: {}, 
+     videos: {},  
+     documents: {},
+     attributes: {}, 
     industry_name: "",
     category_code: "",
     product_type: "",
@@ -294,7 +300,7 @@ export function Products() {
       type: "success",
     });
   };
-    const handleDelete = async () => {
+  const handleDelete = async () => {
     if (!deleteModal.product) return;
 
     const code = deleteModal.product.product_code?.trim();
@@ -313,14 +319,17 @@ export function Products() {
         setDeleteModal({ isOpen: false, product: null });
         return;
       }
-      
+
       await ProductAPI.delete(code);
-      
+
       setToast({ message: "Product deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, product: null });
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message || "Failed to delete product", type: "error" });
+      setToast({
+        message: error.message || "Failed to delete product",
+        type: "error",
+      });
     }
   };
   const resetForm = () => {
@@ -332,6 +341,10 @@ export function Products() {
       mfg_code: "",
       mfg_name: "",
       vendor_code: "",
+      images: {},
+      videos: {},
+      documents: {},
+      attributes: {},
       vendor_name: "",
       industry_name: "",
       category_code: "",
@@ -371,10 +384,7 @@ export function Products() {
 
       if (rawData.length > 0) {
         console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
-        console.log("FIRST ROW DATA:", rawData[0]);
       }
-
-      const requiredColumns = ["product_name"];
 
       const hasProductName =
         rawData.length > 0 &&
@@ -393,6 +403,37 @@ export function Products() {
         return;
       }
 
+      // 1. Existing Bundle Logic (Preserved)
+      const bundleAssets = (row: any, type: string) => {
+        const assets: Record<string, { name: string; url: string }> = {};
+        Object.keys(row).forEach((key) => {
+          const urlMatch = key.match(new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"));
+          const nameMatch = key.match(new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"));
+
+          if (urlMatch) {
+            const idx = urlMatch[1];
+            if (!assets[idx]) assets[idx] = { name: "", url: "" };
+            assets[idx].url = String(row[key] || "").trim();
+          }
+          if (nameMatch) {
+            const idx = nameMatch[1];
+            if (!assets[idx]) assets[idx] = { name: "", url: "" };
+            assets[idx].name = String(row[key] || "").trim();
+          }
+        });
+
+        const cleaned: Record<string, any> = {};
+        Object.entries(assets).forEach(([idx, data]) => {
+          if (data.url) {
+            cleaned[idx] = {
+              url: data.url,
+              name: data.name || `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
+            };
+          }
+        });
+        return Object.keys(cleaned).length > 0 ? cleaned : {};
+      };
+
       const validData: Partial<Product>[] = [];
       const importErrors: string[] = [];
       const brandsToCreate = new Map<string, any>();
@@ -404,7 +445,19 @@ export function Products() {
           const mapped: any = {};
 
           try {
-            mapped.product_name = row.product_name?.trim();
+            // --- EXISTING MAPPING LOGIC START ---
+            const productNameKey = Object.keys(row).find(
+              (k) =>
+                k.toLowerCase().replace(/_/g, " ") === "product name" ||
+                k.toLowerCase() === "name"
+            );
+            mapped.product_name = String(
+              row[productNameKey || "product_name"] || ""
+            ).trim();
+
+            if (!mapped.product_name) {
+              throw new Error("Missing Product Name column or empty value");
+            }
             mapped.product_code = row.product_code?.trim() || null;
             mapped.sku = row.sku?.trim() || "";
             mapped.variant_sku = row.variant_sku?.trim() || "";
@@ -427,45 +480,29 @@ export function Products() {
             if (brandName) {
               mapped.brand_name = brandName;
               mapped.mfg_name = mfgName || brandName;
-
               const existingBrand = brands.find(
-                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
+                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase()
               );
-
               if (existingBrand) {
                 mapped.brand_code = existingBrand.brand_code;
               } else {
-                const brandCode = `BRND-${brandName
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
+                const brandCode = `BRND-${brandName.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
                 mapped.brand_code = brandCode;
-
-                brandsToCreate.set(brandCode, {
-                  brand_code: brandCode,
-                  brand_name: brandName,
-                  mfg_name: mfgName || brandName,
-                });
+                brandsToCreate.set(brandCode, { brand_code: brandCode, brand_name: brandName, mfg_name: mfgName || brandName });
               }
             }
 
             const vendorName = row.vendor_name?.trim();
             if (vendorName) {
               mapped.vendor_name = vendorName;
-
               const existingVendor = vendors.find(
-                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
+                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase()
               );
-
               if (existingVendor) {
                 mapped.vendor_code = existingVendor.vendor_code;
               } else {
-                const vendorCode = `VEND-${vendorName
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
+                const vendorCode = `VEND-${vendorName.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
                 mapped.vendor_code = vendorCode;
-
                 vendorsToCreate.set(vendorCode, {
                   vendor_code: vendorCode,
                   vendor_name: vendorName,
@@ -478,10 +515,9 @@ export function Products() {
             const industryName = row.industry_name?.trim();
             mapped.industry_name = industryName || "";
 
-            const categoryLevels = [];
+            const categoryLevels: string[] = [];
             Object.keys(row).forEach((key) => {
               const categoryMatch = key.match(/^category[_\s]*(\d+)$/i);
-
               if (categoryMatch) {
                 const level = parseInt(categoryMatch[1]);
                 const value = row[key]?.trim();
@@ -495,32 +531,19 @@ export function Products() {
             if (categoryLevels.length > 0) {
               const cat1 = categoryLevels[0];
               const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
-
               const existingCategory = categories.find(
-                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
+                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase()
               );
 
               if (existingCategory) {
                 mapped.category_code = existingCategory.category_code;
               } else {
-                const categoryCode = `CAT-${cat1
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
+                const categoryCode = `CAT-${cat1.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
                 mapped.category_code = categoryCode;
-
-                const categoryData: any = {
-                  category_code: categoryCode,
-                  industry_name: industryName || "General",
-                  breadcrumb: breadcrumb,
-                };
-
+                const categoryData: any = { category_code: categoryCode, industry_name: industryName || "General", breadcrumb: breadcrumb };
                 categoryLevels.forEach((cat, index) => {
-                  if (cat) {
-                    categoryData[`category_${index + 1}`] = cat;
-                  }
+                  if (cat) categoryData[`category_${index + 1}`] = cat;
                 });
-
                 categoriesToCreate.set(categoryCode, categoryData);
               }
             }
@@ -530,14 +553,11 @@ export function Products() {
               if (featureMatch) {
                 const num = featureMatch[1];
                 const value = row[key]?.trim();
-                if (value) {
-                  mapped[`features_${num}`] = value;
-                }
+                if (value) mapped[`features_${num}`] = value;
               }
             });
 
             const attributeData = new Map();
-           
             Object.keys(row).forEach((key) => {
               const nameMatch = key.match(/^attribute_?names?_?(\d+)$/i);
               const valueMatch = key.match(/^attribute_?values?_?(\d+)$/i);
@@ -545,25 +565,23 @@ export function Products() {
 
               if (nameMatch) {
                 const num = nameMatch[1];
-                const value = row[key]?.trim();
+                const value = String(row[key] || "").trim();
                 if (value) {
                   if (!attributeData.has(num)) attributeData.set(num, {});
                   attributeData.get(num).name = value;
                 }
               }
-
               if (valueMatch) {
                 const num = valueMatch[1];
-                const value = row[key]?.trim();
+                const value = String(row[key] || "").trim();
                 if (value) {
                   if (!attributeData.has(num)) attributeData.set(num, {});
                   attributeData.get(num).value = value;
                 }
               }
-
               if (uomMatch) {
                 const num = uomMatch[1];
-                const value = row[key]?.trim();
+                const value = String(row[key] || "").trim();
                 if (value) {
                   if (!attributeData.has(num)) attributeData.set(num, {});
                   attributeData.get(num).uom = value;
@@ -571,141 +589,55 @@ export function Products() {
               }
             });
             const attributesJson: Record<string, any> = {};
-attributeData.forEach((attr, num) => {
-  if (attr.name && attr.value) {
-    attributesJson[num] = {
-      name: attr.name,
-      value: attr.value,
-      uom: attr.uom || null
-    };
-  }
-});
-if (Object.keys(attributesJson).length > 0) {
-  mapped.attributes = attributesJson;
-}
-           
-
-            const imageData = new Map();
-
-            Object.keys(row).forEach((key) => {
-              const imageMatch = key.match(
-                /^image_?names?_?(\d+)$|^image_?urls?_?(\d+)$/i,
-              );
-              if (imageMatch) {
-                const num = imageMatch[1] || imageMatch[2];
-                const isName = key.toLowerCase().includes("name");
-                const value = row[key]?.trim();
-
-                if (value) {
-                  if (!imageData.has(num)) imageData.set(num, {});
-                  if (isName) {
-                    imageData.get(num).name = value;
-                  } else {
-                    imageData.get(num).url = value;
-                  }
-                }
+            attributeData.forEach((attr, num) => {
+              if (attr.name && attr.value) {
+                attributesJson[num] = {
+                  name: attr.name,
+                  value: attr.value,
+                  uom: attr.uom || null,
+                };
               }
             });
-
-            imageData.forEach((img, num) => {
-              if (img.url) {
-                mapped[`image_name_${num}`] = img.name || (mapped.mpn ? `${mapped.mpn}-Image-${num}` : `Image-${num}`);
-                mapped[`image_url_${num}`] = img.url;
-              }
-            });
-
-            const videoData = new Map();
-
-            Object.keys(row).forEach((key) => {
-              const videoMatch = key.match(
-                /^video_?names?_?(\d+)$|^video_?urls?_?(\d+)$/i,
-              );
-              if (videoMatch) {
-                const num = videoMatch[1] || videoMatch[2];
-                const isName = key.toLowerCase().includes("name");
-                const value = row[key]?.trim();
-
-                if (value) {
-                  if (!videoData.has(num)) videoData.set(num, {});
-                  if (isName) {
-                    videoData.get(num).name = value;
-                  } else {
-                    videoData.get(num).url = value;
-                  }
-                }
-              }
-            });
-
-            videoData.forEach((video, num) => {
-              if (video.url) {
-                mapped[`video_name_${num}`] = video.name || (mapped.mpn ? `${mapped.mpn}-Video-${num}` : `Video-${num}`);
-                mapped[`video_url_${num}`] = video.url;
-              }
-            });
-
-            const documentData = new Map();
-
-            Object.keys(row).forEach((key) => {
-              const docMatch = key.match(
-                /^documents?_?names?_?(\d+)$|^documents?_?urls?_?(\d+)$/i,
-              );
-              if (docMatch) {
-                const num = docMatch[1] || docMatch[2];
-                const isName = key.toLowerCase().includes("name");
-                const value = row[key]?.trim();
-
-                if (value) {
-                  if (!documentData.has(num)) documentData.set(num, {});
-                  if (isName) {
-                    documentData.get(num).name = value;
-                  } else {
-                    documentData.get(num).url = value;
-                  }
-                }
-              }
-            });
-
-            documentData.forEach((doc, num) => {
-              if (doc.url) {
-                mapped[`document_name_${num}`] = doc.name || (mapped.mpn ? `${mapped.mpn}-Document-${num}` : `Document-${num}`);
-                mapped[`document_url_${num}`] = doc.url;
-              }
-            });
-
-            Object.keys(row).forEach((key) => {
-              const relatedMatch = key.match(
-                /^related_?products?_?(\d+)(_?(mpn|name))?$/i,
-              );
-              if (relatedMatch) {
-                const value = row[key]?.trim();
-                if (value) {
-                  mapped[key.toLowerCase()] = value;
-                }
-              }
-            });
-
-            Object.keys(row).forEach((key) => {
-              const pairsMatch = key.match(
-                /^pairs_?well_?with_?(\d+)(_?(mpn|name))?$/i,
-              );
-              if (pairsMatch) {
-                const value = row[key]?.trim();
-                if (value) {
-                  mapped[key.toLowerCase()] = value;
-                }
-              }
-            });
-
-            if (!mapped.product_code || mapped.product_code === "") {
-              delete mapped.product_code;
+            if (Object.keys(attributesJson).length > 0) {
+              mapped.attributes = attributesJson;
             }
+            // --- EXISTING MAPPING LOGIC END ---
+
+            mapped.images = bundleAssets(row, "image");
+            mapped.videos = bundleAssets(row, "video");
+
+            // --- CHANGED SECTION STARTS HERE ---
+            // 1. Try to find documents using the standard format (document_url_1)
+            let documents = bundleAssets(row, "document");
+
+            // 2. If no documents found, use "Smart Scan" for the random headers in your CSV
+            if (Object.keys(documents).length === 0) {
+                let docCount = 1;
+                Object.keys(row).forEach((key) => {
+                    const value = String(row[key] || "").trim();
+                    // Check if value is a PDF URL
+                    if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
+                        // Use the Header Name (key) as the document name
+                        // e.g., Header: "Instruction_Wi-Fi Heater" -> Name: "Instruction Wi-Fi Heater"
+                        let name = key.replace(/_/g, " ").trim();
+                        
+                        // Fallback if header is weird
+                        if (!name || name.length > 50) {
+                             name = `Document ${docCount}`;
+                        }
+
+                        documents[docCount] = { name: name, url: value };
+                        docCount++;
+                    }
+                });
+            }
+            mapped.documents = documents;
+            // --- CHANGED SECTION ENDS HERE ---
 
             return mapped;
-          } catch (error) {
+          } catch (error: any) {
             console.error(`Error processing row ${index + 1}:`, error);
-            importErrors.push(
-              `Row ${index + 2}: Error processing data - ${error.message}`,
-            );
+            importErrors.push(`Row ${index + 2}: Error processing data - ${error.message}`);
             return null;
           }
         })
@@ -734,13 +666,8 @@ if (Object.keys(attributesJson).length > 0) {
       if (brandsToCreate.size > 0) {
         try {
           const existingBrands = await MasterAPI.getBrands();
-          const existingCodes = new Set(
-            existingBrands.map((b: any) => b.brand_code),
-          );
-
-          const newBrands = Array.from(brandsToCreate.values()).filter(
-            (b) => !existingCodes.has(b.brand_code),
-          );
+          const existingCodes = new Set(existingBrands.map((b: any) => b.brand_code));
+          const newBrands = Array.from(brandsToCreate.values()).filter((b) => !existingCodes.has(b.brand_code));
 
           for (const brand of newBrands) {
             try {
@@ -758,13 +685,8 @@ if (Object.keys(attributesJson).length > 0) {
       if (vendorsToCreate.size > 0) {
         try {
           const existingVendors = await MasterAPI.getVendors();
-          const existingCodes = new Set(
-            existingVendors.map((v: any) => v.vendor_code),
-          );
-
-          const newVendors = Array.from(vendorsToCreate.values()).filter(
-            (v) => !existingCodes.has(v.vendor_code),
-          );
+          const existingCodes = new Set(existingVendors.map((v: any) => v.vendor_code));
+          const newVendors = Array.from(vendorsToCreate.values()).filter((v) => !existingCodes.has(v.vendor_code));
 
           for (const vendor of newVendors) {
             try {
@@ -782,13 +704,8 @@ if (Object.keys(attributesJson).length > 0) {
       if (categoriesToCreate.size > 0) {
         try {
           const existingCategories = await MasterAPI.getCategories();
-          const existingCodes = new Set(
-            existingCategories.map((c: any) => c.category_code),
-          );
-
-          const newCategories = Array.from(categoriesToCreate.values()).filter(
-            (c) => !existingCodes.has(c.category_code),
-          );
+          const existingCodes = new Set(existingCategories.map((c: any) => c.category_code));
+          const newCategories = Array.from(categoriesToCreate.values()).filter((c) => !existingCodes.has(c.category_code));
 
           for (const category of newCategories) {
             try {
@@ -805,18 +722,14 @@ if (Object.keys(attributesJson).length > 0) {
 
       let processedCount = 0;
       let errorCount = 0;
-      const existingProductMap = new Map(
-      products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]));
+      const existingProductMap = new Map(products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]));
 
       for (const productData of validData) {
         if (!productData.product_code) {
           const mpnKey = productData.mpn?.trim().toLowerCase();
-          if (mpnKey && existingProductMap.has(mpnKey)) 
-          {
+          if (mpnKey && existingProductMap.has(mpnKey)) {
             productData.product_code = existingProductMap.get(mpnKey);
-          }
-          else
-          {
+          } else {
             productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
           }
         }
@@ -825,26 +738,17 @@ if (Object.keys(attributesJson).length > 0) {
           await ProductAPI.upsert(productData);
           processedCount++;
         } catch (e) {
-          console.error(
-            "Failed to import product:",
-            productData.product_name,
-            e,
-          );
+          console.error("Failed to import product:", productData.product_name, e);
           errorCount++;
         }
       }
 
       const masterDataMessage = [];
       if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
-      if (createdVendors > 0)
-        masterDataMessage.push(`${createdVendors} vendors`);
-      if (createdCategories > 0)
-        masterDataMessage.push(`${createdCategories} categories`);
+      if (createdVendors > 0) masterDataMessage.push(`${createdVendors} vendors`);
+      if (createdCategories > 0) masterDataMessage.push(`${createdCategories} categories`);
 
-      const masterDataText =
-        masterDataMessage.length > 0
-          ? ` (Auto-created: ${masterDataMessage.join(", ")})`
-          : "";
+      const masterDataText = masterDataMessage.length > 0 ? ` (Auto-created: ${masterDataMessage.join(", ")})` : "";
 
       setToast({
         message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
@@ -1268,10 +1172,11 @@ if (Object.keys(attributesJson).length > 0) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
-                ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-600 hover:text-gray-900"
-                }`}
+              className={`px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "border-b-2 border-blue-600 text-blue-600"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
             >
               {tab.label}
             </button>
@@ -1715,50 +1620,62 @@ if (Object.keys(attributesJson).length > 0) {
               </div>
             </div>
           )}
-                    {activeTab === "attributes" && (
+          {activeTab === "attributes" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">
                 Product Attributes
               </h3>
-              
-              {formData.attributes && Object.keys(formData.attributes).length > 0 ? (
+
+              {formData.attributes &&
+              Object.keys(formData.attributes).length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {Object.entries(formData.attributes).map(([key, attr]: any) => (
-                    <div key={key} className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center">
-                      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
-                        {key}
+                  {Object.entries(formData.attributes).map(
+                    ([key, attr]: any) => (
+                      <div
+                        key={key}
+                        className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+                          {key}
+                        </div>
+                        <div className="flex-1 grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={attr.name}
+                              readOnly
+                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Value
+                            </label>
+                            <input
+                              type="text"
+                              value={attr.value}
+                              readOnly
+                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              UOM
+                            </label>
+                            <input
+                              type="text"
+                              value={attr.uom || "-"}
+                              readOnly
+                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex-1 grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Name</label>
-                          <input 
-                            type="text" 
-                            value={attr.name} 
-                            readOnly 
-                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">Value</label>
-                          <input 
-                            type="text" 
-                            value={attr.value} 
-                            readOnly 
-                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 mb-1">UOM</label>
-                          <input 
-                            type="text" 
-                            value={attr.uom || '-'} 
-                            readOnly 
-                            className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    ),
+                  )}
                 </div>
               ) : (
                 <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
@@ -1843,7 +1760,7 @@ if (Object.keys(attributesJson).length > 0) {
                       type="text"
                       value={
                         formData[
-                        `related_product_${num}_mpn` as keyof Product
+                          `related_product_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1859,7 +1776,7 @@ if (Object.keys(attributesJson).length > 0) {
                       type="text"
                       value={
                         formData[
-                        `related_product_${num}_name` as keyof Product
+                          `related_product_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1905,7 +1822,7 @@ if (Object.keys(attributesJson).length > 0) {
                       type="text"
                       value={
                         formData[
-                        `pairs_well_with_${num}_mpn` as keyof Product
+                          `pairs_well_with_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1921,7 +1838,7 @@ if (Object.keys(attributesJson).length > 0) {
                       type="text"
                       value={
                         formData[
-                        `pairs_well_with_${num}_name` as keyof Product
+                          `pairs_well_with_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1938,105 +1855,166 @@ if (Object.keys(attributesJson).length > 0) {
               </div>
             </div>
           )}
-                   {activeTab === "assets" && (
-            <div className="space-y-6">
+          {activeTab === "assets" && (
+            <div className="space-y-8">
+              {/* --- IMAGES SECTION --- */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">
-                  Images (up to 5)
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <ImageIcon size={20} className="text-blue-600" />
+                  Product Images
                 </h3>
-                <p className="text-sm text-gray-600">
-                  URLs referenced in Product Master
-                </p>
-                {[1, 2, 3, 4, 5].map((num) => {
-                  // MATCH DATABASE COLUMN NAMES (image_name_1, image_url_1)
-                  const nameKey = `image_name_${num}` as keyof Product;
-                  const urlKey = `image_url_${num}` as keyof Product;
-                  
+                <div className="grid grid-cols-1 gap-3">
+                  {[1, 2, 3, 4, 5].map((num) => {
+                    // Safety check: ensure images object exists
+                    const asset = formData.images?.[num] || {
+                      name: "",
+                      url: "",
+                    };
+                    return (
+                      <div
+                        key={num}
+                        className="grid grid-cols-[1fr_2fr_auto] gap-3 p-3 border rounded-lg bg-gray-50 items-center"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Image Name"
+                          value={asset.name}
+                          onChange={(e) => {
+                            const currentImages = formData.images || {}; // Handle undefined
+                            const updatedImages = {
+                              ...currentImages,
+                              [num]: { ...asset, name: e.target.value },
+                            };
+                            setFormData({ ...formData, images: updatedImages });
+                          }}
+                          className="px-3 py-1.5 border rounded-md text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Image URL"
+                          value={asset.url}
+                          onChange={(e) => {
+                            const currentImages = formData.images || {}; // Handle undefined
+                            const updatedImages = {
+                              ...currentImages,
+                              [num]: { ...asset, url: e.target.value },
+                            };
+                            setFormData({ ...formData, images: updatedImages });
+                          }}
+                          className="px-3 py-1.5 border rounded-md text-sm"
+                        />
+                        {asset.url && (
+                          <div className="w-10 h-10 rounded border overflow-hidden bg-white">
+                            <img
+                              src={asset.url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* --- VIDEOS SECTION (Apply same pattern) --- */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Film size={20} className="text-green-600" />
+                  Videos
+                </h3>
+                {[1, 2, 3].map((num) => {
+                  const asset = formData.videos?.[num] || { name: "", url: "" };
                   return (
-                    <div key={num} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_auto] gap-4 items-start border p-3 rounded-lg">
+                    <div
+                      key={num}
+                      className="grid grid-cols-2 gap-3 p-3 border rounded-lg bg-gray-50"
+                    >
                       <input
                         type="text"
-                        value={formData[nameKey] || `Image ${num}`}
-                        disabled
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
-                      />
-                      <input
-                        type="text"
-                        value={formData[urlKey] || ""}
-                        onChange={(e) =>
+                        placeholder="Video Name"
+                        value={asset.name}
+                        onChange={(e) => {
+                          const currentVideos = formData.videos || {};
                           setFormData({
                             ...formData,
-                            [urlKey]: e.target.value,
-                          })
-                        }
-                        placeholder={`Image ${num} URL`}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      {/* PREVIEW THUMBNAIL */}
-                      {formData[urlKey] && (
-                        <div className="w-10 h-10 border rounded overflow-hidden">
-                          <img 
-                            src={formData[urlKey] as string} 
-                            alt="Preview" 
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Videos Section - Same Fix */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Videos</h3>
-                {[1, 2, 3].map((num) => {
-                  const nameKey = `video_name_${num}` as keyof Product;
-                  const urlKey = `video_url_${num}` as keyof Product;
-                  return (
-                    <div key={num} className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        value={formData[nameKey] || `Video ${num}`}
-                        disabled
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                            videos: {
+                              ...currentVideos,
+                              [num]: { ...asset, name: e.target.value },
+                            },
+                          });
+                        }}
+                        className="px-3 py-1.5 border rounded-md text-sm"
                       />
                       <input
                         type="text"
-                        value={formData[urlKey] || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, [urlKey]: e.target.value })
-                        }
-                        placeholder={`Video ${num} URL`}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Video URL"
+                        value={asset.url}
+                        onChange={(e) => {
+                          const currentVideos = formData.videos || {};
+                          setFormData({
+                            ...formData,
+                            videos: {
+                              ...currentVideos,
+                              [num]: { ...asset, url: e.target.value },
+                            },
+                          });
+                        }}
+                        className="px-3 py-1.5 border rounded-md text-sm"
                       />
                     </div>
                   );
                 })}
               </div>
 
+              {/* --- DOCUMENTS SECTION (Apply same pattern) --- */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-gray-900">Documents</h3>
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText size={20} className="text-orange-600" />
+                  Documents (PDFs)
+                </h3>
                 {[1, 2, 3, 4, 5].map((num) => {
-                  const nameKey = `document_name_${num}` as keyof Product;
-                  const urlKey = `document_url_${num}` as keyof Product;
+                  const asset = formData.documents?.[num] || {
+                    name: "",
+                    url: "",
+                  };
                   return (
-                    <div key={num} className="grid grid-cols-2 gap-4">
+                    <div
+                      key={num}
+                      className="grid grid-cols-2 gap-3 p-3 border rounded-lg bg-gray-50"
+                    >
                       <input
                         type="text"
-                        value={formData[nameKey] || `Document ${num}`}
-                        disabled
-                        className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                        placeholder="Document Name"
+                        value={asset.name}
+                        onChange={(e) => {
+                          const currentDocs = formData.documents || {};
+                          setFormData({
+                            ...formData,
+                            documents: {
+                              ...currentDocs,
+                              [num]: { ...asset, name: e.target.value },
+                            },
+                          });
+                        }}
+                        className="px-3 py-1.5 border rounded-md text-sm"
                       />
                       <input
                         type="text"
-                        value={formData[urlKey] || ""}
-                        onChange={(e) =>
-                           setFormData({ ...formData, [urlKey]: e.target.value })
-                        }
-                        placeholder={`Document ${num} URL`}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Document URL"
+                        value={asset.url}
+                        onChange={(e) => {
+                          const currentDocs = formData.documents || {};
+                          setFormData({
+                            ...formData,
+                            documents: {
+                              ...currentDocs,
+                              [num]: { ...asset, url: e.target.value },
+                            },
+                          });
+                        }}
+                        className="px-3 py-1.5 border rounded-md text-sm"
                       />
                     </div>
                   );
