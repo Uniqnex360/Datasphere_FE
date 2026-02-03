@@ -311,20 +311,16 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
        if (editingVendor) {
       const data = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        // Skip blob URLs
         if (key === "vendor_logo_url" && value?.startsWith("blob:")) return;
-        // Include all fields (including empty strings)
         if (value !== null && value !== undefined) {
           data.append(key, String(value));
         }
       });
-      // Add file if present
       if (logoFile) {
         data.append("logo_file", logoFile);
       }
       payload = data;
     } 
-    // For creating: use FormData if file, otherwise JSON
     else {
       if (logoFile) {
         const data = new FormData();

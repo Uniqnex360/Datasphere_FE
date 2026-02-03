@@ -17,7 +17,7 @@ import {
 import { CategoryCoverageChart } from "../components/CategoryCoverageChart";
 import { BrandProductChart } from "../components/BrandProductChart";
 import { DataCompletenessChart } from "../components/DataCompletenessChart";
-import { MasterAPI, ProductAPI } from "../lib/api";
+import api, { MasterAPI, ProductAPI } from "../lib/api";
 
 interface DashboardStats {
   totalProducts: number;
@@ -86,17 +86,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     trend: { products: 0, brands: 0, vendors: 0 },
   });
   const [industryHealth, setIndustryHealth] = useState<IndustryHealth[]>([]);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
-    [],
-  );
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([],);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [brandData, setBrandData] = useState<BrandData[]>([]);
-  const [brandCompleteness, setBrandCompleteness] = useState<
-    CompletenessData[]
-  >([]);
-  const [industryCompleteness, setIndustryCompleteness] = useState<
-    CompletenessData[]
-  >([]);
+  const [brandCompleteness, setBrandCompleteness] = useState<CompletenessData[]>([]);
+  const [industryCompleteness, setIndustryCompleteness] = useState<CompletenessData[]>([]);
   const [loading, setLoading] = useState(true);
   const [completenessScore, setCompletenessScore] = useState(0);
   const [basicInfoScore, setBasicInfoScore] = useState(0);
@@ -115,6 +109,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
+        api.get('/hitl/pending').then(res=>res.data).catch(()=>({}))
       ]);
 
       if (products) {
