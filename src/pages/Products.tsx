@@ -35,28 +35,17 @@ import {
 import { MasterAPI, ProductAPI } from "../lib/api";
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<
-    ProductWithVariantStatus[]
-  >([]);
+  const [filteredProducts, setFilteredProducts] = useState<ProductWithVariantStatus[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [industries, setIndustries] = useState<Industry[]>([]);
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets"
-  >("basic");
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    product: ProductWithVariantStatus | null;
-  }>({ isOpen: false, product: null });
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [activeTab, setActiveTab] = useState<"basic" | "descriptions" | "attributes" | "variants" | "related" | "assets">("basic");
+  const [deleteModal, setDeleteModal] = useState<{isOpen: boolean;product: ProductWithVariantStatus | null;}>({ isOpen: false, product: null });
+  const [toast, setToast] = useState<{message: string;type: "success" | "error";} | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
@@ -736,6 +725,7 @@ export function Products() {
 
         try {
           await ProductAPI.upsert(productData);
+          loadData()
           processedCount++;
         } catch (e) {
           console.error("Failed to import product:", productData.product_name, e);

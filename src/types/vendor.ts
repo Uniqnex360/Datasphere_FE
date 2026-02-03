@@ -2,6 +2,7 @@ export interface Vendor {
   vendor_code: string;
   vendor_name: string;
   contact_email: string;
+  country?:string;
   contact_phone: string;
   vendor_website: string;
   business_type: 'Wholesaler' | 'Manufacturer' | 'Distributor' | 'Dealer' | 'Retailer' | '';
