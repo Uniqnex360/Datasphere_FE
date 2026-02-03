@@ -110,9 +110,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // NEW: Fetch all data from API in parallel
       const [products, brands, vendors, categories] = await Promise.all([
-        ProductAPI.getAll(0, 1000), // Get enough products for stats
+        ProductAPI.getAll(0, 1000),
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
@@ -121,7 +120,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       if (products) {
         const totalProducts = products.length;
 
-        // --- Calculate Stats Logic (Adapted for API response) ---
         const missingAttributes = products.filter((p: any) => {
           const attrs = p.attributes || {};
           return Object.keys(attrs).length === 0;
@@ -156,7 +154,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             ? Math.round(totalCompletenessScore / totalProducts)
             : 0;
 
-        // Basic Info Score
         const basicInfoComplete = products.filter(
           (p: any) =>
             p.product_name && p.brand_name && (p.category_code || p.category_1),
@@ -166,7 +163,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             ? Math.round((basicInfoComplete / totalProducts) * 100)
             : 0;
 
-        // Attributes Score
         const attrComplete = products.filter(
           (p: any) => p.attributes && Object.keys(p.attributes).length > 0,
         ).length;
@@ -175,7 +171,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             ? Math.round((attrComplete / totalProducts) * 100)
             : 0;
 
-        // Images Score
         const imagesComplete = products.filter(
           (p: any) => p.image_url_1,
         ).length;
@@ -204,7 +199,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setAttributesScore(attributesScoreVal);
         setImagesScore(imagesScoreVal);
 
-        // --- Industry Health ---
         const industryMap = new Map<string, any>();
         products.forEach((p: any) => {
           const industry = p.industry_name || "Unassigned";
@@ -246,7 +240,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         }));
         setIndustryHealth(healthData);
 
-        // --- Recent Activity ---
         const activities: RecentActivity[] = products
           .slice(0, 20)
           .map((p: any, idx: number) => ({
@@ -257,7 +250,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           }));
         setRecentActivities(activities);
 
-        // --- Category Coverage ---
         const categoryMap = new Map<string, CategoryData>();
         products.forEach((p: any) => {
           const parent = p.category_1 || "Uncategorized";
@@ -459,22 +451,34 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           return (
             <div
               key={card.title}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${card.bgColor}`}>
-                  <Icon className={`${card.iconColor}`} size={24} />
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`p-2 rounded-lg ${card.bgColor}`}>
+                  <Icon className={`${card.iconColor}`} size={20} />
                 </div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {card.value}
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-gray-500">
+                  {card.title}
+                </p>
+
                 {card.trend !== 0 && (
-                  <div className="flex items-center gap-1 text-sm">
+                  <div className="flex items-center gap-1 text-xs bg-gray-50 px-2 py-1 rounded border border-gray-100">
                     {card.trendUp ? (
-                      <TrendingUp size={16} className="text-green-600" />
+                      <TrendingUp size={14} className="text-green-600" />
                     ) : (
-                      <TrendingDown size={16} className="text-red-600" />
+                      <TrendingDown size={14} className="text-red-600" />
                     )}
                     <span
                       className={
-                        card.trendUp ? "text-green-600" : "text-red-600"
+                        card.trendUp
+                          ? "text-green-600 font-semibold"
+                          : "text-red-600 font-semibold"
                       }
                     >
                       {Math.abs(card.trend)}
@@ -482,10 +486,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 )}
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                {card.value}
-              </h3>
-              <p className="text-sm text-gray-600">{card.title}</p>
             </div>
           );
         })}
