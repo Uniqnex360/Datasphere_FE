@@ -89,13 +89,14 @@ export function Enrichment() {
 
     const loadData = async () => {
     setLoading(true);
+    console.log("🔄 Loading Data...");
     try {
       const [productsData, brandsData, categoriesData] = await Promise.all([
         ProductAPI.getAll(),
         MasterAPI.getBrands(),
         MasterAPI.getCategories()
       ]);
-
+      console.log("📦 Loaded Products:", productsData.length);
       setProducts(productsData || []);
       
       const uniqueBrands = Array.from(new Set(productsData.map((p: any) => p.brand_name).filter(Boolean))).sort() as string[];
@@ -123,7 +124,21 @@ export function Enrichment() {
       setLoading(false);
     }
   };
-
+  const loadPendingSuggestions = async () => {
+    try {
+        // You might need a new endpoint for this: GET /hitl/counts
+        // Or fetch all pending and count locally
+        const pendingItems = await EnrichmentAPI.getSuggestions(''); // Get all
+        if (pendingItems) {
+            const countMap = new Map<string, number>();
+            pendingItems.forEach((item: any) => {
+                const pid = item.product_code;
+                countMap.set(pid, (countMap.get(pid) || 0) + 1);
+            });
+            setPendingSuggestionsCount(countMap);
+        }
+    } catch (e) { console.error(e); }
+  };
   const loadBrandsAndCategories = async () => {
 
   // const loadInternalProducts = async () => {
@@ -188,22 +203,8 @@ export function Enrichment() {
   //   }
   // };
 
-   const loadPendingSuggestions = async () => {
-    try {
-        // You might need a new endpoint for this: GET /hitl/counts
-        // Or fetch all pending and count locally
-        const pendingItems = await EnrichmentAPI.getSuggestions(''); // Get all
-        if (pendingItems) {
-            const countMap = new Map<string, number>();
-            pendingItems.forEach((item: any) => {
-                const pid = item.product_code;
-                countMap.set(pid, (countMap.get(pid) || 0) + 1);
-            });
-            setPendingSuggestionsCount(countMap);
-        }
-    } catch (e) { console.error(e); }
-  };
-
+   
+  }
     const handleAddExternalSKU = async (data: ExternalSKUData) => {
     try {
       showToast('Adding external SKU...', 'success');
@@ -258,12 +259,18 @@ export function Enrichment() {
       for (const productId of selectedProductIds) {
         try {
           if (operation === 'enrich') {
-             await EnrichmentAPI.enrich(productId);
+             const res=await EnrichmentAPI.enrich(productId);
+             console.log(`✅ Enrich Result for ${productId}:`, res);
           } else if (operation === 'normalize') {
-             // Assuming you have an endpoint or logic for this
-             // await EnrichmentAPI.normalize(productId);
+            const res=await EnrichmentAPI.standardize(productId)
+            console.log(`✅ Normalize Result for ${productId}:`, res);
+
           }
-          // ... other ops ...
+          else if(operation==='score')
+          {
+            const res=await EnrichmentAPI.calculateScore(productId)
+            console.log(`✅ Score Result for ${productId}:`, res);
+          }
           successCount++;
         } catch (error) {
           failCount++;
@@ -656,5 +663,4 @@ export function Enrichment() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
-}
 }

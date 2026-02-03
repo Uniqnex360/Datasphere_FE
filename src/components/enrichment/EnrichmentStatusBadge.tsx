@@ -30,7 +30,8 @@ export function EnrichmentStatusBadge({ status, completenessScore }: EnrichmentS
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+  if (!config) return null;
   const Icon = config.icon;
 
   return (
