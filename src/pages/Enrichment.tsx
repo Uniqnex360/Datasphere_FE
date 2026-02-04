@@ -96,7 +96,7 @@ export function Enrichment() {
         MasterAPI.getBrands(),
         MasterAPI.getCategories()
       ]);
-      console.log("📦 Loaded Products:", productsData.length);
+      console.log(" Loaded Products:", productsData.length);
       setProducts(productsData || []);
       
       const uniqueBrands = Array.from(new Set(productsData.map((p: any) => p.brand_name).filter(Boolean))).sort() as string[];
@@ -570,19 +570,36 @@ export function Enrichment() {
                       </button>
                     </div>
 
-                    <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-                      {product.image_url_1 ? (
-                        <img
-                          src={product.image_url_1}
-                          alt={product.product_name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <Package className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
+                                   <div className="w-20 h-20 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                  {(() => {
+                    let displayImage = null;
+                    
+                    if ((product as any).images && typeof (product as any).images === 'object') {
+                       const imgs = (product as any).images;
+                       const firstKey = Object.keys(imgs).sort()[0]; 
+                       if (firstKey && imgs[firstKey]) {
+                         const imgEntry = imgs[firstKey];
+                         displayImage = typeof imgEntry === 'object' ? imgEntry.url : imgEntry;
+                       }
+                    }
+                    
+                    if (!displayImage) {
+                        displayImage = product.image_url_1;
+                    }
+
+                    return displayImage ? (
+                      <img
+                        src={displayImage}
+                        alt={product.product_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <Package className="w-8 h-8" />
+                      </div>
+                    );
+                  })()}
+                </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-2">

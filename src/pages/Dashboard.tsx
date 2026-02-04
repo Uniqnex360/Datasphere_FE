@@ -47,6 +47,7 @@ interface RecentActivity {
   action: string;
   timestamp: string;
   user: string;
+  image?: string
 }
 
 interface CategoryData {
@@ -104,7 +105,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const [products, brands, vendors, categories] = await Promise.all([
+      const [products, brands, vendors, categories, hitlData] = await Promise.all([
         ProductAPI.getAll(0, 1000),
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
@@ -120,9 +121,15 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           return Object.keys(attrs).length === 0;
         }).length;
 
-        const missingImages = products.filter(
-          (p: any) => !p.image_url_1,
-        ).length;
+        const missingImages = products.filter((p: any) => {
+          let hasImages = false;
+          if(p.images && typeof p.images==='object')
+          {
+            hasImages=Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
+          }
+          
+          return !hasImages 
+        }).length;
 
         const unassignedCategories = products.filter(
           (p: any) => !p.category_code && !p.category_1,
@@ -166,9 +173,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             ? Math.round((attrComplete / totalProducts) * 100)
             : 0;
 
-        const imagesComplete = products.filter(
-          (p: any) => p.image_url_1,
-        ).length;
+        const imagesComplete = products.filter((p: any) => {
+          if(p.images && typeof p.images==='object')
+          {
+            return Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
+          }
+          return false
+        }).length;
+        
         const imagesScoreVal =
           totalProducts > 0
             ? Math.round((imagesComplete / totalProducts) * 100)
@@ -177,7 +189,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setStats({
           totalProducts,
           productsMissingAttributes: missingAttributes,
-          productsMissingImages: missingImages,
+          productsMissingImages: missingImages, 
           unassignedCategories,
           totalBrands: brands?.length || 0,
           totalVendors: vendors?.length || 0,
@@ -194,6 +206,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setAttributesScore(attributesScoreVal);
         setImagesScore(imagesScoreVal);
 
+        // ... (Rest of Industry/Brand mapping logic remains same) ...
+        // Ensure you keep the Industry Health logic below this line in your file
+        // Just make sure to apply the same check inside the industry loop if needed:
+        
         const industryMap = new Map<string, any>();
         products.forEach((p: any) => {
           const industry = p.industry_name || "Unassigned";
@@ -212,7 +228,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
           if (!p.attributes || Object.keys(p.attributes).length === 0)
             entry.missingAttr++;
-          if (!p.image_url_1) entry.missingImg++;
+            
+          let hasImg = false
+          if(p.images && typeof p.images==='object')
+          {
+            hasImg=Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
+          }
+          if (!hasImg) entry.missingImg++;
         });
 
         const healthData: IndustryHealth[] = Array.from(
@@ -237,12 +259,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         const activities: RecentActivity[] = products
           .slice(0, 20)
-          .map((p: any, idx: number) => ({
-            id: `${p.product_code}-${idx}`,
+          .map((p: any, idx: number) => {
+            let displayImage=''
+            if(p.images && typeof p.images==='object')
+            {
+              const keys=Object.keys(p.images).sort()
+              if(keys.length>0 && p.images[keys[0]]?.url)
+              {
+                displayImage=p.images[keys[0]].url
+              }
+            }
+            return {
+               id: `${p.product_code}-${idx}`,
             action: `Product ${p.product_code} updated`,
             timestamp: p.updated_at || new Date().toISOString(),
             user: "System",
-          }));
+            image:displayImage
+            }
+           
+          });
         setRecentActivities(activities);
 
         const categoryMap = new Map<string, CategoryData>();
@@ -721,7 +756,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow">
+                <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b">
             <h2 className="text-lg font-semibold text-gray-900">
               Recent Activity
@@ -739,11 +774,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     key={activity.id}
                     className="flex items-start gap-3 pb-4 border-b last:border-0"
                   >
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <Package size={16} className="text-blue-600" />
+                    {/* Activity Image Thumbnail */}
+                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                      {activity.image ? (
+                        <img 
+                          src={activity.image} 
+                          alt="Product" 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <Package size={20} className="text-gray-400" />
+                      )}
                     </div>
+
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 truncate">
+                      <p className="text-sm text-gray-900 truncate font-medium">
                         {activity.action}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
