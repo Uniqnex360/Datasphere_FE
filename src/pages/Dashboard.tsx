@@ -102,7 +102,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+    const loadDashboardData = async () => {
     try {
       setLoading(true);
       const [products, brands, vendors, categories, hitlData] = await Promise.all([
@@ -110,215 +110,189 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
-        api.get('/hitl/pending').then(res=>res.data).catch(()=>({}))
+        api.get('/hitl/pending').then(res => res.data).catch(() => ({}))
       ]);
 
       if (products) {
         const totalProducts = products.length;
 
+        // --- 1. KPI STATS CALCULATIONS ---
+        
+        // Missing Attributes
         const missingAttributes = products.filter((p: any) => {
           const attrs = p.attributes || {};
           return Object.keys(attrs).length === 0;
         }).length;
 
+        // Missing Images (Dictionary Check)
         const missingImages = products.filter((p: any) => {
           let hasImages = false;
-          if(p.images && typeof p.images==='object')
-          {
-            hasImages=Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
+          if (p.images && typeof p.images === 'object') {
+            hasImages = Object.keys(p.images).some(k => p.images[k] && p.images[k].url);
           }
-          
-          return !hasImages 
+          return !hasImages;
         }).length;
 
         const unassignedCategories = products.filter(
           (p: any) => !p.category_code && !p.category_1,
         ).length;
 
-        const oneDayAgo = new Date();
-        oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        const recentlyUpdated = products.filter((p: any) => {
-          return p.updated_at && new Date(p.updated_at) > oneDayAgo;
-        }).length;
+        // Dates
+        const oneDayAgo = new Date(); oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+        const recentlyUpdated = products.filter((p: any) => p.updated_at && new Date(p.updated_at) > oneDayAgo).length;
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const productsLastWeek = products.filter((p: any) => {
-          return p.created_at && new Date(p.created_at) > sevenDaysAgo;
-        }).length;
+        const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const productsLastWeek = products.filter((p: any) => p.created_at && new Date(p.created_at) > sevenDaysAgo).length;
 
-        const totalCompletenessScore = products.reduce(
-          (sum: number, p: any) => sum + (p.completeness_score || 0),
-          0,
-        );
-        const completeness =
-          totalProducts > 0
-            ? Math.round(totalCompletenessScore / totalProducts)
-            : 0;
-
-        const basicInfoComplete = products.filter(
-          (p: any) =>
-            p.product_name && p.brand_name && (p.category_code || p.category_1),
-        ).length;
-        const basicInfo =
-          totalProducts > 0
-            ? Math.round((basicInfoComplete / totalProducts) * 100)
-            : 0;
-
-        const attrComplete = products.filter(
-          (p: any) => p.attributes && Object.keys(p.attributes).length > 0,
-        ).length;
-        const attributesScoreVal =
-          totalProducts > 0
-            ? Math.round((attrComplete / totalProducts) * 100)
-            : 0;
-
-        const imagesComplete = products.filter((p: any) => {
-          if(p.images && typeof p.images==='object')
-          {
-            return Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
-          }
-          return false
-        }).length;
+        // --- 2. GLOBAL SCORE CALCULATION & AGGREGATION MAPS ---
         
-        const imagesScoreVal =
-          totalProducts > 0
-            ? Math.round((imagesComplete / totalProducts) * 100)
-            : 0;
+        // We calculate global totals and fill maps in ONE loop for performance
+        let globalTotalScore = 0;
+        let globalBasicComplete = 0;
+        let globalAttrComplete = 0;
+        let globalImgComplete = 0;
 
+        const industryMap = new Map<string, { count: number; totalScore: number; missingAttr: number; missingImg: number }>();
+        const brandMap = new Map<string, { count: number; totalScore: number }>();
+
+        products.forEach((p: any) => {
+          // A. Calculate/Get Score
+          // Use backend score if available, else fallback logic could go here
+          const pScore = p.completeness_score || 0; 
+          
+          // B. Check specific completion factors for Global Progress Bars
+          const hasBasic = p.product_name && p.brand_name && (p.category_code || p.category_1);
+          const hasAttr = p.attributes && Object.keys(p.attributes).length > 0;
+          let hasImg = false;
+          if (p.images && typeof p.images === 'object') {
+             hasImg = Object.keys(p.images).some(k => p.images[k] && p.images[k].url);
+          }
+
+          // C. Update Globals
+          globalTotalScore += pScore;
+          if (hasBasic) globalBasicComplete++;
+          if (hasAttr) globalAttrComplete++;
+          if (hasImg) globalImgComplete++;
+
+          // D. Update Industry Map
+          const indName = p.industry_name || "Unassigned";
+          if (!industryMap.has(indName)) {
+            industryMap.set(indName, { count: 0, totalScore: 0, missingAttr: 0, missingImg: 0 });
+          }
+          const indStats = industryMap.get(indName)!;
+          indStats.count++;
+          indStats.totalScore += pScore;
+          if (!hasAttr) indStats.missingAttr++;
+          if (!hasImg) indStats.missingImg++;
+
+          // E. Update Brand Map
+          const brandName = p.brand_name || "Unknown";
+          if (!brandMap.has(brandName)) {
+            brandMap.set(brandName, { count: 0, totalScore: 0 });
+          }
+          const brandStats = brandMap.get(brandName)!;
+          brandStats.count++;
+          brandStats.totalScore += pScore;
+        });
+
+        // --- 3. SET STATE FROM AGGREGATED DATA ---
+
+        // Global Scores
+        const completeness = totalProducts > 0 ? Math.round(globalTotalScore / totalProducts) : 0;
+        setCompletenessScore(completeness);
+        setBasicInfoScore(totalProducts > 0 ? Math.round((globalBasicComplete / totalProducts) * 100) : 0);
+        setAttributesScore(totalProducts > 0 ? Math.round((globalAttrComplete / totalProducts) * 100) : 0);
+        setImagesScore(totalProducts > 0 ? Math.round((globalImgComplete / totalProducts) * 100) : 0);
+
+        // Stats Cards
         setStats({
           totalProducts,
           productsMissingAttributes: missingAttributes,
-          productsMissingImages: missingImages, 
+          productsMissingImages: missingImages,
           unassignedCategories,
           totalBrands: brands?.length || 0,
           totalVendors: vendors?.length || 0,
           recentlyUpdated,
-          trend: {
-            products: productsLastWeek,
-            brands: 0,
-            vendors: 0,
-          },
+          trend: { products: productsLastWeek, brands: 0, vendors: 0 },
         });
 
-        setCompletenessScore(completeness);
-        setBasicInfoScore(basicInfo);
-        setAttributesScore(attributesScoreVal);
-        setImagesScore(imagesScoreVal);
-
-        // ... (Rest of Industry/Brand mapping logic remains same) ...
-        // Ensure you keep the Industry Health logic below this line in your file
-        // Just make sure to apply the same check inside the industry loop if needed:
-        
-        const industryMap = new Map<string, any>();
-        products.forEach((p: any) => {
-          const industry = p.industry_name || "Unassigned";
-          if (!industryMap.has(industry)) {
-            industryMap.set(industry, {
-              industry_name: industry,
-              product_count: 0,
-              totalCompleteness: 0,
-              missingAttr: 0,
-              missingImg: 0,
-            });
-          }
-          const entry = industryMap.get(industry);
-          entry.product_count++;
-          entry.totalCompleteness += p.completeness_score || 0;
-
-          if (!p.attributes || Object.keys(p.attributes).length === 0)
-            entry.missingAttr++;
-            
-          let hasImg = false
-          if(p.images && typeof p.images==='object')
-          {
-            hasImg=Object.keys(p.images).some(k=>p.images[k] && p.images[k].url)
-          }
-          if (!hasImg) entry.missingImg++;
-        });
-
-        const healthData: IndustryHealth[] = Array.from(
-          industryMap.values(),
-        ).map((entry) => ({
-          industry_name: entry.industry_name,
-          product_count: entry.product_count,
-          completed_percentage:
-            entry.product_count > 0
-              ? Math.round(entry.totalCompleteness / entry.product_count)
-              : 0,
-          missing_attributes_percentage:
-            entry.product_count > 0
-              ? Math.round((entry.missingAttr / entry.product_count) * 100)
-              : 0,
-          missing_images_percentage:
-            entry.product_count > 0
-              ? Math.round((entry.missingImg / entry.product_count) * 100)
-              : 0,
+        // Industry Health Table
+        const healthData: IndustryHealth[] = Array.from(industryMap.entries()).map(([name, stat]) => ({
+          industry_name: name,
+          product_count: stat.count,
+          completed_percentage: Math.round(stat.totalScore / stat.count),
+          missing_attributes_percentage: Math.round((stat.missingAttr / stat.count) * 100),
+          missing_images_percentage: Math.round((stat.missingImg / stat.count) * 100),
         }));
         setIndustryHealth(healthData);
 
-        const activities: RecentActivity[] = products
-          .slice(0, 20)
-          .map((p: any, idx: number) => {
-            let displayImage=''
-            if(p.images && typeof p.images==='object')
-            {
-              const keys=Object.keys(p.images).sort()
-              if(keys.length>0 && p.images[keys[0]]?.url)
-              {
-                displayImage=p.images[keys[0]].url
-              }
-            }
-            return {
-               id: `${p.product_code}-${idx}`,
-            action: `Product ${p.product_code} updated`,
-            timestamp: p.updated_at || new Date().toISOString(),
-            user: "System",
-            image:displayImage
-            }
-           
-          });
-        setRecentActivities(activities);
+        // Industry Completeness Chart
+        const industryChartData: CompletenessData[] = healthData.map(h => ({
+          name: h.industry_name,
+          completeness: h.completed_percentage,
+          total_products: h.product_count,
+          complete_products: 0
+        })).sort((a, b) => b.completeness - a.completeness);
+        setIndustryCompleteness(industryChartData);
 
+        // Brand Completeness Chart (Top 10 by Volume)
+        const brandChartData: CompletenessData[] = Array.from(brandMap.entries())
+          .map(([name, stat]) => ({
+            name: name,
+            completeness: Math.round(stat.totalScore / stat.count),
+            total_products: stat.count,
+            complete_products: 0
+          }))
+          .sort((a, b) => b.total_products - a.total_products)
+          .slice(0, 10);
+        setBrandCompleteness(brandChartData);
+
+        // Category Coverage Chart
         const categoryMap = new Map<string, CategoryData>();
         products.forEach((p: any) => {
           const parent = p.category_1 || "Uncategorized";
           const productType = p.product_type || "General";
-
           if (!categoryMap.has(parent)) {
-            categoryMap.set(parent, {
-              parent_category: parent,
-              total_products: 0,
-              subcategories: [],
-            });
+            categoryMap.set(parent, { parent_category: parent, total_products: 0, subcategories: [] });
           }
-          const catData = categoryMap.get(parent)!;
-          catData.total_products++;
-
-          const existingSub = catData.subcategories.find(
-            (s) => s.subcategory === productType,
-          );
-          if (existingSub) {
-            existingSub.product_count++;
-          } else {
-            catData.subcategories.push({
-              subcategory: productType,
-              product_count: 1,
-            });
-          }
+          const catEntry = categoryMap.get(parent)!;
+          catEntry.total_products++;
+          
+          const existingSub = catEntry.subcategories.find(s => s.subcategory === productType);
+          if (existingSub) existingSub.product_count++;
+          else catEntry.subcategories.push({ subcategory: productType, product_count: 1 });
         });
         setCategoryData(Array.from(categoryMap.values()));
 
-        const brandCounts: any = {};
-        products.forEach((p: any) => {
-          const b = p.brand_name || "Unknown";
-          brandCounts[b] = (brandCounts[b] || 0) + 1;
-        });
-        const brandDataArray = Object.keys(brandCounts).map((k) => ({
-          brand_name: k,
-          product_count: brandCounts[k],
-        }));
+        // Brand Product Chart
+        const brandDataArray = Array.from(brandMap.entries())
+          .map(([name, stat]) => ({ brand_name: name, product_count: stat.count }))
+          .sort((a,b) => b.product_count - a.product_count)
+          .slice(0, 10);
         setBrandData(brandDataArray);
+
+        // Recent Activity
+        const sortedProducts = [...products].sort((a: any, b: any) => 
+          new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()
+        );
+        
+        const activities: RecentActivity[] = sortedProducts.slice(0, 20).map((p: any, idx: number) => {
+            let displayImage = "";
+            if (p.images && typeof p.images === 'object') {
+                const keys = Object.keys(p.images).sort();
+                if (keys.length > 0 && p.images[keys[0]]?.url) {
+                    displayImage = p.images[keys[0]].url;
+                }
+            }
+            return {
+              id: `${p.product_code}-${idx}`,
+              action: `Product ${p.product_code} updated`,
+              timestamp: p.updated_at || new Date().toISOString(),
+              user: "System",
+              image: displayImage
+            };
+        });
+        setRecentActivities(activities);
       }
     } catch (error) {
       console.error("Error loading dashboard data:", error);

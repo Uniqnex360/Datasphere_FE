@@ -18,7 +18,7 @@ export function DataCompletenessChart({ data, title }: DataCompletenessChartProp
       </div>
     );
   }
-
+  console.log("DataCompletenessChart",data)
   const sortedData = [...data].sort((a, b) => b.completeness - a.completeness);
 
   return (

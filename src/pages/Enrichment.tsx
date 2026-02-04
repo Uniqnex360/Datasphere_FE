@@ -139,7 +139,7 @@ export function Enrichment() {
         }
     } catch (e) { console.error(e); }
   };
-  const loadBrandsAndCategories = async () => {
+  // const loadBrandsAndCategories = async () => {
 
   // const loadInternalProducts = async () => {
   //   const { data, error } = await supabase
@@ -168,7 +168,7 @@ export function Enrichment() {
   //     const externalProducts: Product[] = data.map(sku => {
   //       let thumbnailUrl = '';
   //       if (sku.image_urls && Array.isArray(sku.image_urls) && sku.image_urls.length > 0) {
-  //         thumbnailUrl = sku.image_urls[0];
+  //         thumbnailUrl = sku.image_urls[0];industryMap
   //       } else if (sku.enriched_data && sku.enriched_data.thumbnail) {
   //         thumbnailUrl = sku.enriched_data.thumbnail;
   //       }
@@ -204,7 +204,7 @@ export function Enrichment() {
   // };
 
    
-  }
+  // }
     const handleAddExternalSKU = async (data: ExternalSKUData) => {
     try {
       showToast('Adding external SKU...', 'success');

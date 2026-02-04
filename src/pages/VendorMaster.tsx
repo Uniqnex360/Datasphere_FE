@@ -17,9 +17,10 @@ import Modal from "../components/Modal";
 import Toast from "../components/Toast";
 import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
-import { DigitalAssetAPI, MasterAPI, ProductAPI } from "../lib/api";
+import { MasterAPI, ProductAPI } from "../lib/api";
 import { generateEntityCode } from "../utils/codeGenerator";
 import { validateImportFormat } from "../utils/importValidator";
+import { SearchableSelect } from "../components/SearchableSelect";
 const COUNTRIES = [
   "United States",
   "Canada",
@@ -62,6 +63,7 @@ export function VendorMaster() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [industrySearchm, setIndustrySearch] = useState("");
   const [submitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
@@ -72,10 +74,11 @@ export function VendorMaster() {
   const [industryFilter, setIndustryFilter] = useState("");
   const [sortKey, setSortKey] = useState("vendor_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-const URL_REGEX = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
-const PHONE_REGEX = /^\+?[0-9\s\-\(\)]{7,20}$/; 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; 
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const URL_REGEX =
+    /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  const PHONE_REGEX = /^\+?[0-9\s\-\(\)]{7,20}$/;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const [isCustomIndustry, setIsCustomIndustry] = useState(false);
   const [industryOptions, setIndustryOptions] =
     useState<string[]>(DEFAULT_INDUSTRIES);
@@ -126,10 +129,10 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     sortKey,
     sortDirection,
   ]);
-    // Cleanup object URLs when component unmounts or logo changes
+  // Cleanup object URLs when component unmounts or logo changes
   useEffect(() => {
     return () => {
-      if (formData.vendor_logo_url?.startsWith('blob:')) {
+      if (formData.vendor_logo_url?.startsWith("blob:")) {
         URL.revokeObjectURL(formData.vendor_logo_url);
       }
     };
@@ -181,15 +184,15 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     });
     setFilteredVendors(filtered);
   };
-    const validateForm = () => {
+  const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     // Helper to safely trim
     const getName = () => formData.vendor_name?.trim() || "";
     const getEmail = () => formData.contact_email?.trim() || "";
     const getPhone = () => formData.contact_phone?.trim() || "";
     const getWebsite = () => formData.vendor_website?.trim() || "";
-        const country = formData.country?.trim();
+    const country = formData.country?.trim();
 
     // 1. Critical Fields (Cannot be empty or just spaces)
     if (!getName()) {
@@ -201,15 +204,14 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     } else if (!/\S+@\S+\.\S+/.test(getEmail())) {
       newErrors.contact_email = "Invalid email format";
     }
-     if (!country) {
+    if (!country) {
       newErrors.country = "Country is required";
-    } 
-     else if (isCustomCountry) {
-        const validCountryRegex = /^[a-zA-Z][a-zA-Z\s\.\-']{2,}$/;
-        
-        if (!validCountryRegex.test(country)) {
-            newErrors.country = "Invalid country name (min 3 chars)";
-        }
+    } else if (isCustomCountry) {
+      const validCountryRegex = /^[a-zA-Z][a-zA-Z\s\.\-']{2,}$/;
+
+      if (!validCountryRegex.test(country)) {
+        newErrors.country = "Invalid country name (min 3 chars)";
+      }
     }
     if (!getPhone()) {
       newErrors.contact_phone = "Contact phone is required";
@@ -236,7 +238,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     // 4. Validate Department Emails (Optional but must be valid if present)
     for (let i = 1; i <= 5; i++) {
       const val = formData[`dept${i}_email` as keyof Vendor];
-      if (val && typeof val === 'string' && val.trim() !== '') {
+      if (val && typeof val === "string" && val.trim() !== "") {
         if (!/\S+@\S+\.\S+/.test(val.trim())) {
           newErrors[`dept${i}_email`] = "Invalid email format";
         }
@@ -291,7 +293,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   //         return prev;
   //       });
   //     }
-  //     setToast({ message: "Vendor saved successfully", type: "success" }); 
+  //     setToast({ message: "Vendor saved successfully", type: "success" });
   //     setIsDrawerOpen(false);
   //     setEditingVendor(null);
   //     resetForm();
@@ -301,28 +303,14 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   //     setToast({ message: error.message, type: "error" });
   //   }
   // };
-    const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
-    
+
     setIsSubmitting(true);
     try {
       let payload: any = { ...formData };
-      
-       if (editingVendor) {
-      const data = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === "vendor_logo_url" && value?.startsWith("blob:")) return;
-        if (value !== null && value !== undefined) {
-          data.append(key, String(value));
-        }
-      });
-      if (logoFile) {
-        data.append("logo_file", logoFile);
-      }
-      payload = data;
-    } 
-    else {
-      if (logoFile) {
+
+      if (editingVendor) {
         const data = new FormData();
         Object.entries(formData).forEach(([key, value]) => {
           if (key === "vendor_logo_url" && value?.startsWith("blob:")) return;
@@ -330,13 +318,29 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
             data.append(key, String(value));
           }
         });
-        data.append("logo_file", logoFile);
+        if (logoFile) {
+          data.append("logo_file", logoFile);
+        }
         payload = data;
       } else {
-        payload = { ...formData };
-        payload.vendor_code = generateEntityCode("vendor", payload.vendor_name || "");
+        if (logoFile) {
+          const data = new FormData();
+          Object.entries(formData).forEach(([key, value]) => {
+            if (key === "vendor_logo_url" && value?.startsWith("blob:")) return;
+            if (value !== null && value !== undefined) {
+              data.append(key, String(value));
+            }
+          });
+          data.append("logo_file", logoFile);
+          payload = data;
+        } else {
+          payload = { ...formData };
+          payload.vendor_code = generateEntityCode(
+            "vendor",
+            payload.vendor_name || "",
+          );
+        }
       }
-    }
 
       if (editingVendor) {
         await MasterAPI.update("vendors", editingVendor.vendor_code, payload);
@@ -347,7 +351,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
       }
 
       if (isCustomIndustry && formData.industry) {
-        setIndustryOptions(prev => {
+        setIndustryOptions((prev) => {
           if (!prev.includes(formData.industry!)) {
             return [...prev, formData.industry!].sort();
           }
@@ -362,16 +366,19 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     } catch (error: any) {
       setToast({ message: error.message, type: "error" });
     } finally {
-      setIsSubmitting(false); 
+      setIsSubmitting(false);
     }
   };
-   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // 1. Validate File Type
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      setToast({ message: "Only JPG, PNG, and WEBP files are allowed.", type: "error" });
+      setToast({
+        message: "Only JPG, PNG, and WEBP files are allowed.",
+        type: "error",
+      });
       e.target.value = "";
       return;
     }
@@ -387,7 +394,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     setLogoFile(file);
     const objectUrl = URL.createObjectURL(file);
     setFormData((prev) => ({ ...prev, vendor_logo_url: objectUrl }));
-    
+
     // Clear input to allow re-selecting same file if user clears it and picks again
     e.target.value = "";
   };
@@ -482,9 +489,11 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
     }
     setFormData({ ...formData, vendor_logo_url: "" });
     setLogoFile(null);
-    
-    const fileInput = document.getElementById('logo-upload') as HTMLInputElement;
-    if(fileInput) fileInput.value = "";
+
+    const fileInput = document.getElementById(
+      "logo-upload",
+    ) as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
   const handleExport = () => {
     if (filteredVendors.length === 0) {
@@ -813,7 +822,9 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
           >
             <option value="">All Industries</option>
             {industryOptions.map((ind) => (
-               <option key={ind} value={ind}>{ind}</option>
+              <option key={ind} value={ind}>
+                {ind}
+              </option>
             ))}
           </select>
           <div className="flex gap-2">
@@ -966,20 +977,15 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                     autoFocus
                   />
                 ) : (
-                  <select
-                    value={formData.industry}
-                    onChange={(e) =>
-                      setFormData({ ...formData, industry: e.target.value })
+                  <SearchableSelect
+                    options={industryOptions}
+                    value={formData.industry || ""}
+                    onChange={(val) =>
+                      setFormData({ ...formData, industry: val })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select Industry</option>
-                     {industryOptions.map((ind) => (
-                      <option key={ind} value={ind}>
-                        {ind}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select or Search Industry"
+                    onAddNew={() => setIsCustomIndustry(true)}
+                  />
                 )}
               </div>
               <div>
@@ -1102,9 +1108,11 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-                            <div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                  <span>Country <span className="text-red-500">*</span></span>
+                  <span>
+                    Country <span className="text-red-500">*</span>
+                  </span>
                   {isCustomCountry && (
                     <button
                       type="button"
@@ -1119,7 +1127,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                     </button>
                   )}
                 </label>
-                
+
                 {isCustomCountry ? (
                   <input
                     type="text"
@@ -1129,38 +1137,48 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                       setFormData({ ...formData, country: e.target.value })
                     }
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                        errors.country ? "border-red-500" : "border-blue-400"
+                      errors.country ? "border-red-500" : "border-blue-400"
                     }`}
                     autoFocus
                   />
                 ) : (
-                  <select
-                    value={formData.country}
-                    onChange={(e) => {
-                      if (e.target.value === "Other") {
-                        setCustomCountry(true);
-                        setFormData({ ...formData, country: "" });
-                      } else {
-                        setFormData({ ...formData, country: e.target.value });
-                      }
-                    }}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        errors.country ? "border-red-500" : "border-gray-300"
-                    }`}
-                  >
-                    <option value="">Select Country</option>
-                    {COUNTRIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                    <option value="Other" className="font-semibold text-blue-600">+ Other (Add New)</option>
-                  </select>
+                  // <select
+                  //   value={formData.country}
+                  //   onChange={(e) => {
+                  //     if (e.target.value === "Other") {
+                  //       setCustomCountry(true);
+                  //       setFormData({ ...formData, country: "" });
+                  //     } else {
+                  //       setFormData({ ...formData, country: e.target.value });
+                  //     }
+                  //   }}
+                  //   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  //       errors.country ? "border-red-500" : "border-gray-300"
+                  //   }`}
+                  // >
+                  //   <option value="">Select Country</option>
+                  //   {COUNTRIES.map((c) => (
+                  //     <option key={c} value={c}>
+                  //       {c}
+                  //     </option>
+                  //   ))}
+                  //   <option value="Other" className="font-semibold text-blue-600">+ Other (Add New)</option>
+                  // </select>
+                  <SearchableSelect
+                    options={COUNTRIES}
+                    value={formData.country || ""}
+                    onChange={(val) =>
+                      setFormData({ ...formData, country: val })
+                    }
+                    placeholder="Select or Search Country"
+                    onAddNew={() => setCustomCountry(true)}
+                  />
                 )}
-                
-                {/* --- ERROR MESSAGE --- */}
+
                 {errors.country && (
-                  <p className="text-red-500 text-xs mt-1 ml-1">{errors.country}</p>
+                  <p className="text-red-500 text-xs mt-1 ml-1">
+                    {errors.country}
+                  </p>
                 )}
               </div>
               <div>
@@ -1176,31 +1194,38 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-                            {/* --- VENDOR LOGO SECTION --- */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Vendor Logo
                 </label>
-                
+
                 <div className="flex gap-2 items-start">
-                  {/* Text Input Wrapper */}
                   <div className="relative flex-1">
                     <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                       <ImageIcon size={16} />
                     </div>
-                    
+
                     <input
                       type="text"
-                      placeholder={logoFile ? "Image File Selected" : "https://example.com/logo.png"}
-                      value={logoFile ? `File: ${logoFile.name}` : formData.vendor_logo_url}
+                      placeholder={
+                        logoFile
+                          ? "Image File Selected"
+                          : "https://example.com/logo.png"
+                      }
+                      value={
+                        logoFile
+                          ? `File: ${logoFile.name}`
+                          : formData.vendor_logo_url
+                      }
                       onChange={handleUrlInput}
-                      disabled={!!logoFile} // Lock text input if file is uploaded
+                      disabled={!!logoFile} 
                       className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        logoFile ? "bg-gray-100 text-gray-500 cursor-not-allowed" : "border-gray-300"
+                        logoFile
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                          : "border-gray-300"
                       }`}
                     />
 
-                    {/* REMOVE BUTTON - Shows if there is content */}
                     {(formData.vendor_logo_url || logoFile) && (
                       <button
                         type="button"
@@ -1213,14 +1238,15 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                     )}
                   </div>
 
-                  {/* Upload Button */}
                   <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white h-[42px]">
                     {uploadingLogo ? (
                       <Loader2 className="animate-spin" size={18} />
                     ) : (
                       <Upload size={18} className="text-gray-600" />
                     )}
-                    <span className="text-sm font-medium text-gray-700">Upload</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      Upload
+                    </span>
                     <input
                       id="logo-upload"
                       type="file"
@@ -1232,18 +1258,20 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
                   </label>
                 </div>
 
-                {/* Preview Area */}
                 {formData.vendor_logo_url && (
                   <div className="mt-3">
-                    <span className="text-xs text-gray-500 mb-1 block">Preview:</span>
+                    <span className="text-xs text-gray-500 mb-1 block">
+                      Preview:
+                    </span>
                     <div className="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2 relative group">
                       <img
                         src={formData.vendor_logo_url}
                         alt="Logo Preview"
                         className="max-w-full max-h-full object-contain"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-red-400 text-center">Invalid Image</span>';
+                          (e.target as HTMLImageElement).style.display = "none";
+                          e.currentTarget.parentElement!.innerHTML =
+                            '<span class="text-xs text-red-400 text-center">Invalid Image</span>';
                         }}
                       />
                     </div>
