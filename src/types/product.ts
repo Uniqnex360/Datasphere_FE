@@ -1,3 +1,5 @@
+import { ProductAttributeDefinition } from "./enrichment";
+
 export interface Product {
   product_code: string;
   product_name: string;
@@ -100,6 +102,7 @@ export interface Product {
   completeness_details?: Record<string, any>;
   created_at?: string;
   updated_at?: string;
+  attributes?: Record<string, ProductAttributeDefinition>;
 }
 
 export interface ProductFormData extends Partial<Product> {}

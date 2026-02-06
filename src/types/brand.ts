@@ -1,4 +1,5 @@
 export interface Brand {
+  id?:string
   brand_code: string;
   brand_name: string;
   brand_logo: string;

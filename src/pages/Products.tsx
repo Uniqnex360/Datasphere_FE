@@ -35,7 +35,9 @@ import {
 import { MasterAPI, ProductAPI } from "../lib/api";
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<ProductWithVariantStatus[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<
+    ProductWithVariantStatus[]
+  >([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -43,9 +45,17 @@ export function Products() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [activeTab, setActiveTab] = useState<"basic" | "descriptions" | "attributes" | "variants" | "related" | "assets">("basic");
-  const [deleteModal, setDeleteModal] = useState<{isOpen: boolean;product: ProductWithVariantStatus | null;}>({ isOpen: false, product: null });
-  const [toast, setToast] = useState<{message: string;type: "success" | "error";} | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets"
+  >("basic");
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    product: ProductWithVariantStatus | null;
+  }>({ isOpen: false, product: null });
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
@@ -63,10 +73,10 @@ export function Products() {
     mfg_name: "",
     vendor_code: "",
     vendor_name: "",
-    images: {}, 
-     videos: {},  
-     documents: {},
-     attributes: {}, 
+    images: {},
+    videos: {},
+    documents: {},
+    attributes: {},
     industry_name: "",
     category_code: "",
     product_type: "",
@@ -78,6 +88,14 @@ export function Products() {
     mpn: "",
     gtin: "",
     upc: "",
+    price: 0,
+    sale_price: 0,
+    list_price: 0,
+    base_price: 0,
+    regular_price: 0,
+    retail_price: 0,
+    msrp: 0,
+    map_price: 0,
     unspsc: "",
     meta_title: "",
     meta_desc: "",
@@ -350,6 +368,14 @@ export function Products() {
       meta_title: "",
       meta_desc: "",
       meta_keywords: "",
+      price:0,
+      sale_price:0,
+      list_price:0,
+      base_price:0,
+      regular_price:0,
+      retail_price:0,
+      msrp:0,
+      map_price:0
     });
     setErrors({});
     setActiveTab("basic");
@@ -392,12 +418,11 @@ export function Products() {
         return;
       }
 
-      // 1. Existing Bundle Logic (Preserved)
       const bundleAssets = (row: any, type: string) => {
         const assets: Record<string, { name: string; url: string }> = {};
         Object.keys(row).forEach((key) => {
-          const urlMatch = key.match(new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"));
-          const nameMatch = key.match(new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"));
+          const urlMatch = key.match(new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),);
+          const nameMatch = key.match(new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),);
 
           if (urlMatch) {
             const idx = urlMatch[1];
@@ -416,7 +441,9 @@ export function Products() {
           if (data.url) {
             cleaned[idx] = {
               url: data.url,
-              name: data.name || `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
+              name:
+                data.name ||
+                `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
             };
           }
         });
@@ -434,20 +461,27 @@ export function Products() {
           const mapped: any = {};
 
           try {
-            // --- EXISTING MAPPING LOGIC START ---
             const productNameKey = Object.keys(row).find(
               (k) =>
                 k.toLowerCase().replace(/_/g, " ") === "product name" ||
-                k.toLowerCase() === "name"
+                k.toLowerCase() === "name",
             );
             mapped.product_name = String(
-              row[productNameKey || "product_name"] || ""
+              row[productNameKey || "product_name"] || "",
             ).trim();
 
             if (!mapped.product_name) {
               throw new Error("Missing Product Name column or empty value");
             }
             mapped.product_code = row.product_code?.trim() || null;
+            mapped.price = parseFloat(row.price) || 0;
+            mapped.sale_price = parseFloat(row.sale_price) || 0;
+            mapped.list_price = parseFloat(row.list_price) || 0;
+            mapped.base_price = parseFloat(row.base_price) || 0;
+            mapped.regular_price = parseFloat(row.regular_price) || 0;
+            mapped.retail_price = parseFloat(row.retail_price) || 0;
+            mapped.msrp = parseFloat(row.msrp) || 0;
+            mapped.map_price = parseFloat(row.map_price || row.map) || 0;
             mapped.sku = row.sku?.trim() || "";
             mapped.variant_sku = row.variant_sku?.trim() || "";
             mapped.mpn = row.mpn?.trim() || "";
@@ -470,14 +504,21 @@ export function Products() {
               mapped.brand_name = brandName;
               mapped.mfg_name = mfgName || brandName;
               const existingBrand = brands.find(
-                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase()
+                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
               );
               if (existingBrand) {
                 mapped.brand_code = existingBrand.brand_code;
               } else {
-                const brandCode = `BRND-${brandName.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
+                const brandCode = `BRND-${brandName
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
                 mapped.brand_code = brandCode;
-                brandsToCreate.set(brandCode, { brand_code: brandCode, brand_name: brandName, mfg_name: mfgName || brandName });
+                brandsToCreate.set(brandCode, {
+                  brand_code: brandCode,
+                  brand_name: brandName,
+                  mfg_name: mfgName || brandName,
+                });
               }
             }
 
@@ -485,12 +526,15 @@ export function Products() {
             if (vendorName) {
               mapped.vendor_name = vendorName;
               const existingVendor = vendors.find(
-                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase()
+                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
               );
               if (existingVendor) {
                 mapped.vendor_code = existingVendor.vendor_code;
               } else {
-                const vendorCode = `VEND-${vendorName.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
+                const vendorCode = `VEND-${vendorName
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
                 mapped.vendor_code = vendorCode;
                 vendorsToCreate.set(vendorCode, {
                   vendor_code: vendorCode,
@@ -521,15 +565,22 @@ export function Products() {
               const cat1 = categoryLevels[0];
               const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
               const existingCategory = categories.find(
-                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase()
+                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
               );
 
               if (existingCategory) {
                 mapped.category_code = existingCategory.category_code;
               } else {
-                const categoryCode = `CAT-${cat1.substring(0, 8).toUpperCase().replace(/[^A-Z0-9]/g, "")}`;
+                const categoryCode = `CAT-${cat1
+                  .substring(0, 8)
+                  .toUpperCase()
+                  .replace(/[^A-Z0-9]/g, "")}`;
                 mapped.category_code = categoryCode;
-                const categoryData: any = { category_code: categoryCode, industry_name: industryName || "General", breadcrumb: breadcrumb };
+                const categoryData: any = {
+                  category_code: categoryCode,
+                  industry_name: industryName || "General",
+                  breadcrumb: breadcrumb,
+                };
                 categoryLevels.forEach((cat, index) => {
                   if (cat) categoryData[`category_${index + 1}`] = cat;
                 });
@@ -590,43 +641,52 @@ export function Products() {
             if (Object.keys(attributesJson).length > 0) {
               mapped.attributes = attributesJson;
             }
-            // --- EXISTING MAPPING LOGIC END ---
 
             mapped.images = bundleAssets(row, "image");
             mapped.videos = bundleAssets(row, "video");
 
-            // --- CHANGED SECTION STARTS HERE ---
-            // 1. Try to find documents using the standard format (document_url_1)
             let documents = bundleAssets(row, "document");
 
-            // 2. If no documents found, use "Smart Scan" for the random headers in your CSV
             if (Object.keys(documents).length === 0) {
-                let docCount = 1;
-                Object.keys(row).forEach((key) => {
-                    const value = String(row[key] || "").trim();
-                    // Check if value is a PDF URL
-                    if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
-                        // Use the Header Name (key) as the document name
-                        // e.g., Header: "Instruction_Wi-Fi Heater" -> Name: "Instruction Wi-Fi Heater"
-                        let name = key.replace(/_/g, " ").trim();
-                        
-                        // Fallback if header is weird
-                        if (!name || name.length > 50) {
-                             name = `Document ${docCount}`;
-                        }
-
-                        documents[docCount] = { name: name, url: value };
-                        docCount++;
+              let docCount = 1;
+              const allKeys=Object.keys(row)
+              allKeys.forEach((key,idx) => {
+                const value = String(row[key] || "").trim();
+                if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
+                  let docName=''
+                  if(idx>0)
+                  {
+                    const prevKey=allKeys[idx-1]
+                    const prevValue=String(row[prevKey]||"").trim()
+                    if(prevValue && !prevValue.startsWith('http'))
+                    {
+                      docName=prevValue
                     }
-                });
+                  }
+                  if(!docName)
+                  {
+                    docName = key.replace(/_/g, " ").replace(/url/i, "").trim();
+                    docName = docName.charAt(0).toUpperCase() + docName.slice(1);
+                  }
+                  // let name = key.replace(/_/g, " ").trim();
+
+                  // if (!name || name.length > 50) {
+                  //   name = `Document ${docCount}`;
+                  // }
+
+                  documents[docCount] = { name: docName, url: value };
+                  docCount++;
+                }
+              });
             }
             mapped.documents = documents;
-            // --- CHANGED SECTION ENDS HERE ---
 
             return mapped;
           } catch (error: any) {
             console.error(`Error processing row ${index + 1}:`, error);
-            importErrors.push(`Row ${index + 2}: Error processing data - ${error.message}`);
+            importErrors.push(
+              `Row ${index + 2}: Error processing data - ${error.message}`,
+            );
             return null;
           }
         })
@@ -655,8 +715,12 @@ export function Products() {
       if (brandsToCreate.size > 0) {
         try {
           const existingBrands = await MasterAPI.getBrands();
-          const existingCodes = new Set(existingBrands.map((b: any) => b.brand_code));
-          const newBrands = Array.from(brandsToCreate.values()).filter((b) => !existingCodes.has(b.brand_code));
+          const existingCodes = new Set(
+            existingBrands.map((b: any) => b.brand_code),
+          );
+          const newBrands = Array.from(brandsToCreate.values()).filter(
+            (b) => !existingCodes.has(b.brand_code),
+          );
 
           for (const brand of newBrands) {
             try {
@@ -674,8 +738,12 @@ export function Products() {
       if (vendorsToCreate.size > 0) {
         try {
           const existingVendors = await MasterAPI.getVendors();
-          const existingCodes = new Set(existingVendors.map((v: any) => v.vendor_code));
-          const newVendors = Array.from(vendorsToCreate.values()).filter((v) => !existingCodes.has(v.vendor_code));
+          const existingCodes = new Set(
+            existingVendors.map((v: any) => v.vendor_code),
+          );
+          const newVendors = Array.from(vendorsToCreate.values()).filter(
+            (v) => !existingCodes.has(v.vendor_code),
+          );
 
           for (const vendor of newVendors) {
             try {
@@ -693,8 +761,12 @@ export function Products() {
       if (categoriesToCreate.size > 0) {
         try {
           const existingCategories = await MasterAPI.getCategories();
-          const existingCodes = new Set(existingCategories.map((c: any) => c.category_code));
-          const newCategories = Array.from(categoriesToCreate.values()).filter((c) => !existingCodes.has(c.category_code));
+          const existingCodes = new Set(
+            existingCategories.map((c: any) => c.category_code),
+          );
+          const newCategories = Array.from(categoriesToCreate.values()).filter(
+            (c) => !existingCodes.has(c.category_code),
+          );
 
           for (const category of newCategories) {
             try {
@@ -711,7 +783,9 @@ export function Products() {
 
       let processedCount = 0;
       let errorCount = 0;
-      const existingProductMap = new Map(products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]));
+      const existingProductMap = new Map(
+        products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]),
+      );
 
       for (const productData of validData) {
         if (!productData.product_code) {
@@ -725,20 +799,30 @@ export function Products() {
 
         try {
           await ProductAPI.upsert(productData);
-          loadData()
           processedCount++;
         } catch (e) {
-          console.error("Failed to import product:", productData.product_name, e);
+          console.error(
+            "Failed to import product:",
+            productData.product_name,
+            e,
+          );
           errorCount++;
         }
       }
+          loadData();
+
 
       const masterDataMessage = [];
       if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
-      if (createdVendors > 0) masterDataMessage.push(`${createdVendors} vendors`);
-      if (createdCategories > 0) masterDataMessage.push(`${createdCategories} categories`);
+      if (createdVendors > 0)
+        masterDataMessage.push(`${createdVendors} vendors`);
+      if (createdCategories > 0)
+        masterDataMessage.push(`${createdCategories} categories`);
 
-      const masterDataText = masterDataMessage.length > 0 ? ` (Auto-created: ${masterDataMessage.join(", ")})` : "";
+      const masterDataText =
+        masterDataMessage.length > 0
+          ? ` (Auto-created: ${masterDataMessage.join(", ")})`
+          : "";
 
       setToast({
         message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
@@ -780,7 +864,14 @@ export function Products() {
         "17-inch touchscreen chartplotter with worldwide basemap",
       prod_long_desc:
         "The GPSMAP 8617 features a 17-inch multi-touch widescreen display with worldwide basemap, built-in Wi-Fi and support for premium charts. Includes NMEA 2000 and NMEA 0183 network support for easy integration with compatible marine instruments.",
-
+      price: "199.99",
+      sale_price: "149.99",
+      list_price: "210.00",
+      base_price: "120.00",
+      regular_price: "199.99",
+      retail_price: "220.00",
+      msrp: "249.99",
+      map_price: "180.00",
       features_1: "17-inch multi-touch widescreen display",
       features_2: "Worldwide basemap included",
       features_3: "Built-in Wi-Fi connectivity",
@@ -858,8 +949,7 @@ export function Products() {
       document_name_5: "010-02092-00-Warranty",
       document_url_5: "https://example.com/docs/gpsmap-8617-warranty.pdf",
 
-      "// INSTRUCTIONS":
-        "You can add unlimited fields by incrementing numbers: features_11, features_12, attribute_name8, image_name_6, etc. Remove this instruction row before importing.",
+      
     };
 
     exportToCSV([template], "product_import_template.csv");
@@ -884,8 +974,8 @@ export function Products() {
   const columns = [
     { key: "product_code", label: "Code", sortable: true },
     { key: "product_name", label: "Name", sortable: true },
-    { key: "brand_name", label: "Brand", sortable: true },
-    { key: "vendor_name", label: "Vendor", sortable: true },
+    { key: "brand_name", label: "Brand", sortable: true, render: (_: any, row: any) => row.brand?.brand_name || "N/A" },
+    { key: "vendor_name", label: "Vendor", sortable: true,render: (_: any, row: any) => row.vendor?.vendor_name || "N/A"},
     { key: "industry_name", label: "Industry", sortable: true },
     {
       key: "category",
@@ -958,6 +1048,7 @@ export function Products() {
   const tabs = [
     { id: "basic", label: "Basic Info" },
     { id: "descriptions", label: "Descriptions" },
+    { id: "pricing", label: "Pricing" },
     { id: "attributes", label: "Attributes" },
     { id: "variants", label: "Variants" },
     { id: "related", label: "Related" },
@@ -1133,6 +1224,51 @@ export function Products() {
           </div>
         </div>
       </div>
+      {/* Dynamic Count Info Bar */}
+      <div className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500 italic">
+          {searchTerm ||
+          industryFilter ||
+          brandFilter ||
+          vendorFilter ||
+          variantStatusFilter ||
+          category1Filter ||
+          productTypeFilter ? (
+            <span>
+              Showing <strong>{filteredProducts.length}</strong> matching
+              results out of {products.length} total products.
+            </span>
+          ) : (
+            <span>
+              Showing all <strong>{products.length}</strong> products.
+            </span>
+          )}
+        </p>
+
+        {(searchTerm ||
+          industryFilter ||
+          brandFilter ||
+          vendorFilter ||
+          variantStatusFilter ||
+          category1Filter ||
+          productTypeFilter) && (
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setIndustryFilter("");
+              setBrandFilter("");
+              setVendorFilter("");
+              setVariantStatusFilter("");
+              setCategory1Filter("");
+              setProductTypeFilter("");
+            }}
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
+
       <DataTable
         columns={columns}
         data={filteredProducts}
@@ -1392,6 +1528,49 @@ export function Products() {
               </div>
             </div>
           )}
+          {activeTab === "pricing" && (
+            <div className="space-y-4">
+              <h3 className="font-semibold text-gray-900 border-b pb-2">
+                Pricing Details
+              </h3>
+              <div className="grid grid-cols-2 gap-6">
+                {[
+                  { label: "Price", key: "price" },
+                  { label: "Sale Price", key: "sale_price" },
+                  { label: "List Price", key: "list_price" },
+                  { label: "Base Price", key: "base_price" },
+                  { label: "Regular Price", key: "regular_price" },
+                  { label: "Retail Price", key: "retail_price" },
+                  { label: "MSRP", key: "msrp" },
+                  { label: "MAP", key: "map_price" },
+                ].map((item) => (
+                  <div key={item.key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {item.label}
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData[item.key as keyof Product] || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [item.key]: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {activeTab === "descriptions" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1619,54 +1798,103 @@ export function Products() {
               {formData.attributes &&
               Object.keys(formData.attributes).length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {Object.entries(formData.attributes).map(
-                    ([key, attr]: any) => (
-                      <div
-                        key={key}
-                        className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
-                      >
-                        <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
-                          {key}
-                        </div>
-                        <div className="flex-1 grid grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                              Name
-                            </label>
-                            <input
-                              type="text"
-                              value={attr.name}
-                              readOnly
-                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                              Value
-                            </label>
-                            <input
-                              type="text"
-                              value={attr.value}
-                              readOnly
-                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                              UOM
-                            </label>
-                            <input
-                              type="text"
-                              value={attr.uom || "-"}
-                              readOnly
-                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ),
-                  )}
-                </div>
+  {Object.entries(formData.attributes).map(([key, attr]: any) => (
+    <div
+      key={key}
+      className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
+    >
+      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+        {/* If it's ATTR-001, show 'A', otherwise show the number */}
+        {key.startsWith("ATTR") ? "A" : key}
+      </div>
+      <div className="flex-1 grid grid-cols-3 gap-4">
+        {/* 1. Name Column (Read Only) */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Name</label>
+          <input
+            type="text"
+            value={attr.name}
+            readOnly
+            className="w-full px-2 py-1 border border-gray-300 rounded bg-white font-medium"
+          />
+        </div>
+
+        {/* 2. Value Column (Dropdown OR Input) */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Value</label>
+          
+          {/* ✅ LOGIC: If options exist, show Select. If not, show Input. */}
+          {attr.options && attr.options.length > 0 ? (
+            <select
+              value={attr.value || ""}
+              onChange={(e) => {
+                const selectedOpt = attr.options.find((opt: any) => opt.value === e.target.value);
+                setFormData((prev) => ({
+                  ...prev,
+                  attributes: {
+                    ...prev.attributes,
+                    [key]: {
+                      ...prev.attributes![key],
+                      value: e.target.value,
+                      // Auto-update UOM based on selection
+                      uom: selectedOpt ? selectedOpt.uom : attr.uom
+                    }
+                  }
+                }));
+              }}
+              className="w-full px-2 py-1 border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select...</option>
+              {attr.options.map((opt: any, idx: number) => (
+                <option key={idx} value={opt.value}>
+                  {opt.value}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={attr.value}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  attributes: {
+                    ...prev.attributes,
+                    [key]: { ...prev.attributes![key], value: e.target.value }
+                  }
+                }));
+              }}
+              className="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:border-blue-500"
+            />
+          )}
+        </div>
+
+        {/* 3. UOM Column (Auto-updated or Read Only) */}
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">UOM</label>
+          <input
+            type="text"
+            value={attr.uom || "-"}
+            // Make editable only if it's NOT a master attribute (optional)
+            readOnly={!!(attr.options && attr.options.length > 0)}
+            onChange={(e) => {
+               if(!attr.options) {
+                   setFormData((prev) => ({
+                    ...prev,
+                    attributes: {
+                        ...prev.attributes,
+                        [key]: { ...prev.attributes![key], uom: e.target.value }
+                    }
+                   }));
+               }
+            }}
+            className={`w-full px-2 py-1 border border-gray-300 rounded ${attr.options ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}
+          />
+        </div>
+      </div>
+    </div>
+  ))}
+</div>
               ) : (
                 <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
                   <p>No dynamic attributes found for this product.</p>
@@ -1847,7 +2075,6 @@ export function Products() {
           )}
           {activeTab === "assets" && (
             <div className="space-y-8">
-              {/* --- IMAGES SECTION --- */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <ImageIcon size={20} className="text-blue-600" />
@@ -1855,7 +2082,6 @@ export function Products() {
                 </h3>
                 <div className="grid grid-cols-1 gap-3">
                   {[1, 2, 3, 4, 5].map((num) => {
-                    // Safety check: ensure images object exists
                     const asset = formData.images?.[num] || {
                       name: "",
                       url: "",
@@ -1870,7 +2096,7 @@ export function Products() {
                           placeholder="Image Name"
                           value={asset.name}
                           onChange={(e) => {
-                            const currentImages = formData.images || {}; // Handle undefined
+                            const currentImages = formData.images || {}; 
                             const updatedImages = {
                               ...currentImages,
                               [num]: { ...asset, name: e.target.value },
@@ -1884,7 +2110,7 @@ export function Products() {
                           placeholder="Image URL"
                           value={asset.url}
                           onChange={(e) => {
-                            const currentImages = formData.images || {}; // Handle undefined
+                            const currentImages = formData.images || {}; 
                             const updatedImages = {
                               ...currentImages,
                               [num]: { ...asset, url: e.target.value },
@@ -1908,7 +2134,6 @@ export function Products() {
                 </div>
               </div>
 
-              {/* --- VIDEOS SECTION (Apply same pattern) --- */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Film size={20} className="text-green-600" />

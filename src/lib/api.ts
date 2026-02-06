@@ -6,7 +6,6 @@ const api = axios.create({
   //   'Content-Type': 'application/json',
   // },
 });
-console.log("API", API_URL);
 api.interceptors.request.use((config) => {
   if (
     !(config.data instanceof FormData) &&
@@ -217,10 +216,7 @@ export const MasterAPI = {
     const response = await api.get("/master/industries");
     return response.data;
   },
-  create: async (
-    type: "brands" | "vendors" | "categories" | "industries" | "attributes",
-    data: any,
-  ) => {
+  create: async (type: "brands" | "vendors" | "categories" | "industries" | "attributes",data: any,) => {
     const response = await api.post(`/master/${type}`, data);
     return response.data;
   },

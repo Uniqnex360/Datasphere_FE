@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, RefreshCw, Sparkles, Package, CheckSquare, Square } from 'lucide-react';
 import { Toast } from '../components/Toast';
-import { AIDetailPanel } from '../components/enrichment/AIDetailPanel';
+// import { AIDetailPanel } from '../components/enrichment/AIDetailPanel';
 import { EnrichmentStatusBadge } from '../components/enrichment/EnrichmentStatusBadge';
 import { ExternalSKUModal, ExternalSKUData } from '../components/enrichment/ExternalSKUModal';
 import { EnrichmentAPI, MasterAPI, ProductAPI } from '../lib/api';
@@ -126,9 +126,7 @@ export function Enrichment() {
   };
   const loadPendingSuggestions = async () => {
     try {
-        // You might need a new endpoint for this: GET /hitl/counts
-        // Or fetch all pending and count locally
-        const pendingItems = await EnrichmentAPI.getSuggestions(''); // Get all
+        const pendingItems = await EnrichmentAPI.getSuggestions(''); 
         if (pendingItems) {
             const countMap = new Map<string, number>();
             pendingItems.forEach((item: any) => {
@@ -139,72 +137,7 @@ export function Enrichment() {
         }
     } catch (e) { console.error(e); }
   };
-  // const loadBrandsAndCategories = async () => {
 
-  // const loadInternalProducts = async () => {
-  //   const { data, error } = await supabase
-  //     .from('product_master')
-  //     .select('product_code, product_name, brand_name, category_1, completeness_score, prod_short_desc, prod_long_desc, image_url_1')
-  //     .order('created_at', { ascending: false })
-  //     .limit(100);
-
-  //   if (error) {
-  //     console.error('Error loading products:', error);
-  //   } else if (data) {
-  //     const internalProducts = data.map(p => ({ ...p, is_external: false }));
-  //     setProducts(prev => [...internalProducts, ...prev.filter(p => p.is_external)]);
-  //   }
-  // };
-
-  // const loadExternalProducts = async () => {
-  //   const { data, error } = await supabase
-  //     .from('external_skus')
-  //     .select('external_sku, product_name, brand_name, category, enriched_data, image_urls')
-  //     .order('created_at', { ascending: false });
-
-  //   if (error) {
-  //     console.error('Error loading external SKUs:', error);
-  //   } else if (data) {
-  //     const externalProducts: Product[] = data.map(sku => {
-  //       let thumbnailUrl = '';
-  //       if (sku.image_urls && Array.isArray(sku.image_urls) && sku.image_urls.length > 0) {
-  //         thumbnailUrl = sku.image_urls[0];industryMap
-  //       } else if (sku.enriched_data && sku.enriched_data.thumbnail) {
-  //         thumbnailUrl = sku.enriched_data.thumbnail;
-  //       }
-
-  //       return {
-  //         product_code: sku.external_sku,
-  //         product_name: sku.product_name || 'Unnamed Product',
-  //         brand_name: sku.brand_name,
-  //         category_1: sku.category,
-  //         completeness_score: 0,
-  //         image_url_1: thumbnailUrl,
-  //         is_external: true,
-  //       };
-  //     });
-  //     setProducts(prev => [...prev.filter(p => !p.is_external), ...externalProducts]);
-  //   }
-  // };
-
-  // const loadEnrichmentStatuses = async () => {
-  //   const { data, error } = await supabase
-  //     .from('product_enrichment_status')
-  //     .select('*');
-
-  //   if (error) {
-  //     console.error('Error loading statuses:', error);
-  //   } else if (data) {
-  //     const statusMap = new Map<string, EnrichmentStatus>();
-  //     data.forEach(status => {
-  //       statusMap.set(status.product_id, status);
-  //     });
-  //     setEnrichmentStatuses(statusMap);
-  //   }
-  // };
-
-   
-  // }
     const handleAddExternalSKU = async (data: ExternalSKUData) => {
     try {
       showToast('Adding external SKU...', 'success');
@@ -663,13 +596,13 @@ export function Enrichment() {
         )}
       </div>
 
-      <AIDetailPanel
+      {/* <AIDetailPanel
         productId={selectedProduct?.product_code || ''}
         productName={selectedProduct?.product_name || ''}
         isOpen={isDetailPanelOpen}
         onClose={() => setIsDetailPanelOpen(false)}
         onRefresh={loadData}
-      />
+      /> */}
 
       <ExternalSKUModal
         isOpen={isExternalSKUModalOpen}

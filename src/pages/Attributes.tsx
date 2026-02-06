@@ -8,6 +8,8 @@ import {
   Trash2,
   Sliders,
   X,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import { Attribute, AttributeValue } from "../types/attribute";
 import { Category } from "../types/category";
@@ -19,6 +21,9 @@ import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI } from "../lib/api";
 import { validateImportFormat } from "../utils/importValidator";
+import { useIndustryManager } from "../hooks/useIndustryManager";
+import { SearchableSelect } from "../components/SearchableSelect";
+import { generateEntityCode } from "../utils/codeGenerator";
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
   attributeName: string,
@@ -40,7 +45,6 @@ const findDuplicateAttribute = (
 const generateAttributeCode = (allAttributes: Attribute[]): string => {
   if (!allAttributes || allAttributes.length === 0) return "ATTR-000001";
 
-  // Sort descending by code to find the highest current number
   const sorted = [...allAttributes]
     .filter((a) => a.attribute_code && a.attribute_code.startsWith("ATTR-"))
     .sort((a, b) => b.attribute_code.localeCompare(a.attribute_code));
@@ -132,6 +136,7 @@ export function Attributes() {
   const [dataTypeFilter, setDataTypeFilter] = useState("");
   const [sortKey, setSortKey] = useState("attribute_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [industryOptions, setIndustryOptions] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<Partial<Attribute>>({
     attribute_name: "",
@@ -183,7 +188,11 @@ export function Attributes() {
       setLoading(false);
     }
   };
-
+  const {
+    isCustom: isCustomIndustry,
+    handleIndustryChange,
+    setIsCustom: setIsCustomIndustry,
+  } = useIndustryManager(industries, setFormData, setErrors, "industry_name");
   const loadCategories = async () => {
     try {
       const data = await MasterAPI.getCategories();
@@ -197,6 +206,8 @@ export function Attributes() {
     try {
       const data = await MasterAPI.getIndustries();
       setIndustries(data || []);
+      const names = data.map((i: any) => i.industry_name).sort();
+      setIndustryOptions(names);
     } catch (error: any) {
       console.error("Error loading industries:", error);
     }
@@ -258,7 +269,9 @@ export function Attributes() {
     if (!formData.attribute_name?.trim()) {
       newErrors.attribute_name = "Attribute name is required";
     }
-
+    if (!formData.industry_name?.trim()) {
+      newErrors.industry_name = "Industry is required";
+    }
     if (
       (formData.attribute_type === "Multi-select" ||
         formData.data_type === "list") &&
@@ -281,6 +294,29 @@ export function Attributes() {
     if (!validateForm()) return;
 
     try {
+      if (isCustomIndustry && formData.industry_name) {
+        const industryName = formData.industry_name.trim();
+        const existingIndusty = industries.find(
+          (f) => f.industry_name?.toLowerCase() == industryName.toLowerCase(),
+        );
+        if (!existingIndusty) {
+          try {
+            const industryCode = generateEntityCode("industry", industryName);
+            await MasterAPI.create("industries", {
+              industry_code: industryCode,
+              industry_name: industryName,
+              is_active: true,
+            });
+            await loadIndustries();
+          } catch (error: any) {
+            setToast({
+              message: `Failed to create industry ${error.message}`,
+              type: "error",
+            });
+            return;
+          }
+        }
+      }
       const dataToSubmit: any = {
         ...formData,
         applicable_categories: selectedCategories.join(","),
@@ -301,6 +337,7 @@ export function Attributes() {
           message: "Attribute updated successfully",
           type: "success",
         });
+        
       } else {
         // Use helper with local state
         const duplicate = findDuplicateAttribute(
@@ -428,237 +465,257 @@ export function Attributes() {
     setToast({ message: "Attributes exported successfully", type: "success" });
   };
 
-const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    setLoading(true);
-    const data = await parseCSV(file);
+    try {
+      setLoading(true);
+      const data = await parseCSV(file);
 
-    // Debug logging
-    if (data.length > 0) {
-      console.log("CSV Column Names:", Object.keys(data[0]));
-      console.log("First Row Sample:", data[0]);
-    }
-
-    const requiredColumns = ["attribute_name", "industry_name"];
-    const validation = validateImportFormat(data, requiredColumns);
-    if (!validation.isValid) {
-      setToast({
-        message: validation.errorMessage || "Import failed!",
-        type: "error",
-      });
-      e.target.value = "";
-      return;
-    }
-
-    let added = 0;
-    let merged = 0;
-    let errors = 0;
-    let totalNewValues = 0;
-    let totalIgnoredValues = 0;
-    const importDetails: string[] = [];
-
-    let nextCodeNumber = 1;
-    const codes = attributes
-      .map((a) => a.attribute_code)
-      .filter((c) => c && c.startsWith("ATTR-"))
-      .sort((a, b) => b.localeCompare(a));
-
-    if (codes.length > 0) {
-      const match = codes[0].match(/ATTR-(\d+)/);
-      if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
-    }
-
-    const currentAttributes = [...attributes];
-
-    for (const row of data) {
-      if (!row.attribute_name?.trim()) {
-        errors++;
-        continue;
+      // Debug logging
+      if (data.length > 0) {
+        console.log("CSV Column Names:", Object.keys(data[0]));
+        console.log("First Row Sample:", data[0]);
       }
 
-      try {
-        const attributeData: any = {};
-        attributeData.attribute_name = row.attribute_name;
-        attributeData.industry_name = row.industry_name || "";
-        attributeData.industry_attribute_name = row.industry_attribute_name || "";
-        attributeData.description = row.description || "";
-        attributeData.applicable_categories = row.applicable_categories || "";
-        attributeData.attribute_type = row.attribute_type || "";
-        attributeData.data_type = row.data_type || "";
-        attributeData.unit = row.unit || "";
-        attributeData.filter = row.filter || "No";
-        attributeData.filter_display_name = row.filter_display_name || "";
+      const requiredColumns = ["attribute_name", "industry_name"];
+      const validation = validateImportFormat(data, requiredColumns);
+      if (!validation.isValid) {
+        setToast({
+          message: validation.errorMessage || "Import failed!",
+          type: "error",
+        });
+        e.target.value = "";
+        return;
+      }
 
-        // Extract all 50 attribute values and UOMs from CSV
-        const newValues: AttributeValue[] = [];
-        for (let i = 1; i <= 50; i++) {
-          const val = row[`attribute_value_${i}`] || "";
-          const uom = row[`attribute_uom_${i}`] || "";
+      let added = 0;
+      let merged = 0;
+      let errors = 0;
+      let totalNewValues = 0;
+      let totalIgnoredValues = 0;
+      const importDetails: string[] = [];
 
-          if (val && String(val).trim()) {
-            newValues.push({
-              value: String(val).trim(),
-              uom: String(uom || "").trim(),
-            });
-          }
+      let nextCodeNumber = 1;
+      const codes = attributes
+        .map((a) => a.attribute_code)
+        .filter((c) => c && c.startsWith("ATTR-"))
+        .sort((a, b) => b.localeCompare(a));
 
-          attributeData[`attribute_value_${i}`] = val ? String(val).trim() : "";
-          attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
+      if (codes.length > 0) {
+        const match = codes[0].match(/ATTR-(\d+)/);
+        if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
+      }
+
+      const currentAttributes = [...attributes];
+
+      for (const row of data) {
+        if (!row.attribute_name?.trim()) {
+          errors++;
+          continue;
         }
 
-        const duplicate = findDuplicateAttribute(
-          currentAttributes,
-          row.attribute_name,
-          row.industry_name || "",
-        );
+        try {
+          const attributeData: any = {};
+          attributeData.attribute_name = row.attribute_name;
+          attributeData.industry_name = row.industry_name || "";
+          attributeData.industry_attribute_name =
+            row.industry_attribute_name || "";
+          attributeData.description = row.description || "";
+          attributeData.applicable_categories = row.applicable_categories || "";
+          attributeData.attribute_type = row.attribute_type || "";
+          attributeData.data_type = row.data_type || "";
+          attributeData.unit = row.unit || "";
+          attributeData.filter = row.filter || "No";
+          attributeData.filter_display_name = row.filter_display_name || "";
 
-        if (duplicate) {
-          // **MERGE LOGIC - Enhanced**
-          console.log(`Merging values for existing attribute: ${duplicate.attribute_name}`);
-
-          // Get existing values from the duplicate attribute
-          const existingValues: AttributeValue[] = [];
+          // Extract all 50 attribute values and UOMs from CSV
+          const newValues: AttributeValue[] = [];
           for (let i = 1; i <= 50; i++) {
-            const value = duplicate[`attribute_value_${i}` as keyof Attribute];
-            const uom = duplicate[`attribute_uom_${i}` as keyof Attribute];
-            if (value && String(value).trim()) {
-              existingValues.push({
-                value: String(value).trim(),
+            const val = row[`attribute_value_${i}`] || "";
+            const uom = row[`attribute_uom_${i}`] || "";
+
+            if (val && String(val).trim()) {
+              newValues.push({
+                value: String(val).trim(),
                 uom: String(uom || "").trim(),
               });
             }
+
+            attributeData[`attribute_value_${i}`] = val
+              ? String(val).trim()
+              : "";
+            attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
           }
 
-          // Merge logic: Add only new values that don't exist
-          const mergedValues = [...existingValues];
-          let newValuesAdded = 0;
-          let ignoredValuesCount = 0;
+          const duplicate = findDuplicateAttribute(
+            currentAttributes,
+            row.attribute_name,
+            row.industry_name || "",
+          );
 
-          newValues.forEach((newVal) => {
-            if (newVal.value.trim()) {
-              // Check if this exact value+uom combination already exists
-              const isDuplicate = existingValues.some(
-                (existing) =>
-                  existing.value.toLowerCase().trim() === newVal.value.toLowerCase().trim() &&
-                  existing.uom.toLowerCase().trim() === newVal.uom.toLowerCase().trim(),
-              );
+          if (duplicate) {
+            // **MERGE LOGIC - Enhanced**
+            console.log(
+              `Merging values for existing attribute: ${duplicate.attribute_name}`,
+            );
 
-              if (!isDuplicate && mergedValues.length < 50) {
-                mergedValues.push(newVal);
-                newValuesAdded++;
-              } else if (isDuplicate) {
-                ignoredValuesCount++;
+            // Get existing values from the duplicate attribute
+            const existingValues: AttributeValue[] = [];
+            for (let i = 1; i <= 50; i++) {
+              const value =
+                duplicate[`attribute_value_${i}` as keyof Attribute];
+              const uom = duplicate[`attribute_uom_${i}` as keyof Attribute];
+              if (value && String(value).trim()) {
+                existingValues.push({
+                  value: String(value).trim(),
+                  uom: String(uom || "").trim(),
+                });
               }
             }
-          });
 
-          // Pad to 50 values
-          while (mergedValues.length < 50) {
-            mergedValues.push({ value: "", uom: "" });
-          }
+            // Merge logic: Add only new values that don't exist
+            const mergedValues = [...existingValues];
+            let newValuesAdded = 0;
+            let ignoredValuesCount = 0;
 
-          // Prepare update data
-          const updateData: any = {
-            ...duplicate,
-            ...attributeData,
-            usage_count: (duplicate.usage_count || 1) + 1,
-          };
-          delete updateData.attribute_code;
+            newValues.forEach((newVal) => {
+              if (newVal.value.trim()) {
+                // Check if this exact value+uom combination already exists
+                const isDuplicate = existingValues.some(
+                  (existing) =>
+                    existing.value.toLowerCase().trim() ===
+                      newVal.value.toLowerCase().trim() &&
+                    existing.uom.toLowerCase().trim() ===
+                      newVal.uom.toLowerCase().trim(),
+                );
 
-          // Set merged values
-          mergedValues.forEach((item, idx) => {
-            updateData[`attribute_value_${idx + 1}`] = item.value;
-            updateData[`attribute_uom_${idx + 1}`] = item.uom;
-          });
+                if (!isDuplicate && mergedValues.length < 50) {
+                  mergedValues.push(newVal);
+                  newValuesAdded++;
+                } else if (isDuplicate) {
+                  ignoredValuesCount++;
+                }
+              }
+            });
 
-          await MasterAPI.update("attributes", duplicate.attribute_code, updateData);
+            // Pad to 50 values
+            while (mergedValues.length < 50) {
+              mergedValues.push({ value: "", uom: "" });
+            }
 
-          merged++;
-          totalNewValues += newValuesAdded;
-          totalIgnoredValues += ignoredValuesCount;
+            // Prepare update data
+            const updateData: any = {
+              ...duplicate,
+              ...attributeData,
+              usage_count: (duplicate.usage_count || 1) + 1,
+            };
+            delete updateData.attribute_code;
 
-          if (newValuesAdded > 0 || ignoredValuesCount > 0) {
-            importDetails.push(
-              `${duplicate.attribute_name}: +${newValuesAdded} values, ${ignoredValuesCount} ignored`
+            // Set merged values
+            mergedValues.forEach((item, idx) => {
+              updateData[`attribute_value_${idx + 1}`] = item.value;
+              updateData[`attribute_uom_${idx + 1}`] = item.uom;
+            });
+
+            await MasterAPI.update(
+              "attributes",
+              duplicate.attribute_code,
+              updateData,
             );
-          }
 
-          // Update local array for subsequent checks
-          const index = currentAttributes.findIndex(
-            (attr) => attr.attribute_code === duplicate.attribute_code
+            merged++;
+            totalNewValues += newValuesAdded;
+            totalIgnoredValues += ignoredValuesCount;
+
+            if (newValuesAdded > 0 || ignoredValuesCount > 0) {
+              importDetails.push(
+                `${duplicate.attribute_name}: +${newValuesAdded} values, ${ignoredValuesCount} ignored`,
+              );
+            }
+
+            // Update local array for subsequent checks
+            const index = currentAttributes.findIndex(
+              (attr) => attr.attribute_code === duplicate.attribute_code,
+            );
+            if (index !== -1) {
+              currentAttributes[index] = {
+                ...updateData,
+                attribute_code: duplicate.attribute_code,
+              };
+            }
+          } else {
+            // **CREATE NEW ATTRIBUTE**
+            console.log(
+              `Creating new attribute: ${attributeData.attribute_name}`,
+            );
+
+            const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
+            attributeData.attribute_code = attributeCode;
+            attributeData.usage_count = 1;
+
+            await MasterAPI.create("attributes", attributeData);
+
+            nextCodeNumber++;
+            currentAttributes.push(attributeData);
+            added++;
+
+            const valueCount = newValues.filter((v) => v.value.trim()).length;
+            if (valueCount > 0) {
+              importDetails.push(
+                `${attributeData.attribute_name}: new attribute with ${valueCount} values`,
+              );
+            }
+          }
+        } catch (error: any) {
+          console.error(
+            `Error processing row for ${row.attribute_name}:`,
+            error,
           );
-          if (index !== -1) {
-            currentAttributes[index] = { ...updateData, attribute_code: duplicate.attribute_code };
-          }
-
-        } else {
-          // **CREATE NEW ATTRIBUTE**
-          console.log(`Creating new attribute: ${attributeData.attribute_name}`);
-
-          const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
-          attributeData.attribute_code = attributeCode;
-          attributeData.usage_count = 1;
-
-          await MasterAPI.create("attributes", attributeData);
-
-          nextCodeNumber++;
-          currentAttributes.push(attributeData);
-          added++;
-
-          const valueCount = newValues.filter(v => v.value.trim()).length;
-          if (valueCount > 0) {
-            importDetails.push(`${attributeData.attribute_name}: new attribute with ${valueCount} values`);
-          }
+          errors++;
+          importDetails.push(`${row.attribute_name}: ERROR - ${error.message}`);
         }
-
-      } catch (error: any) {
-        console.error(`Error processing row for ${row.attribute_name}:`, error);
-        errors++;
-        importDetails.push(`${row.attribute_name}: ERROR - ${error.message}`);
       }
-    }
 
-    let message = "";
-    if (errors === 0) {
-      if (added > 0 && merged > 0) {
-        message = ` Import completed! ${added} new attributes added, ${merged} existing attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
-      } else if (added > 0) {
-        message = ` Import successful! ${added} new attributes added`;
-      } else if (merged > 0) {
-        message = ` Import completed! ${merged} attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
+      let message = "";
+      if (errors === 0) {
+        if (added > 0 && merged > 0) {
+          message = ` Import completed! ${added} new attributes added, ${merged} existing attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
+        } else if (added > 0) {
+          message = ` Import successful! ${added} new attributes added`;
+        } else if (merged > 0) {
+          message = ` Import completed! ${merged} attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
+        } else {
+          message = `ℹ No changes made - all attributes and values already exist`;
+        }
       } else {
-        message = `ℹ No changes made - all attributes and values already exist`;
+        message = ` Import completed with issues: ${added} added, ${merged} merged, ${errors} errors`;
       }
-    } else {
-      message = ` Import completed with issues: ${added} added, ${merged} merged, ${errors} errors`;
+
+      console.log("Import Summary:", {
+        added,
+        merged,
+        errors,
+        totalNewValues,
+        totalIgnoredValues,
+        details: importDetails,
+      });
+
+      setToast({
+        message,
+        type: errors > 0 ? "error" : "success",
+      });
+
+      loadAttributes();
+    } catch (error: any) {
+      console.error("Import error:", error);
+      setToast({ message: `Import error: ${error.message}`, type: "error" });
+    } finally {
+      setLoading(false);
+      e.target.value = "";
     }
-
-    console.log("Import Summary:", {
-      added,
-      merged,
-      errors,
-      totalNewValues,
-      totalIgnoredValues,
-      details: importDetails,
-    });
-
-    setToast({
-      message,
-      type: errors > 0 ? "error" : "success",
-    });
-
-    loadAttributes();
-  } catch (error: any) {
-    console.error("Import error:", error);
-    setToast({ message: `Import error: ${error.message}`, type: "error" });
-  } finally {
-    setLoading(false);
-    e.target.value = "";
-  }
-};
+  };
   const downloadTemplate = () => {
     const template: any = {
       attribute_name: "Example Attribute",
@@ -688,13 +745,6 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
       );
     } else {
       setSelectedCategories([...selectedCategories, categoryCode]);
-    }
-  };
-
-  const addMoreValues = () => {
-    const firstEmptyIndex = attributeValues.findIndex((v) => !v.value.trim());
-    if (firstEmptyIndex !== -1 && firstEmptyIndex < 45) {
-      return;
     }
   };
 
@@ -883,7 +933,40 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
           </div>
         </div>
       </div>
+      <div className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500 italic">
+          {searchTerm ||
+          industryFilter ||
+          attributeTypeFilter ||
+          dataTypeFilter ? (
+            <span>
+              Showing <strong>{filteredAttributes.length}</strong> matching
+              results out of {attributes.length} total attributes.
+            </span>
+          ) : (
+            <span>
+              Showing all <strong>{attributes.length}</strong> attributes.
+            </span>
+          )}
+        </p>
 
+        {(searchTerm ||
+          industryFilter ||
+          attributeTypeFilter ||
+          dataTypeFilter) && (
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setIndustryFilter("");
+              setAttributeTypeFilter("");
+              setDataTypeFilter("");
+            }}
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
       <DataTable
         columns={columns}
         data={filteredAttributes}
@@ -905,7 +988,9 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         onClose={() => {
           setIsDrawerOpen(false);
           setEditingAttribute(null);
+          setIsCustomIndustry(false);
           resetForm();
+          loadAttributes();
         }}
         title={editingAttribute ? "Edit Attribute" : "Add Attribute"}
       >
@@ -949,26 +1034,76 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Industry
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                <span className="flex items-center gap-2">
+                  Industry <span className="text-red-500">*</span>
+                  {isCustomIndustry && formData.industry_name?.trim() && (
+                    <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
+                      New
+                    </span>
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomIndustry(!isCustomIndustry);
+                    if (isCustomIndustry)
+                      setFormData({ ...formData, industry_name: "" });
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  {isCustomIndustry ? <X size={12} /> : <Plus size={12} />}
+                  {isCustomIndustry ? "Select List" : "Add New"}
+                </button>
               </label>
-              <select
-                value={formData.industry_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, industry_name: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select industry</option>
-                {industries.map((industry) => (
-                  <option
-                    key={industry.industry_code}
-                    value={industry.industry_name}
-                  >
-                    {industry.industry_name}
-                  </option>
-                ))}
-              </select>
+
+              {isCustomIndustry ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter new industry name..."
+                      value={formData.industry_name || ""}
+                      onChange={(e) => handleIndustryChange(e.target.value)}
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && e.currentTarget.blur()
+                      }
+                      className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        errors.industry_name
+                          ? "border-red-500"
+                          : "border-blue-400"
+                      }`}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200"
+                      title="Confirmed"
+                    >
+                      <CheckCircle size={20} />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 italic flex items-center gap-1">
+                    <AlertCircle size={10} /> This will be added to Master Data
+                    on save.
+                  </p>
+                </div>
+              ) : (
+                <SearchableSelect
+                  options={industryOptions}
+                  value={formData.industry_name || ""}
+                  onChange={(val) => handleIndustryChange(val)}
+                  placeholder="Select or Search Industry"
+                  onAddNew={() => setIsCustomIndustry(true)}
+                  error={!!errors.industry_name}
+                />
+              )}
+
+              {errors.industry_name && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.industry_name}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -19,6 +19,20 @@ export interface EnrichedProduct {
   ai_generated_description?: string;
   ai_generated_tags?: string[];
 }
+export interface ProductAttributeValue {
+  value: string;
+  uom: string;
+}
+export interface ProductAttributeDefinition {
+  attribute_code: string;
+  attribute_name: string;
+  attribute_type: string; 
+  data_type: string;      
+  unit?: string;
+  available_values?: ProductAttributeValue[];
+  selected_value?: string | null; 
+  selected_uom?: string | null;
+}
 export interface EnrichmentAttribute {
   id: string;
   name: string;

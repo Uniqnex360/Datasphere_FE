@@ -5,7 +5,7 @@ import { Products } from './pages/Products';
 import { Enrichment } from './pages/Enrichment';
 import { Categories } from './pages/Categories';
 import { Attributes } from './pages/Attributes';
-import { ImportExport } from './pages/ImportExport';
+// import { ImportExport } from './pages/ImportExport';
 import { Channels } from './pages/Channels';
 import { Users } from './pages/Users';
 import { Settings } from './pages/Settings';

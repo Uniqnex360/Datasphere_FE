@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import {
+  Download,
+  Edit,
+  Loader2,
   Plus,
   Search,
-  Download,
-  Upload,
-  Edit,
-  Trash2,
   Tag,
+  Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import { Brand } from "../types/brand";
 import Drawer from "../components/Drawer";
@@ -17,10 +19,14 @@ import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { generateEntityCode } from "../utils/codeGenerator";
 import { validateImportFormat } from "../utils/importValidator";
+import { clearFieldError } from "../utils/formHelpers";
 
 export function BrandMaster() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [filteredBrands, setFilteredBrands] = useState<Brand[]>([]);
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
+  const [mfgLogoFile, setMfgLogoFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
@@ -38,7 +44,10 @@ export function BrandMaster() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortKey, setSortKey] = useState("brand_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
+  const URL_REGEX =
+    /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
   const [formData, setFormData] = useState<Partial<Brand>>({
     brand_name: "",
     brand_logo: "",
@@ -56,7 +65,16 @@ export function BrandMaster() {
   useEffect(() => {
     filterAndSortBrands();
   }, [brands, searchTerm, sortKey, sortDirection]);
-
+  useEffect(() => {
+    return () => {
+      if (formData.brand_logo?.startsWith("blob:")) {
+        URL.revokeObjectURL(formData.brand_logo);
+      }
+      if (formData.mfg_logo?.startsWith("blob:")) {
+        URL.revokeObjectURL(formData.mfg_logo);
+      }
+    };
+  }, [formData.brand_logo, formData.mfg_logo]);
   const loadBrands = async () => {
     try {
       const data = await MasterAPI.getBrands();
@@ -95,19 +113,106 @@ export function BrandMaster() {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.brand_name?.trim()) {
-      newErrors.brand_name = "Brand name is required";
+    const name = formData.brand_name?.trim() || "";
+    const mfgName = formData.mfg_name?.trim() || "";
+    const bLogo = formData.brand_logo?.trim() || "";
+    const mLogo = formData.mfg_logo?.trim() || "";
+    if (!name) newErrors.brand_name = "Brand name is required";
+    if (!mfgName) newErrors.mfg_name = "Manufacturer name is required";
+    const isDuplicate = brands.find(
+      (b) =>
+        b.brand_name.trim().toLowerCase() === name.toLowerCase() &&
+        (!editingBrand || b.brand_code !== editingBrand.brand_code),
+    );
+    if (isDuplicate) {
+      newErrors.brand_name = "A brand with this name already exists!";
+    }
+    if (bLogo && !bLogo.startsWith("blob:") && !URL_REGEX.test(bLogo)) {
+      newErrors.brand_logo = "Invalid URL format for Brand Logo";
+    }
+    if (mLogo && !mLogo.startsWith("blob:") && URL_REGEX.test(mLogo)) {
+      newErrors.mfg_logo = "Invalid URL format for Manufacturer Logo";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleBrandLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setToast({ message: "Only JPG,PNG, and WEBP allowed", type: "error" });
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setToast({ message: "File size must be under 5MB", type: "error" });
+      return;
+    }
+    if (formData.brand_logo?.startsWith("blob:")) {
+      URL.revokeObjectURL(formData.brand_logo);
+    }
+    setBrandLogoFile(file);
+    setFormData((prev) => ({ ...prev, brand_logo: URL.createObjectURL(file) }));
+    setErrors((prev) => ({ ...prev, brand_logo: "" }));
+    e.target.value = "";
+  };
+  const handleRemoveBrandLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (formData.brand_logo?.startsWith("blob:")) {
+      URL.revokeObjectURL(formData.brand_logo);
+    }
+    setFormData((prev) => ({ ...prev, brand_logo: "" }));
+    setBrandLogoFile(null);
+  };
+  const handleMfgLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (mfgLogoFile) URL.revokeObjectURL(formData.mfg_logo!);
+    setMfgLogoFile(file);
+    setFormData((prev) => ({ ...prev, mfg_logo: URL.createObjectURL(file) }));
+    e.target.value = "";
+  };
+  const handleRemoveMfgLogo = () => {
+    if (formData.mfg_logo?.startsWith("blob:")) {
+      URL.revokeObjectURL(formData.mfg_logo);
+    }
+    setFormData((prev) => ({ ...prev, mfg_logo: "" }));
+    setMfgLogoFile(null);
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
-
+    setSubmitting(true);
+    const name = formData.brand_name?.trim().toLowerCase();
+    const duplicate = brands.find(
+      (b) =>
+        b.brand_name.trim().toLowerCase() === name &&
+        (!editingBrand || b.brand_code !== editingBrand.brand_code),
+    );
+    if (duplicate) {
+      setToast({ message: "Brand name already exists!", type: "error" });
+      return;
+    }
     try {
+      const sanitized: any = { ...formData };
+      if (sanitized.brand_logo?.startsWith("blob:")) sanitized.brand_logo = "";
+      if (sanitized.mfg_logo?.startsWith("blob:")) sanitized.mfg_logo = "";
+      if (!sanitized.brand_code && !editingBrand) {
+        sanitized.brand_code = generateEntityCode(
+          "brand",
+          sanitized.brand_name || "",
+        );
+      }
+      let payload: any = sanitized;
+      if (brandLogoFile || mfgLogoFile) {
+        const data = new FormData();
+        Object.entries(sanitized).forEach(([key, val]) => {
+          if (val !== null && val !== undefined) data.append(key, String(val));
+        });
+        if (brandLogoFile) data.append("brand_logo_file", brandLogoFile);
+        if (mfgLogoFile) data.append("mfg_logo_file", mfgLogoFile);
+        payload = data;
+      }
       const name = formData.brand_name?.trim().toLowerCase();
       const duplicate = brands.find(
         (b) =>
@@ -119,17 +224,20 @@ export function BrandMaster() {
         return;
       }
       if (editingBrand) {
-        await MasterAPI.update("brands", editingBrand.brand_code, formData);
+        await MasterAPI.update("brands", editingBrand.brand_code, payload);
         setToast({ message: "Brand updated successfully", type: "success" });
       } else {
-        const dataToSubmit = {
-          ...formData,
-          brand_code:
-            formData.brand_code ||
-            generateEntityCode("brand", formData.brand_name || ""),
-        };
+        if (!(payload instanceof FormData)) {
+          payload.brand_code = generateEntityCode(
+            "brand",
+            payload.brand_name || "",
+          );
+        }
+        if (!(payload instanceof FormData)) {
+          payload.mfg_code = generateEntityCode("mfg", payload.mfg_name || "");
+        }
 
-        await MasterAPI.create("brands", dataToSubmit);
+        await MasterAPI.create("brands", payload);
         setToast({ message: "Brand added successfully", type: "success" });
       }
 
@@ -146,6 +254,8 @@ export function BrandMaster() {
         error.message ||
         "Request failed";
       setToast({ message: errorMessage, type: "error" });
+    } finally {
+      setSubmitting(false);
     }
   };
   const handleEdit = (brand: Brand) => {
@@ -154,41 +264,50 @@ export function BrandMaster() {
     setErrors({});
     setIsDrawerOpen(true);
   };
-
+  const clearErrors = (fieldName: string) => {
+    setErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[fieldName];
+      return newErrors;
+    });
+  };
   const handleDelete = async () => {
+    console.log("brandmodela", deleteModal);
     if (!deleteModal.brand) return;
-
+    const code = deleteModal.brand.brand_code || deleteModal.brand.id;
+    if (!code) {
+      setToast({ message: "Error: Brand Code is missing", type: "error" });
+      return;
+    }
     try {
-      // const { data: products } = await supabase
-      //   .from("product_master")
-      //   .select("product_code")
-      //   .eq("brand_code", deleteModal.brand.brand_code)
-      //   .limit(1);
       const products = await ProductAPI.getAll(0, 1, {
-        brand_name: deleteModal.brand.brand_name,
+        brand_code: deleteModal.brand.brand_code,
       });
-      if (Array.isArray(products) && products.length > 0) {
+
+      console.log("Products found for this brand:", products);
+
+      const linkedProducts = products.filter(
+        (p: any) => p.brand_code === deleteModal.brand?.brand_code,
+      );
+
+      if (linkedProducts.length > 0) {
         setToast({
-          message: "Cannot delete brand. It is linked to products.",
+          message: `Cannot delete. ${linkedProducts.length} product(s) are still using this brand.`,
           type: "error",
         });
         setDeleteModal({ isOpen: false, brand: null });
         return;
       }
-      await MasterAPI.delete("brands", deleteModal.brand.brand_code);
-
-      // const { error } = await supabase
-      //   .from("brand_master")
-      //   .delete()
-      //   .eq("brand_code", deleteModal.brand.brand_code);
-
-      // if (error) throw error;
+      await MasterAPI.delete("brands", code);
 
       setToast({ message: "Brand deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, brand: null });
       loadBrands();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      setToast({
+        message: error.message || "Failed to delete brand",
+        type: "error",
+      });
     }
   };
 
@@ -201,6 +320,8 @@ export function BrandMaster() {
       mfg_name: "",
       mfg_logo: "",
     });
+    setBrandLogoFile(null);
+    setMfgLogoFile(null);
     setErrors({});
   };
 
@@ -220,7 +341,7 @@ export function BrandMaster() {
     try {
       const data = await parseCSV(file);
       const validData: Partial<Brand>[] = [];
-      const ignoredItems:string[]=[]
+      const ignoredItems: string[] = [];
       const importErrors: string[] = [];
       const validColumns = [
         "brand_code",
@@ -252,7 +373,9 @@ export function BrandMaster() {
             row.brand_name?.trim().toLowerCase(),
         );
         if (existingBrand) {
-          ignoredItems.push(`Row ${index+2}:"${row.brand_name}"(already exists!)`)
+          ignoredItems.push(
+            `Row ${index + 2}:"${row.brand_name}"(already exists!)`,
+          );
         }
         const duplicateInImport = validData.find(
           (item) =>
@@ -260,8 +383,10 @@ export function BrandMaster() {
             row.brand_name?.trim().toLowerCase(),
         );
         if (duplicateInImport) {
-          ignoredItems.push(`Row ${index+2}:"${row.brand_name}"(duplicate in file!)`);
-          return
+          ignoredItems.push(
+            `Row ${index + 2}:"${row.brand_name}"(duplicate in file!)`,
+          );
+          return;
         }
         if (rowErrors.length > 0) {
           importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
@@ -273,7 +398,10 @@ export function BrandMaster() {
             }
           });
 
-          if (brandData.brand_code === "" ||brandData.brand_code === undefined  ) {
+          if (
+            brandData.brand_code === "" ||
+            brandData.brand_code === undefined
+          ) {
             brandData.brand_code = generateEntityCode(
               "brand",
               brandData.brand_name || "",
@@ -290,61 +418,62 @@ export function BrandMaster() {
         });
         return;
       }
-      if(validData.length===0)
-      {
-        const totalRows=data.length 
-        const ignoredCount=ignoredItems.length 
+      if (validData.length === 0) {
+        const totalRows = data.length;
+        const ignoredCount = ignoredItems.length;
         setToast({
-          message:`No new brands to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,type:'error'
-        })
-        e.target.value=''
-        return
-
+          message: `No new brands to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,
+          type: "error",
+        });
+        e.target.value = "";
+        return;
       }
-      let successCount=0
-      let failedCount=0
-      const failedItems:string[]=[]
-      for(let i=0;i<validData.length;i++)
-      {
-        const brand=validData[i]
+      let successCount = 0;
+      let failedCount = 0;
+      const failedItems: string[] = [];
+      for (let i = 0; i < validData.length; i++) {
+        const brand = validData[i];
         try {
-          await MasterAPI.create('brands',brand)
-          successCount++
+          await MasterAPI.create("brands", brand);
+          successCount++;
         } catch (error) {
-          failedCount++
-          const errorDetail=error.response?.data?.detail||error.response?.data?.message||error.message||"Unknown error"
-          failedItems.push(`${brand.brand_name}:${errorDetail}`)
+          failedCount++;
+          const errorDetail =
+            error.response?.data?.detail ||
+            error.response?.data?.message ||
+            error.message ||
+            "Unknown error";
+          failedItems.push(`${brand.brand_name}:${errorDetail}`);
         }
       }
-      
 
-      const totalRows=data.length
-      const ignoredCount=ignoredItems.length
-      const processedCount=validData.length
-      if(failedCount===0 && ignoredCount===0)
-      {
-        setToast({message:`Import successful!${successCount} brands added from ${totalRows} rows!`,type:'success'})
-      }
-      else if (failedCount===0 && ignoredCount>0)
-      {
-         setToast({
-        message: `Import completed! ${successCount} brands added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
-        type: "success",
-      });
-      }
-      else if (successCount>0)
-      {
+      const totalRows = data.length;
+      const ignoredCount = ignoredItems.length;
+      const processedCount = validData.length;
+      if (failedCount === 0 && ignoredCount === 0) {
         setToast({
-        message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join("; ")}`,
-        type: "error",
-      });
-      }
-      else
-      {
-         setToast({
-        message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join("; ")}`,
-        type: "error",
-      });
+          message: `Import successful!${successCount} brands added from ${totalRows} rows!`,
+          type: "success",
+        });
+      } else if (failedCount === 0 && ignoredCount > 0) {
+        setToast({
+          message: `Import completed! ${successCount} brands added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
+          type: "success",
+        });
+      } else if (successCount > 0) {
+        setToast({
+          message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join(
+            "; ",
+          )}`,
+          type: "error",
+        });
+      } else {
+        setToast({
+          message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join(
+            "; ",
+          )}`,
+          type: "error",
+        });
       }
       loadBrands();
     } catch (error: any) {
@@ -490,7 +619,26 @@ export function BrandMaster() {
           </div>
         </div>
       </div>
-
+            <div className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500 italic">
+          {searchTerm ? (
+            <span>
+              Showing <strong>{filteredBrands.length}</strong> matching results out of {brands.length} total brands.
+            </span>
+          ) : (
+            <span>Showing all <strong>{brands.length}</strong> brands.</span>
+          )}
+        </p>
+        
+        {searchTerm && (
+          <button 
+            onClick={() => setSearchTerm('')}
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear search
+          </button>
+        )}
+      </div>
       <DataTable
         columns={columns}
         data={filteredBrands}
@@ -543,9 +691,11 @@ export function BrandMaster() {
                 <input
                   type="text"
                   value={formData.brand_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, brand_name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, brand_name: e.target.value });
+
+                    clearFieldError("brand_name", setErrors);
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 {errors.brand_name && (
@@ -556,17 +706,44 @@ export function BrandMaster() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Brand Logo URL
+                  Brand Logo
                 </label>
-                <input
-                  type="text"
-                  value={formData.brand_logo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, brand_logo: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://example.com/logo.png"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={
+                      brandLogoFile ? brandLogoFile.name : formData.brand_logo
+                    }
+                    placeholder={
+                      brandLogoFile ? "File selected" : "https://..."
+                    }
+                    onChange={(e) =>
+                      setFormData({ ...formData, brand_logo: e.target.value })
+                    }
+                    disabled={!!brandLogoFile}
+                    className="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg text-sm"
+                  />
+                  {formData.brand_logo && brandLogoFile && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveBrandLogo}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <label className="px-3 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 flex items-center gap-1">
+                  <Upload size={14} />
+                  <span className="text-sm">Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBrandLogoUpload}
+                    className="hidden"
+                  />
+                </label>
+
                 {formData.brand_logo && (
                   <img
                     src={formData.brand_logo}
@@ -590,11 +767,12 @@ export function BrandMaster() {
                 <input
                   type="text"
                   value={formData.mfg_code}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mfg_code: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Auto-generated upon creation
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -603,25 +781,56 @@ export function BrandMaster() {
                 <input
                   type="text"
                   value={formData.mfg_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mfg_name: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ ...formData, mfg_name: e.target.value });
+                    clearFieldError("mfg_name", setErrors);
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {errors.mfg_name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.mfg_name}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Manufacturer Logo URL
+                  Manufacturer Logo
                 </label>
-                <input
-                  type="text"
-                  value={formData.mfg_logo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mfg_logo: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://example.com/mfg-logo.png"
-                />
+                <div className="flex gap-2 items-start">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={mfgLogoFile ? mfgLogoFile.name : formData.mfg_logo}
+                      onChange={(e) =>
+                        setFormData({ ...formData, mfg_logo: e.target.value })
+                      }
+                      disabled={!!mfgLogoFile}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder={
+                        mfgLogoFile ? "File selected" : "https://..."
+                      }
+                    />
+                    {formData.mfg_logo && mfgLogoFile && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveMfgLogo}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <label className="px-3 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 flex items-center gap-1">
+                  <Upload size={14} />
+                  <span className="text-sm">Upload</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMfgLogoUpload}
+                    className="hidden"
+                  />
+                </label>
+
                 {formData.mfg_logo && (
                   <img
                     src={formData.mfg_logo}
@@ -646,9 +855,21 @@ export function BrandMaster() {
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              disabled={submitting}
+              className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                submitting
+                  ? "opacity-70 cursor-not-allowed"
+                  : "hover:bg-blue-700"
+              }`}
             >
-              {editingBrand ? "Update" : "Add"} Brand
+              {submitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>{editingBrand ? "Update" : "Add"}</>
+              )}
             </button>
           </div>
         </div>
