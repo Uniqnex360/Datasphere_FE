@@ -54,7 +54,15 @@ export default function Inventory() {
   useEffect(() => {
     loadInventory();
   }, []);
-
+  useEffect(() => {
+  if (editQty <= 0) {
+    setEditStatus("Out of Stock");
+  } else if (editQty < 50) {
+    setEditStatus("Low Stock");
+  } else {
+    setEditStatus("In Stock");
+  }
+}, [editQty]);
   const loadInventory = async (): Promise<void> => {
     try {
       setLoading(true);
@@ -328,6 +336,7 @@ export default function Inventory() {
   <div className="p-6 space-y-6">
     {selectedProduct && (
       <>
+        {/* Info Panel */}
         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
           <div>
             <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Product</p>
@@ -353,26 +362,30 @@ export default function Inventory() {
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">New Manual Status</label>
-            <select 
-              value={editStatus}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditStatus(e.target.value as InventoryStatus)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-            </select>
-            
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">New Quantity</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Adjust Quantity</label>
             <input 
               type="number" 
               min={0}
               value={editQty}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditQty(parseInt(e.target.value) || 0)}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl text-xl font-bold focus:ring-2 focus:ring-blue-500"
+              autoFocus
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Stock Status <span className="text-xs font-normal text-gray-400">(Auto-calculated)</span>
+            </label>
+            <select 
+              value={editStatus}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed font-medium"
+            >
+              {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+            <p className="text-[10px] text-blue-500 mt-2 italic px-1">
+              * Status is "In Stock" at 50+, "Low Stock" under 50.
+            </p>
           </div>
         </div>
 
@@ -388,7 +401,7 @@ export default function Inventory() {
             className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
           >
             <CheckCircle2 size={18} />
-            Commit Changes
+            Update Inventory
           </button>
         </footer>
       </>
