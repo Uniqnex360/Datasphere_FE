@@ -16,6 +16,7 @@ export interface Product {
   category_level_3: string;
   category_level_4: string;
   category_level_5: string;
+  inventory_status?: InventoryStatus;
   category_level_6: string;
   category_level_7: string;
   category_level_8: string;
@@ -104,6 +105,7 @@ export interface Product {
   updated_at?: string;
   attributes?: Record<string, ProductAttributeDefinition>;
 }
+export type InventoryStatus=|"In Stock" |"Low Stock"|"Out of Stock"
 
 export interface ProductFormData extends Partial<Product> {}
 

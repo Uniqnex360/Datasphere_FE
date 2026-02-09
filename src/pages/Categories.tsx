@@ -904,23 +904,24 @@ export function Categories() {
                   />
                 </div>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
-  const value = selectedCategory[`category_${level}` as keyof Category];
-  if (!value || !String(value).trim()) return null;
-  
-  return (
-    <div key={level}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Level {level}
-      </label>
-      <input
-        type="text"
-        value={String(value)}
-        readOnly
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-      />
-    </div>
-  );
-})}
+                  const value =
+                    selectedCategory[`category_${level}` as keyof Category];
+                  if (!value || !String(value).trim()) return null;
+
+                  return (
+                    <div key={level}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Level {level}
+                      </label>
+                      <input
+                        type="text"
+                        value={String(value)}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      />
+                    </div>
+                  );
+                })}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Product Type

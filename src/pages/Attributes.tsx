@@ -832,7 +832,7 @@ export function Attributes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-white py-6 -mx-6 px-6 shadows-sm flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Attributes Master

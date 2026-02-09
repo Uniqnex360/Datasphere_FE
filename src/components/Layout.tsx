@@ -13,8 +13,10 @@ import {
   X,
   Sliders,
   Building2,
+  Grid2x2,
   Tag,
-  LogOut
+  LogOut,
+  CircleDollarSign
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -32,6 +34,8 @@ const navigation = [
   { name: 'Categories', icon: FolderTree, page: 'categories' },
   { name: 'Attributes', icon: Sliders, page: 'attributes' },
   { name: 'Products', icon: Package, page: 'products' },
+  { name: 'Price', icon: CircleDollarSign, page: 'price' },
+  { name: 'Inventory', icon: Grid2x2, page: 'inventory' },
   { name: 'Digital Assets', icon: Image, page: 'assets' },
   { name: 'Enrichment', icon: FileCheck, page: 'enrichment' },
   { name: 'Channels', icon: Share2, page: 'channels' },

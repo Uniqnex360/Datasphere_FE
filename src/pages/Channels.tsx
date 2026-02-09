@@ -130,7 +130,6 @@ export function Channels() {
         return;
       }
 
-      // NEW: API Call
       await ChannelAPI.create({
           channel_name: newChannel.channel_name,
           template_headers: headers,

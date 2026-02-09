@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Upload, Trash2, ImageIcon, FileText, Film, File, FolderOpen, ExternalLink, AlertCircle } from 'lucide-react';
 import { DigitalAssetAPI } from '../lib/api';
 
-// Configure your Cloudinary credentials here
 const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_API_KEY_NAME,
   uploadPreset: import.meta.env.VITE_CLOUDINARY_PRESET_NAME
@@ -86,7 +85,6 @@ useEffect(() => {
 
     setUploading(true);
     try {
-      // Upload to Cloudinary
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);

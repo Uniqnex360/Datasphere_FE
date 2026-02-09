@@ -13,6 +13,8 @@ import { VendorMaster } from './pages/VendorMaster';
 import { BrandMaster } from './pages/BrandMaster';
 import { Login } from './pages/Login';
 import DigitalAssets from './pages/DigitalAssets';
+import Price from './pages/Price';
+import Inventory from './pages/Inventory';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -43,6 +45,10 @@ function App() {
         return <Dashboard onNavigate={setCurrentPage} />;
       case 'products':
         return <Products />;
+      case 'price':
+        return <Price />;
+      case 'inventory':
+        return <Inventory />;
       case 'enrichment':
         return <Enrichment />;
       case 'categories':
