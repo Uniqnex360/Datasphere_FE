@@ -166,7 +166,7 @@ export default function Inventory() {
   };
 
   const columns = [
-    { key: "product_code", label: "Code", sortable: true },
+    // { key: "product_code", label: "Code", sortable: true },
     { key: "product_name", label: "Name", sortable: true },
     { 
       key: "brand_name", 
