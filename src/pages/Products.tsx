@@ -1311,7 +1311,7 @@ export function Products() {
         <div className="p-6 space-y-6">
           {activeTab === "basic" && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-gray-900">Basic Information</h3>
+              {/* <h3 className="font-semibold text-gray-900">Basic Information</h3> */}
               <div className="grid grid-cols-2 gap-4">
                 {editingProduct && (
                   <div>

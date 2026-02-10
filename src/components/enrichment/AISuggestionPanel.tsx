@@ -164,7 +164,7 @@ export function AISuggestionPanel({ product, suggestions, onClose, onAcceptSugge
         {activeTab === 'data' && (
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-2">Basic Information</h4>
+              {/* <h4 className="text-sm font-semibold text-gray-900 mb-2">Basic Information</h4> */}
               <div className="bg-gray-50 rounded p-3">
                 <div className="space-y-2 text-sm">
                   <div>

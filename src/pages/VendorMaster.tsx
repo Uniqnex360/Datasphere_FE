@@ -53,6 +53,7 @@ export function VendorMaster() {
     isDeleting: boolean;
   }>({ isOpen: false, vendor: null, isDeleting: false });
   const [filteredVendors, setFilteredVendors] = useState<Vendor[]>([]);
+  const [deptCount, setDeptCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
@@ -193,7 +194,7 @@ export function VendorMaster() {
 
     const getName = () => formData.vendor_name?.trim() || "";
     const getEmail = () => formData.contact_email?.trim() || "";
-    const getPhone = () => formData.contact_phone?.trim() || "";
+    // const getPhone = () => formData.contact_phone?.trim() || "";
     const getWebsite = () => formData.vendor_website?.trim() || "";
     const getIndustry = () => formData.industry?.trim() || "";
     const getBusinessType = () => formData.business_type?.trim() || "";
@@ -224,11 +225,11 @@ export function VendorMaster() {
         newErrors.country = "Invalid country name (min 3 chars)";
       }
     }
-    if (!getPhone()) {
-      newErrors.contact_phone = "Contact phone is required";
-    } else if (!PHONE_REGEX.test(getPhone())) {
-      newErrors.contact_phone = "Invalid phone number format";
-    }
+    // if (!getPhone()) {
+    //   newErrors.contact_phone = "Contact phone is required";
+    // } else if (!PHONE_REGEX.test(getPhone())) {
+    //   newErrors.contact_phone = "Invalid phone number format";
+    // }
 
     if (getWebsite() && !URL_REGEX.test(getWebsite())) {
       newErrors.vendor_website = "Invalid website URL format";
@@ -244,25 +245,25 @@ export function VendorMaster() {
       newErrors.vendor_name = "A vendor with this name already exists";
     }
 
-    for (let i = 1; i <= 5; i++) {
-      const name = formData[`dept${i}_poc_name` as keyof Vendor] as string;
-      const email = formData[`dept${i}_email` as keyof Vendor] as string;
-      const phone = formData[`dept${i}_phone` as keyof Vendor] as string;
-      if (!name) {
-        newErrors[`dept${i}_poc_name`] = `Dept ${i} Name is required`;
-      }
-      if (!email) {
-        newErrors[`dept${i}_email`] = `Dept ${i} Email is required`;
-      } else if (!/\S+@\S+\.\S+/.test(email)) {
-        newErrors[`dept${i}_email`] = "Invalid email format";
-      }
+    // for (let i = 1; i <= 5; i++) {
+    //   const name = formData[`dept${i}_poc_name` as keyof Vendor] as string;
+    //   const email = formData[`dept${i}_email` as keyof Vendor] as string;
+    //   const phone = formData[`dept${i}_phone` as keyof Vendor] as string;
+    //   if (!name) {
+    //     newErrors[`dept${i}_poc_name`] = `Dept ${i} Name is required`;
+    //   }
+    //   if (!email) {
+    //     newErrors[`dept${i}_email`] = `Dept ${i} Email is required`;
+    //   } else if (!/\S+@\S+\.\S+/.test(email)) {
+    //     newErrors[`dept${i}_email`] = "Invalid email format";
+    //   }
 
-      if (phone && !PHONE_REGEX.test(phone)) {
-        {
-          newErrors[`dept${i}_phone`] = "Invalid phone number";
-        }
-      }
-    }
+    //   if (phone && !PHONE_REGEX.test(phone)) {
+    //     {
+    //       newErrors[`dept${i}_phone`] = "Invalid phone number";
+    //     }
+    //   }
+    // }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -272,14 +273,22 @@ export function VendorMaster() {
 
     setIsSubmitting(true);
     try {
-      const sanitizedData: any = {};
-      Object.entries(formData).forEach(([key, value]) => {
+      const sanitizedData: any = { ...formData };
+
+      for (let i = 1; i <= 10; i++) {
+        if (i > deptCount) {
+          sanitizedData[`dept${i}_poc_name`] = "";
+          sanitizedData[`dept${i}_email`] = "";
+          sanitizedData[`dept${i}_phone`] = "";
+        }
+      }
+
+      Object.keys(sanitizedData).forEach((key) => {
+        const value = sanitizedData[key];
         if (typeof value === "string") {
           sanitizedData[key] = value.trim();
         } else if (value === null || value === undefined) {
           sanitizedData[key] = "";
-        } else {
-          sanitizedData[key] = value;
         }
       });
 
@@ -288,7 +297,6 @@ export function VendorMaster() {
       }
 
       let finalPayload: any;
-
       if (logoFile) {
         const data = new FormData();
         Object.entries(sanitizedData).forEach(([key, value]) => {
@@ -317,12 +325,14 @@ export function VendorMaster() {
         await MasterAPI.create("vendors", finalPayload);
         setToast({ message: "Vendor added successfully", type: "success" });
       }
+
       if (isCustomIndustry && formData.industry?.trim()) {
-        const newIndustry = formData.industry?.trim();
+        const newInd = formData.industry.trim();
         setIndustryOptions((prev) =>
-          prev.includes(newIndustry) ? prev : [...prev, newIndustry].sort(),
+          prev.includes(newInd) ? prev : [...prev, newInd].sort(),
         );
       }
+
       setIsDrawerOpen(false);
       setEditingVendor(null);
       resetForm();
@@ -362,6 +372,11 @@ export function VendorMaster() {
     setEditingVendor(vendor);
     setFormData(vendor);
     setErrors({});
+    let maxDept = 0;
+    for (let i = 1; i <= 10; i++) {
+      if (vendor[`dept${i}_poc_name` as keyof Vendor]) maxDept = i;
+    }
+    setDeptCount(maxDept);
     const isStandard = industryOptions.includes(vendor.industry || "");
     setIsCustomIndustry(!!vendor.industry && !isStandard);
     setIsDrawerOpen(true);
@@ -429,6 +444,7 @@ export function VendorMaster() {
       dept5_phone: "",
     });
     setErrors({});
+    setDeptCount(0);
     setIsCustomIndustry(false);
     setCustomCountry(false);
     setLogoFile(null);
@@ -873,7 +889,7 @@ export function VendorMaster() {
       >
         <div className="p-6 space-y-6">
           <div className="space-y-4">
-            <h3 className="font-semibold text-gray-900">Basic Information</h3>
+            {/* <h3 className="font-semibold text-gray-900">Basic Information</h3> */}
             <div className="grid grid-cols-2 gap-4">
               {editingVendor && (
                 <div>
@@ -931,7 +947,7 @@ export function VendorMaster() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Phone <span className="text-red-500">*</span>
+                  Contact Phone
                 </label>
                 <input
                   type="text"
@@ -1256,83 +1272,125 @@ export function VendorMaster() {
               </div>
             </div>
           </div>
-          {[1, 2, 3, 4, 5].map((dept) => (
-            <div key={dept} className="space-y-4">
-              <h3 className="font-semibold text-gray-900">
-                Department {dept} Contact
+          <div className="space-y-6 border-t pt-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">
+                Department Contacts
               </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    POC Name
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      formData[`dept${dept}_poc_name` as keyof typeof formData]
-                    }
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        [`dept${dept}_poc_name`]: e.target.value,
-                      });
-
-                      clearFieldError(`dept${dept}_poc_name`, setErrors);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  {errors[`dept${dept}_poc_name`] && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors[`dept${dept}_poc_name`]}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={
-                      formData[`dept${dept}_email` as keyof typeof formData]
-                    }
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        [`dept${dept}_email`]: e.target.value,
-                      });
-                      clearFieldError(`dept${dept}_email`, setErrors);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  {errors[`dept${dept}_email`] && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors[`dept${dept}_email`]}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    value={
-                      formData[`dept${dept}_phone` as keyof typeof formData]
-                    }
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        [`dept${dept}_phone`]: e.target.value,
-                      });
-                      clearFieldError(`dept${dept}_phone`, setErrors);
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
+              {deptCount>0 && (
+                <span className="text-xs text-gray-500 font-medium">
+                {deptCount} / 10 Levels
+              </span>
+              )}
+              
             </div>
-          ))}
+            {deptCount===0 ? (
+              <div className="py-4 text-center border-2 border-dashed border-gray-100 rounded-xl text-gray-400 text-sm">
+                No departments added yet.
+              </div>
+            ):(
+              Array.from({ length: deptCount }).map((_, index) => {
+              const deptNum = index + 1;
+              return (
+                <div
+                  key={deptNum}
+                  className="p-4 border border-gray-200 rounded-xl bg-gray-50/50 space-y-4 relative group"
+                >
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-blue-600">
+                      Department {deptNum}
+                    </h4>
+                    <button
+                      onClick={() => setDeptCount((prev) => prev - 1)}
+                      className="text-red-500 hover:text-red-700 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        POC Name
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          formData[
+                            `dept${deptNum}_poc_name` as keyof typeof formData
+                          ] || ""
+                        }
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [`dept${deptNum}_poc_name`]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="Full Name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={
+                          formData[
+                            `dept${deptNum}_email` as keyof typeof formData
+                          ] || ""
+                        }
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [`dept${deptNum}_email`]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="email@company.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          formData[
+                            `dept${deptNum}_phone` as keyof typeof formData
+                          ] || ""
+                        }
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            [`dept${deptNum}_phone`]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                        placeholder="+1..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+            )}
+
+          
+
+            {deptCount < 10 && (
+              <button
+                type="button"
+                onClick={() => setDeptCount((prev) => prev + 1)}
+                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-semibold"
+              >
+                <Plus size={18} />
+                Add Another Department Level
+              </button>
+            )}
+          </div>
           <div className="flex gap-3 pt-4 border-t">
             <button
               onClick={() => {
