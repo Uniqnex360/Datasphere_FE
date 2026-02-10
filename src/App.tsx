@@ -13,7 +13,7 @@ import { VendorMaster } from './pages/VendorMaster';
 import { BrandMaster } from './pages/BrandMaster';
 import { Login } from './pages/Login';
 import DigitalAssets from './pages/DigitalAssets';
-import Price from './pages/Price';
+import Price from './pages/PriceManagement';
 import Inventory from './pages/Inventory';
 
 function App() {
