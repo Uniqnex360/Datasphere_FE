@@ -12,6 +12,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { Attribute, AttributeValue } from "../types/attribute";
+import CustomDownloadIcon from "../assets/download-custom.png"
 import { Category } from "../types/category";
 import { Industry } from "../types/industry";
 import Drawer from "../components/Drawer";
@@ -768,7 +769,7 @@ export function Attributes() {
     formData.attribute_type === "Multi-select" || formData.data_type === "list";
 
   const columns = [
-    { key: "attribute_code", label: "Code", sortable: true },
+    // { key: "attribute_code", label: "Code", sortable: true },
     { key: "attribute_name", label: "Name", sortable: true },
     { key: "industry_name", label: "Industry", sortable: true },
     { key: "attribute_type", label: "Attr Type", sortable: true },
@@ -928,7 +929,9 @@ export function Attributes() {
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               title="Download Template"
             >
-              <Sliders size={20} />
+             <img src={CustomDownloadIcon}
+                alt="Download"
+                className="w-7 h-7 object-contain"/>
             </button>
           </div>
         </div>
@@ -945,7 +948,7 @@ export function Attributes() {
             </span>
           ) : (
             <span>
-              Showing all <strong>{attributes.length}</strong> attributes.
+              Showing all <strong>{attributes.length}</strong> attributes
             </span>
           )}
         </p>

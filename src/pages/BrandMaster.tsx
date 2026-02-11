@@ -20,6 +20,7 @@ import { MasterAPI, ProductAPI } from "../lib/api";
 import { generateEntityCode } from "../utils/codeGenerator";
 import { validateImportFormat } from "../utils/importValidator";
 import { clearFieldError } from "../utils/formHelpers";
+import CustomDownloadIcon from "../assets/download-custom.png";
 
 export function BrandMaster() {
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -563,45 +564,57 @@ export function BrandMaster() {
             Manage brand and manufacturer information
           </p>
         </div>
-        <button
-          onClick={() => {
-            setEditingBrand(null);
-            resetForm();
-            setIsDrawerOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Add Brand
-        </button>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+          <div className="relative w-full md:w-[500px] lg:w-[600px] transition-all duration-300">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={20} />
+            </div>
             <input
               type="text"
-              placeholder="Search brand code or name..."
+              placeholder="Quick Search"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                clearFieldError("vendor_name", setErrors);
+              }}
+              className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
-          <div className="flex gap-2">
+
+          <button
+            onClick={() => {
+              setEditingBrand(null);
+              resetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+          >
+            <Plus size={20} />
+            Add Brand
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
+        <div className="flex flex-col md:flex-row items-center justify-end gap-4">
+          <div className="flex items-center gap-4">
             <button
               onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-blue-600 flex items-center gap-2 transition-all"
             >
-              <Download size={20} />
-              Export
+              <Download size={16} /> Export
             </button>
-            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-              <Upload size={20} />
-              Import
+
+            <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-green-600 cursor-pointer transition-all">
+              <Upload size={16} /> Import
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -609,30 +622,38 @@ export function BrandMaster() {
                 className="hidden"
               />
             </label>
+
             <button
               onClick={downloadTemplate}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Download Template"
+              className="p-2 hover:bg-gray-50 rounded-lg transition-all"
+              title="Download CSV Template"
             >
-              <Tag size={20} />
+              <img
+                src={CustomDownloadIcon}
+                className="w-5 h-5 object-contain opacity-70 hover:opacity-100"
+                alt="Template"
+              />
             </button>
           </div>
         </div>
       </div>
-            <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ? (
             <span>
-              Showing <strong>{filteredBrands.length}</strong> matching results out of {brands.length} total brands.
+              Showing <strong>{filteredBrands.length}</strong> matching results
+              out of {brands.length} total brands.
             </span>
           ) : (
-            <span>Showing all <strong>{brands.length}</strong> brands.</span>
+            <span>
+              Showing all <strong>{brands.length}</strong> brands
+            </span>
           )}
         </p>
-        
+
         {searchTerm && (
-          <button 
-            onClick={() => setSearchTerm('')}
+          <button
+            onClick={() => setSearchTerm("")}
             className="text-sm text-blue-600 hover:underline font-medium"
           >
             Clear search

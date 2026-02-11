@@ -21,6 +21,8 @@ import { Brand } from "../types/brand";
 import { Vendor } from "../types/vendor";
 import { Category } from "../types/category";
 import { Industry } from "../types/industry";
+import CustomDownloadIcon from "../assets/download-custom.png"
+
 import { ProductVariant } from "../types/variant";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
@@ -972,7 +974,7 @@ export function Products() {
     return generateBreadcrumb(product as any);
   };
   const columns = [
-    { key: "product_code", label: "Code", sortable: true },
+    // { key: "product_code", label: "Code", sortable: true },
     { key: "product_name", label: "Name", sortable: true },
     { key: "brand_name", label: "Brand", sortable: true, render: (_: any, row: any) => row.brand?.brand_name || "N/A" },
     { key: "vendor_name", label: "Vendor", sortable: true,render: (_: any, row: any) => row.vendor?.vendor_name || "N/A"},
@@ -981,13 +983,14 @@ export function Products() {
       key: "category",
       label: "Category",
       sortable: false,
+      width:'400px',
       render: (_: any, row: Product) => (
         <span className="text-sm text-gray-600">
           {getCategoryBreadcrumb(row)}
         </span>
       ),
     },
-    { key: "product_type", label: "Type", sortable: true },
+    // { key: "product_type", label: "Type", sortable: true },
     {
       key: "variant_status",
       label: "Status",
@@ -1219,7 +1222,9 @@ export function Products() {
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               title="Download Template"
             >
-              <Package size={20} />
+              <img src={CustomDownloadIcon}
+                alt="Download"
+                className="w-7 h-7 object-contain"/>
             </button>
           </div>
         </div>
@@ -1240,7 +1245,7 @@ export function Products() {
             </span>
           ) : (
             <span>
-              Showing all <strong>{products.length}</strong> products.
+              Showing all <strong>{products.length}</strong> products
             </span>
           )}
         </p>

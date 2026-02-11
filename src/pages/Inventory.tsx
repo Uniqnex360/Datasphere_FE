@@ -305,7 +305,7 @@ export default function Inventory() {
             </span>
           ) : (
             <span>
-              Showing all <strong>{products.length}</strong> products.
+              Showing all <strong>{products.length}</strong> products
             </span>
           )}
         </p>

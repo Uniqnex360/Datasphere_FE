@@ -9,6 +9,7 @@ export interface Vendor {
   industry: string;
   description: string;
   address: string;
+  is_active:boolean;
   city: string;
   tax_info: string;
   vendor_logo_url: string;

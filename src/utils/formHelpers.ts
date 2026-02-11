@@ -11,3 +11,17 @@ export const clearFieldError = (
     return newErrors;
   });
 };
+export const formatWebsiteUrl=(url:string):string=>{
+  if(!url)return ""
+  let cleanUrl=url.trim().toLowerCase()
+  if(!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://'))
+  {
+    cleanUrl=`https://${cleanUrl}`
+  }
+  try {
+    const urlObj=new URL(cleanUrl)
+    return urlObj.href
+  } catch (e) {
+    return cleanUrl
+  }
+}

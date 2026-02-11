@@ -4,6 +4,7 @@ interface Column {
   key: string;
   label: string;
   sortable?: boolean;
+  width?: string; // Add this to control width from parent
   render?: (value: any, row: any) => React.ReactNode;
 }
 
@@ -38,9 +39,7 @@ export default function DataTable({
   if (data.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-8 text-center text-gray-500">
-          No data found
-        </div>
+        <div className="p-8 text-center text-gray-500">No data found</div>
       </div>
     );
   }
@@ -48,32 +47,31 @@ export default function DataTable({
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        {/* Added 'table-fixed' to stop the table from expanding based on text */}
+        <table className="w-full table-fixed border-collapse"> 
           <thead className="bg-gray-50 border-b">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
+                  // We apply the width to the header
+                  style={{ width: column.width || 'auto' }}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   {column.sortable ? (
                     <button
                       onClick={() => onSort(column.key)}
-                      className="flex items-center gap-2 hover:text-gray-700 transition-colors"
+                      className="flex items-center gap-2 hover:text-gray-700 transition-colors w-full"
                     >
-                      {column.label}
+                      <span className="truncate">{column.label}</span>
                       {sortKey === column.key && (
-                        <>
-                          {sortDirection === 'asc' ? (
-                            <ChevronUp className="w-4 h-4" />
-                          ) : (
-                            <ChevronDown className="w-4 h-4" />
-                          )}
-                        </>
+                        <span className="flex-shrink-0">
+                          {sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </span>
                       )}
                     </button>
                   ) : (
-                    column.label
+                    <span className="truncate">{column.label}</span>
                   )}
                 </th>
               ))}
@@ -83,8 +81,19 @@ export default function DataTable({
             {data.map((row, index) => (
               <tr key={index} className="hover:bg-gray-50 transition-colors">
                 {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {column.render ? column.render(row[column.key], row) : row[column.key] || '-'}
+                  <td 
+                    key={column.key} 
+                    className="px-6 py-4 text-sm text-gray-900"
+                  >
+                    {/* 
+                       Removed 'whitespace-nowrap'. 
+                       Added a div with 'truncate' to handle long words.
+                    */}
+                    <div className="truncate" title={String(row[column.key] || '')}>
+                      {column.render 
+                        ? column.render(row[column.key], row) 
+                        : (row[column.key] || '-')}
+                    </div>
                   </td>
                 ))}
               </tr>
