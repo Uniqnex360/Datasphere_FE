@@ -1056,7 +1056,7 @@ export function Products() {
   ];
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-40 bg-white py-6 -mx-6 px-6 shadows-sm flex justify-between items-center">
+     <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Product Master</h1>
           <p className="text-gray-600 mt-1">

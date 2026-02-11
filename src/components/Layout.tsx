@@ -103,7 +103,7 @@ export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutPr
       </div>
 
       <div className="pt-16 lg:pl-64">
-        <main className="p-6">{children}</main>
+        <main className="p-1">{children}</main>
       </div>
 
       {sidebarOpen && (

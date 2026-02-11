@@ -250,7 +250,7 @@ export default function Inventory() {
   ];
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
         <p className="text-gray-600 mt-1">Operational stock control and basic info</p>
