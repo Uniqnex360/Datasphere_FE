@@ -944,7 +944,7 @@ export function Attributes() {
           dataTypeFilter ? (
             <span>
               Showing <strong>{filteredAttributes.length}</strong> matching
-              results out of {attributes.length} total attributes.
+              results out of {attributes.length} total attributes
             </span>
           ) : (
             <span>

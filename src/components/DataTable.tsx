@@ -4,7 +4,7 @@ interface Column {
   key: string;
   label: string;
   sortable?: boolean;
-  width?: string; // Add this to control width from parent
+  width?: string; 
   render?: (value: any, row: any) => React.ReactNode;
 }
 
@@ -47,32 +47,32 @@ export default function DataTable({
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
-        {/* Added 'table-fixed' to stop the table from expanding based on text */}
         <table className="w-full table-fixed border-collapse"> 
           <thead className="bg-gray-50 border-b">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  // We apply the width to the header
                   style={{ width: column.width || 'auto' }}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   {column.sortable ? (
-                    <button
-                      onClick={() => onSort(column.key)}
-                      className="flex items-center gap-2 hover:text-gray-700 transition-colors w-full"
-                    >
-                      <span className="truncate">{column.label}</span>
-                      {sortKey === column.key && (
-                        <span className="flex-shrink-0">
-                          {sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    <span className="truncate">{column.label}</span>
-                  )}
+  <button
+    onClick={() => onSort(column.key)}
+    className="flex items-center justify-between gap-2 hover:text-gray-700 transition-colors w-full"
+  >
+    <span className="truncate">{column.label}</span>
+    <span className="flex-shrink-0">
+      {sortKey === column.key ? (
+        sortDirection === 'asc' ? <ChevronUp size={14} className="text-blue-600" /> : <ChevronDown size={14} className="text-blue-600" />
+      ) : (
+        <ChevronDown size={14} className="text-gray-300" /> 
+      )}
+    </span>
+  </button>
+) : (
+  <span className="truncate">{column.label}</span>
+)}
                 </th>
               ))}
             </tr>
@@ -85,10 +85,7 @@ export default function DataTable({
                     key={column.key} 
                     className="px-6 py-4 text-sm text-gray-900"
                   >
-                    {/* 
-                       Removed 'whitespace-nowrap'. 
-                       Added a div with 'truncate' to handle long words.
-                    */}
+                   
                     <div className="truncate" title={String(row[column.key] || '')}>
                       {column.render 
                         ? column.render(row[column.key], row) 

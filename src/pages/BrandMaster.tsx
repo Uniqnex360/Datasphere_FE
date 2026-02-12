@@ -97,7 +97,9 @@
           filtered = filtered.filter(
             (b) =>
               b.brand_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              b.brand_name.toLowerCase().includes(searchTerm.toLowerCase()),
+              b.brand_name.toLowerCase().includes(searchTerm.toLowerCase())||
+              b.mfg_name.toLowerCase().includes(searchTerm.toLowerCase())
+
           );
         }
 
@@ -678,7 +680,7 @@
               {searchTerm ? (
                 <span>
                   Showing <strong>{filteredBrands.length}</strong> matching results
-                  out of {brands.length} total brands.
+                  out of {brands.length} total brands
                 </span>
               ) : (
                 <span>

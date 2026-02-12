@@ -301,7 +301,7 @@ export default function Inventory() {
           {searchTerm || statusFilter !== "all" ? (
             <span>
               Showing <strong>{filteredAndSortedProducts.length}</strong> matching
-              results out of {products.length} total products.
+              results out of {products.length} total products
             </span>
           ) : (
             <span>

@@ -806,7 +806,7 @@ export function Categories() {
         <p className="text-sm text-gray-500 italic">
           {searchTerm || industryFilter ? (
             <span>
-              Showing <strong>{filteredCategories.length}</strong> matching results out of {categories.length} total categories.
+              Showing <strong>{filteredCategories.length}</strong> matching results out of {categories.length} total categories
             </span>
           ) : (
             <span>Showing all <strong>{categories.length}</strong> categories</span>

@@ -1252,7 +1252,7 @@ export function Products() {
             productTypeFilter ? (
             <span>
               Showing <strong>{filteredProducts.length}</strong> matching
-              results out of {products.length} total products.
+              results out of {products.length} total products
             </span>
           ) : (
             <span>

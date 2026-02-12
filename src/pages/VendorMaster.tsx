@@ -251,7 +251,11 @@ export function VendorMaster() {
       filtered = filtered.filter(
         (v) =>
           v.vendor_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()),
+          v.vendor_name.toLowerCase().includes(searchTerm.toLowerCase())||
+          v.business_type.toLowerCase().includes(searchTerm.toLowerCase())||
+          v.industry.toLowerCase().includes(searchTerm.toLowerCase())||
+          v.vendor_website.toLowerCase().includes(searchTerm.toLowerCase())||
+          v.country?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
     if (businessTypeFilter) {
@@ -1018,7 +1022,7 @@ export function VendorMaster() {
             ? (
               <span>
                 Showing <strong>{filteredVendors.length}</strong>{" "}
-                matching results out of {vendors.length} total vendors.
+                matching results out of {vendors.length} total vendors
               </span>
             )
             : (
