@@ -808,7 +808,7 @@ export function VendorMaster() {
           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
         />
       ) as any,
-      width: "40px",
+      width: "100px",
       render: (_: any, row: Vendor) => (
         <div onClick={(e) => e.stopPropagation()}>
           <input
