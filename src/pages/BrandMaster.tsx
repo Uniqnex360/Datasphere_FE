@@ -645,13 +645,12 @@
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleExport}
-                  className="px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-blue-600 flex items-center gap-2 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   <Download size={16} /> Export
                 </button>
 
-                <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-600 hover:text-green-600 cursor-pointer transition-all">
-                  <Upload size={16} /> Import
+<label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">                  <Upload size={16} /> Import
                   <input
                     type="file"
                     accept=".csv,.xlsx,.xls"
@@ -662,7 +661,7 @@
 
                 <button
                   onClick={downloadTemplate}
-                  className="p-2 hover:bg-gray-50 rounded-lg transition-all"
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                   title="Download CSV Template"
                 >
                   <img

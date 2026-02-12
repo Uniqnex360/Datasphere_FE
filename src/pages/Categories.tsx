@@ -26,6 +26,7 @@ import {
   validateCategoryHierarchy,
 } from "../utils/categoryHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
+import CustomDownloadIcon from "../assets/download-custom.png";
 import { generateEntityCode } from "../utils/codeGenerator";
 import { validateImportFormat } from "../utils/importValidator";
 import { SearchableSelect } from "../components/SearchableSelect";
@@ -702,74 +703,83 @@ export function Categories() {
 
   const treeNodes = convertToTreeNodes(buildCategoryTree(filteredCategories));
 
-  return (
+   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex-shrink-0">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Category Management
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-500 mt-1 font-medium">
             Build and manage hierarchical product categories
           </p>
         </div>
-        <button
-          onClick={() => {
-            setIsEditing(false);
-            resetForm();
-            setIsDrawerOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Add Category
-        </button>
-      </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+          <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={20} />
+            </div>
             <input
               type="text"
-              placeholder="Search categories..."
+              placeholder="Search categories or product types..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
-          <select
-            value={industryFilter}
-            onChange={(e) => setIndustryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              resetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
           >
-            <option value="">All Industries</option>
-            {industries &&
-              industries
-                .filter((industry) => industry && industry.industry_code)
-                .map((industry) => (
-                  <option
-                    key={industry.industry_code}
-                    value={industry.industry_code}
-                  >
-                    {industry.industry_name}
-                  </option>
-                ))}
-          </select>
-          <div className="flex gap-2">
+            <Plus size={20} />
+            Add Category
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 w-full lg:w-auto">
+              
+              <select
+                value={industryFilter}
+                onChange={(e) => setIndustryFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Industries</option>
+                {industries
+                  .filter((ind) => ind && ind.industry_code)
+                  .map((ind) => (
+                    <option key={ind.industry_code} value={ind.industry_code}>
+                      {ind.industry_name}
+                    </option>
+                  ))}
+              </select>
+          </div>
+
+          <div className="flex items-center gap-2 w-full lg:w-auto border-t lg:border-t-0 lg:border-l pt-4 lg:pt-0 lg:pl-4 border-gray-100">
             <button
               onClick={handleExport}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <Download size={20} />
-              Export
+              <Download size={16} /> Export
             </button>
             <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-              <Upload size={20} />
-              Import
+              <Upload size={16} /> Import
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -779,25 +789,27 @@ export function Categories() {
             </label>
             <button
               onClick={downloadTemplate}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Download Template"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Download template"
             >
-              <FolderTree size={20} />
+              <img
+                    src={CustomDownloadIcon}
+                    className="w-5 h-5 object-contain opacity-70 hover:opacity-100"
+                    alt="Template"
+                  />
             </button>
           </div>
         </div>
       </div>
+
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm || industryFilter ? (
             <span>
-              Showing <strong>{filteredCategories.length}</strong> matching
-              results out of {categories.length} total categories.
+              Showing <strong>{filteredCategories.length}</strong> matching results out of {categories.length} total categories.
             </span>
           ) : (
-            <span>
-              Showing all <strong>{categories.length}</strong> categories.
-            </span>
+            <span>Showing all <strong>{categories.length}</strong> categories</span>
           )}
         </p>
 
@@ -813,12 +825,11 @@ export function Categories() {
           </button>
         )}
       </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col">
           <div className="p-4 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Category Tree
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">Category Tree</h2>
           </div>
           <div className="p-4 max-h-[600px] overflow-y-auto">
             {loading ? (
@@ -826,9 +837,7 @@ export function Categories() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : treeNodes.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                No categories found. Add your first category to get started.
-              </div>
+              <div className="text-center py-12 text-gray-500">No categories found.</div>
             ) : (
               <TreeView
                 nodes={treeNodes}
@@ -840,115 +849,46 @@ export function Categories() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Category Details
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">Category Details</h2>
             <div className="flex gap-2">
               {selectedCategory && (
                 <>
-                  <button
-                    onClick={handleEdit}
-                    className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Save size={16} className="inline mr-1" />
-                    Edit
+                  <button onClick={handleEdit} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold flex items-center gap-1">
+                    <Edit size={16} /> Edit
                   </button>
-                  <button
-                    onClick={() =>
-                      setDeleteModal({
-                        isOpen: true,
-                        category: selectedCategory,
-                      })
-                    }
-                    className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <Trash2 size={16} className="inline mr-1" />
-                    Delete
+                  <button onClick={() => setDeleteModal({ isOpen: true, category: selectedCategory })} className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold flex items-center gap-1">
+                    <Trash2 size={16} /> Delete
                   </button>
                 </>
               )}
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Close"
-              >
-                ✕
-              </button>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-6">
             {selectedCategory ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category Code
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedCategory.category_code}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  />
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Code</label>
+                  <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm font-mono">{selectedCategory.category_code}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedCategory.industry_name || "-"}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  />
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Hierarchy Path</label>
+                  <p className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700 font-medium">{selectedCategory.breadcrumb}</p>
                 </div>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
-                  const value =
-                    selectedCategory[`category_${level}` as keyof Category];
-                  if (!value || !String(value).trim()) return null;
-
-                  return (
-                    <div key={level}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Level {level}
-                      </label>
-                      <input
-                        type="text"
-                        value={String(value)}
-                        readOnly
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                      />
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Industry</label>
+                        <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">{selectedCategory.industry_name || "-"}</p>
                     </div>
-                  );
-                })}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product Type
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedCategory.product_type || "-"}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Breadcrumb
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedCategory.breadcrumb}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  />
+                    <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Product Type</label>
+                        <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">{selectedCategory.product_type || "-"}</p>
+                    </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-12 text-gray-500">
-                Select a category from the tree to view details
-              </div>
+              <div className="text-center py-20 text-gray-400 italic">Select a category node to view details</div>
             )}
           </div>
         </div>
@@ -963,275 +903,128 @@ export function Categories() {
         }}
         title={isEditing ? "Edit Category" : "Add Category"}
       >
-        <div className="p-6 space-y-6">
-          <div className="space-y-4">
-            {isEditing && (
+        <div className="flex flex-col h-full">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="space-y-4">
+              {isEditing && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Code</label>
+                  <input type="text" value={formData.category_code || ""} disabled className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" />
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category Code
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                  <span>Industry <span className="text-red-500">*</span></span>
+                  <button type="button" onClick={() => setIsCustomIndustry(!isCustomIndustry)} className="text-xs text-blue-600 font-bold">
+                    {isCustomIndustry ? "Select Existing" : "+ Add New"}
+                  </button>
                 </label>
-                <input
-                  type="text"
-                  value={formData.category_code || ""}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Auto-generated upon creation
-                </p>
-              </div>
-            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                <span className="flex items-center gap-2">
-                  Industry <span className="text-red-500">*</span>
-                  {isCustomIndustry && formData.industry_name?.trim() && (
-                    <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
-                      New
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomIndustry(!isCustomIndustry);
-                    if (isCustomIndustry)
-                      setFormData({
-                        ...formData,
-                        industry_name: "",
-                        industry_code: "",
-                      });
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  {isCustomIndustry ? <X size={12} /> : <Plus size={12} />}
-                  {isCustomIndustry ? "Select List" : "Add New"}
-                </button>
-              </label>
-
-              {isCustomIndustry ? (
-                <div className="space-y-2">
+                {isCustomIndustry ? (
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Enter new industry name..."
+                      placeholder="Enter new industry..."
                       value={formData.industry_name || ""}
                       onChange={(e) => handleIndustryChange(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && e.currentTarget.blur()
-                      }
-                      className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                        errors.industry_code
-                          ? "border-red-500"
-                          : "border-gray-300"
-                      }`}
+                      className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                       autoFocus
                     />
-                    <button
-                      type="button"
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200"
-                      title="Confirmed"
-                    >
-                      <CheckCircle size={20} />
-                    </button>
                   </div>
-                  <p className="text-[10px] text-gray-400 italic flex items-center gap-1">
-                    <AlertCircle size={10} /> This will be added to Master Data
-                    on save.
-                  </p>
-                </div>
-              ) : (
-                <SearchableSelect
-                  options={industryOptions}
-                  value={formData.industry_name || ""}
-                  onChange={(val) => handleIndustryChange(val)}
-                  placeholder="Select or Search Industry"
-                  onAddNew={() => setIsCustomIndustry(true)}
-                  error={!!errors.industry_code}
-                />
-              )}
-
-              {errors.industry_code && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.industry_code}
-                </p>
-              )}
-            </div>
-
-            {!isEditing && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Parent Category (Optional)
-                  {parentCategoryCode && (
-                    <span className="ml-2 text-xs text-blue-600">
-                      (Parent levels auto-filled below)
-                    </span>
-                  )}
-                </label>
-                <select
-                  value={parentCategoryCode}
-                  onChange={(e) => {
-                    const newParentCode = e.target.value;
-                    setParentCategoryCode(newParentCode);
-
-                    if (newParentCode) {
-                      const parent = categories.find(
-                        (c) => c.category_code === newParentCode,
-                      );
-                      if (parent) {
-                        const newFormData: Partial<Category> = {
-                          category_code: formData.category_code || "",
-                          industry_code: parent.industry_code || "",
-                          industry_name: parent.industry_name || "",
-                          product_type: "",
-                          breadcrumb: "",
-                        };
-
-                        for (let i = 1; i <= 8; i++) {
-                          const levelKey = `category_${i}` as keyof Category;
-                          const levelValue = parent[levelKey];
-                          if (levelValue && String(levelValue).trim()) {
-                            newFormData[levelKey] = levelValue;
-                          } else {
-                            newFormData[levelKey] = "" as any;
-                          }
-                        }
-
-                        setFormData(newFormData);
-                      }
-                    } else {
-                      resetForm();
-                    }
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">None (Root Level)</option>
-                  {categories
-                    .filter((cat) => cat && cat.category_code) // ✅ Safety filter
-                    .sort((a, b) =>
-                      (a.breadcrumb || "").localeCompare(b.breadcrumb || ""),
-                    )
-                    .map((cat) => (
-                      <option key={cat.category_code} value={cat.category_code}>
-                        {cat.breadcrumb}
-                      </option>
-                    ))}
-                </select>
+                ) : (
+                  <SearchableSelect
+                    options={industryOptions}
+                    value={formData.industry_name || ""}
+                    onChange={(val) => handleIndustryChange(val)}
+                    placeholder="Search Industry"
+                    error={!!errors.industry_code}
+                  />
+                )}
               </div>
-            )}
 
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => (
-              <div key={level}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category Level {level}
-                </label>
+              {!isEditing && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category (Optional)</label>
+                  <select
+                    value={parentCategoryCode}
+                    onChange={(e) => setParentCategoryCode(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Root Level</option>
+                    {categories.filter(c => c && c.category_code).map((cat) => (
+                      <option key={cat.category_code} value={cat.category_code}>{cat.breadcrumb}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => (
+                  <div key={level}>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Category Level {level}</label>
+                    <input
+                      type="text"
+                      value={formData[`category_${level}` as keyof Category] || ""}
+                      onChange={(e) => setFormData({ ...formData, [`category_${level}`]: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder={`Enter name for level ${level}...`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
                 <input
                   type="text"
-                  value={formData[`category_${level}` as keyof Category] || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      [`category_${level}`]: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={formData.product_type}
+                  onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            ))}
 
-            {errors.category_levels && (
-              <p className="text-red-500 text-sm">{errors.category_levels}</p>
-            )}
-            {errors.hierarchy && (
-              <p className="text-red-500 text-sm">{errors.hierarchy}</p>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Product Type
-              </label>
-              <input
-                type="text"
-                value={formData.product_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, product_type: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Breadcrumb (Auto-generated)
-              </label>
-              <input
-                type="text"
-                value={generateBreadcrumb(formData as Category)}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-              />
+              <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Breadcrumb Preview</label>
+                 <p className="text-xs font-medium text-gray-600">{generateBreadcrumb(formData as Category) || "No levels defined yet"}</p>
+              </div>
             </div>
           </div>
-          </div>
 
-
-            <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6  shadow-lg flex gap-3">
+          <div className="flex-shrink-0 border-t bg-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex gap-3">
             <button
-              onClick={() => {
-                setIsDrawerOpen(false);
-                setIsEditing(false);
-                resetForm();
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              onClick={() => { setIsDrawerOpen(false); setIsEditing(false); resetForm(); }}
+              className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition-colors"
             >
               {isEditing ? "Update" : "Add"} Category
             </button>
+          </div>
         </div>
       </Drawer>
 
+     
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, category: null })}
         title="Delete Category"
         actions={
           <>
-            <button
-              onClick={() => setDeleteModal({ isOpen: false, category: null })}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Delete
-            </button>
+            <button onClick={() => setDeleteModal({ isOpen: false, category: null })} className="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>
+            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Delete</button>
           </>
         }
       >
-        <p className="text-gray-600">
-          Are you sure you want to delete category{" "}
-          <span className="font-semibold">
-            {deleteModal.category?.breadcrumb}
-          </span>
-          ? This action cannot be undone.
-        </p>
+        <p className="text-gray-600">Are you sure you want to delete category <span className="font-bold">{deleteModal.category?.breadcrumb}</span>?</p>
       </Modal>
 
       {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

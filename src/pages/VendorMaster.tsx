@@ -26,7 +26,7 @@ import { validateImportFormat } from "../utils/importValidator";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { clearFieldError, formatWebsiteUrl } from "../utils/formHelpers";
 import { useIndustryManager } from "../hooks/useIndustryManager";
-import { Country, State, City } from "country-state-city";
+import { City, Country, State } from "country-state-city";
 import CustomDownloadIcon from "../assets/download-custom.png";
 const ALLOWED_COUNTRIES = [
   "United States",
@@ -54,7 +54,7 @@ export function VendorMaster() {
   const countryOptions = useMemo(
     () =>
       Country.getAllCountries().filter((c) =>
-        ALLOWED_COUNTRIES.includes(c.name),
+        ALLOWED_COUNTRIES.includes(c.name)
       ),
     [],
   );
@@ -78,7 +78,9 @@ export function VendorMaster() {
         is_active: !vendor.is_active,
       });
       setToast({
-        message: `Vendor "${vendor.vendor_name}" is now ${!vendor.is_active ? "Active" : "Inactive"}`,
+        message: `Vendor "${vendor.vendor_name}" is now ${
+          !vendor.is_active ? "Active" : "Inactive"
+        }`,
         type: "success",
       });
       loadVendors();
@@ -94,7 +96,7 @@ export function VendorMaster() {
       setLoading(true);
       await Promise.all(
         codes.map((code) =>
-          MasterAPI.update("vendors", code, { is_active: active }),
+          MasterAPI.update("vendors", code, { is_active: active })
         ),
       );
       setToast({
@@ -122,10 +124,12 @@ export function VendorMaster() {
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [industryOptions, setIndustryOptions] = useState<string[]>([]);
   const [submitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
+  const [toast, setToast] = useState<
+    {
+      message: string;
+      type: "success" | "error";
+    } | null
+  >(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [businessTypeFilter, setBusinessTypeFilter] = useState("");
   const [countryFilter, setCountryFilter] = useState("");
@@ -395,7 +399,7 @@ export function VendorMaster() {
       if (isCustomIndustry && formData.industry?.trim()) {
         const newInd = formData.industry.trim();
         setIndustryOptions((prev) =>
-          prev.includes(newInd) ? prev : [...prev, newInd].sort(),
+          prev.includes(newInd) ? prev : [...prev, newInd].sort()
         );
       }
       setIsDrawerOpen(false);
@@ -582,12 +586,12 @@ export function VendorMaster() {
         const existingVendor = vendors.find(
           (v) =>
             v.vendor_name.trim().toLowerCase() ===
-            row.vendor_name?.trim().toLowerCase(),
+              row.vendor_name?.trim().toLowerCase(),
         );
         const duplicateInImport = validData.find(
           (item) =>
             item.vendor_name?.trim().toLowerCase() ===
-            row.vendor_name?.trim().toLowerCase(),
+              row.vendor_name?.trim().toLowerCase(),
         );
         if (existingVendor) {
           ignoredItems.push(
@@ -631,11 +635,12 @@ export function VendorMaster() {
               row[col] !== undefined &&
               row[col] !== ""
             ) {
-              let value =
-                typeof row[col] === "number" ? String(row[col]) : row[col];
+              let value = typeof row[col] === "number"
+                ? String(row[col])
+                : row[col];
               if (col === "business_type" && typeof value === "string") {
-                value =
-                  value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+                value = value.charAt(0).toUpperCase() +
+                  value.slice(1).toLowerCase();
               }
               vendorData[col] = value;
             }
@@ -663,7 +668,8 @@ export function VendorMaster() {
         const totalRows = data.length;
         const ignoredCount = ignoredItems.length;
         setToast({
-          message: `No new vendors to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,
+          message:
+            `No new vendors to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,
           type: "error",
         });
         e.target.value = "";
@@ -679,8 +685,7 @@ export function VendorMaster() {
           successCount++;
         } catch (error) {
           failedCount++;
-          const errorDetail =
-            error.response?.data?.detail ||
+          const errorDetail = error.response?.data?.detail ||
             error.response?.data?.message ||
             error.message ||
             "Unknown error";
@@ -692,26 +697,34 @@ export function VendorMaster() {
       const processedCount = validData.length;
       if (failedCount === 0 && ignoredCount === 0) {
         setToast({
-          message: `Import successful!${successCount} vendors added from ${totalRows} rows!`,
+          message:
+            `Import successful!${successCount} vendors added from ${totalRows} rows!`,
           type: "success",
         });
       } else if (failedCount === 0 && ignoredCount > 0) {
         setToast({
-          message: `Import completed! ${successCount} vendors added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
+          message:
+            `Import completed! ${successCount} vendors added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
           type: "success",
         });
       } else if (successCount > 0) {
         setToast({
-          message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join(
-            "; ",
-          )}`,
+          message:
+            ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${
+              failedItems.join(
+                "; ",
+              )
+            }`,
           type: "error",
         });
       } else {
         setToast({
-          message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join(
-            "; ",
-          )}`,
+          message:
+            ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${
+              failedItems.join(
+                "; ",
+              )
+            }`,
           type: "error",
         });
       }
@@ -789,10 +802,8 @@ export function VendorMaster() {
       label: (
         <input
           type="checkbox"
-          checked={
-            selectedCodes.size === filteredVendors.length &&
-            filteredVendors.length > 0
-          }
+          checked={selectedCodes.size === filteredVendors.length &&
+            filteredVendors.length > 0}
           onChange={toggleSelectAll}
           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
         />
@@ -803,7 +814,8 @@ export function VendorMaster() {
           <input
             type="checkbox"
             checked={selectedCodes.has(row.vendor_code)}
-            onChange={() => toggleSelect(row.vendor_code)}
+            onChange={() =>
+              toggleSelect(row.vendor_code)}
             className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
           />
         </div>
@@ -826,10 +838,11 @@ export function VendorMaster() {
       sortable: true,
       render: (val: boolean) => (
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${val
-            ? "bg-green-50 text-green-700 border border-green-100"
-            : "bg-red-50 text-red-700 border border-red-100"
-            }`}
+          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+            val
+              ? "bg-green-50 text-green-700 border border-green-100"
+              : "bg-red-50 text-red-700 border border-red-100"
+          }`}
         >
           {val ? "Active" : "Inactive"}
         </span>
@@ -850,10 +863,11 @@ export function VendorMaster() {
           </button>
           <button
             onClick={() => handleToggleStatus(row)}
-            className={`p-1.5 rounded-lg transition-colors ${row.is_active
-              ? "hover:bg-red-100 text-red-600"
-              : "hover:bg-green-100 text-green-600"
-              }`}
+            className={`p-1.5 rounded-lg transition-colors ${
+              row.is_active
+                ? "hover:bg-red-100 text-red-600"
+                : "hover:bg-green-100 text-green-600"
+            }`}
             title={row.is_active ? "Deactivate Vendor" : "Activate Vendor"}
           >
             {row.is_active ? <XCircle size={16} /> : <CheckCircle size={16} />}
@@ -870,7 +884,7 @@ export function VendorMaster() {
             Vendor Master
           </h1>
           <p className="text-gray-500 mt-1 font-medium">
-            Manage vendor information and contacts
+            Manage vendor information
           </p>
         </div>
 
@@ -915,29 +929,20 @@ export function VendorMaster() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">
-                Type
-              </span>
               <select
                 value={businessTypeFilter}
                 onChange={(e) => setBusinessTypeFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer min-w-[100px]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Types</option>
                 <option value="Wholesaler">Wholesaler</option>
                 <option value="Manufacturer">Manufacturer</option>
                 <option value="Distributor">Distributor</option>
               </select>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">
-                Industry
-              </span>
               <select
                 value={industryFilter}
                 onChange={(e) => setIndustryFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer min-w-[100px]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Industries</option>
                 {industryOptions.map((ind) => (
@@ -946,15 +951,10 @@ export function VendorMaster() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">
-                Country
-              </span>
               <select
                 value={countryFilter}
                 onChange={(e) => setCountryFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer min-w-[100px]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Countries</option>
                 {ALLOWED_COUNTRIES.map((c) => (
@@ -970,30 +970,24 @@ export function VendorMaster() {
                     </option>
                   ))}
               </select>
-            </div>
-            <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase">
-                Status
-              </span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-gray-700 focus:outline-none cursor-pointer min-w-[100px]"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Status</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
               </select>
-            </div>
           </div>
           <div className="flex items-center gap-2 w-full lg:w-auto border-t lg:border-t-0 lg:border-l pt-4 lg:pt-0 lg:pl-4 border-gray-100">
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-gray-600 hover:text-blue-600"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <Download size={16} /> Export
             </button>
-            <label className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-gray-600 hover:text-green-600 cursor-pointer">
+            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
               <Upload size={16} /> Import
               <input
                 type="file"
@@ -1004,7 +998,7 @@ export function VendorMaster() {
             </label>
             <button
               onClick={downloadTemplate}
-              className="p-2 hover:bg-gray-100 rounded-lg"
+             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <img
                 src={CustomDownloadIcon}
@@ -1018,35 +1012,37 @@ export function VendorMaster() {
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
-            businessTypeFilter ||
-            industryFilter ||
-            countryFilter ? (
-            <span>
-              Showing <strong>{filteredVendors.length}</strong> matching results
-              out of {vendors.length} total vendors.
-            </span>
-          ) : (
-            <span>
-              Showing all <strong>{vendors.length}</strong> vendors
-            </span>
-          )}
+              businessTypeFilter ||
+              industryFilter ||
+              countryFilter
+            ? (
+              <span>
+                Showing <strong>{filteredVendors.length}</strong>{" "}
+                matching results out of {vendors.length} total vendors.
+              </span>
+            )
+            : (
+              <span>
+                Showing all <strong>{vendors.length}</strong> vendors
+              </span>
+            )}
         </p>
         {(searchTerm ||
           businessTypeFilter ||
           industryFilter ||
           countryFilter) && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setBusinessTypeFilter("");
-                setIndustryFilter("");
-                setCountryFilter("");
-              }}
-              className="text-sm text-blue-600 hover:underline font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setBusinessTypeFilter("");
+              setIndustryFilter("");
+              setCountryFilter("");
+            }}
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
       </div>
       {selectedCodes.size > 0 && (
         <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -1131,14 +1127,16 @@ export function VendorMaster() {
                   value={formData.vendor_name}
                   onChange={(e) => {
                     setFormData({ ...formData, vendor_name: e.target.value });
-                    if (errors.vendor_name)
+                    if (errors.vendor_name) {
                       clearFieldError("vendor_name", setErrors);
+                    }
                   }}
                   onBlur={(e) => checkDuplicateVendorName(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 transition-all ${errors.vendor_name
-                    ? "border-red-500 focus:ring-red-200"
-                    : "border-gray-300 focus:ring-blue-500"
-                    }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    errors.vendor_name
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
                   placeholder="Enter vendor name"
                 />
                 {errors.vendor_name && (
@@ -1150,7 +1148,7 @@ export function VendorMaster() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Operational Status
+                  Status
                 </label>
                 <select
                   value={formData.is_active ? "Active" : "Inactive"}
@@ -1160,10 +1158,11 @@ export function VendorMaster() {
                       is_active: e.target.value === "Active",
                     });
                   }}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all ${formData.is_active
-                    ? "bg-green-50 border-green-200 text-green-700"
-                    : "bg-red-50 border-red-200 text-red-700"
-                    }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all ${
+                    formData.is_active
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-red-50 border-red-200 text-red-700"
+                  }`}
                 >
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
@@ -1221,8 +1220,9 @@ export function VendorMaster() {
                     type="button"
                     onClick={() => {
                       setIsCustomIndustry(!isCustomIndustry);
-                      if (isCustomIndustry)
+                      if (isCustomIndustry) {
                         setFormData({ ...formData, industry: "" });
+                      }
                     }}
                     className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
                   >
@@ -1230,52 +1230,57 @@ export function VendorMaster() {
                     {isCustomIndustry ? "Select Existing" : "Create New"}
                   </button>
                 </label>
-                {isCustomIndustry ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Type new industry name..."
-                        value={formData.industry || ""}
-                        onChange={(e) => handleIndustryChange(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && e.currentTarget.blur()
-                        }
-                        className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.industry ? "border-red-500" : "border-blue-400"
+                {isCustomIndustry
+                  ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type new industry name..."
+                          value={formData.industry || ""}
+                          onChange={(e) => handleIndustryChange(e.target.value)}
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && e.currentTarget.blur()}
+                          className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                            errors.industry
+                              ? "border-red-500"
+                              : "border-blue-400"
                           }`}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!formData.industry?.trim()) return;
-                          setToast({
-                            message: `"${formData.industry}" is ready to be added.`,
-                            type: "success",
-                          });
-                        }}
-                        className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200"
-                        title="Confirm name"
-                      >
-                        <CheckCircle size={20} />
-                      </button>
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!formData.industry?.trim()) return;
+                            setToast({
+                              message:
+                                `"${formData.industry}" is ready to be added.`,
+                              type: "success",
+                            });
+                          }}
+                          className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 border border-blue-200"
+                          title="Confirm name"
+                        >
+                          <CheckCircle size={20} />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                        <AlertCircle size={12} />
+                        This will be saved to your master list permanently when
+                        you save the vendor.
+                      </p>
                     </div>
-                    <p className="text-[11px] text-gray-500 flex items-center gap-1">
-                      <AlertCircle size={12} />
-                      This will be saved to your master list permanently when
-                      you save the vendor.
-                    </p>
-                  </div>
-                ) : (
-                  <SearchableSelect
-                    options={industryOptions}
-                    value={formData.industry || ""}
-                    onChange={(val) => handleIndustryChange(val)}
-                    placeholder="Search or select from list..."
-                    onAddNew={() => setIsCustomIndustry(true)}
-                    error={!!errors.industry}
-                  />
-                )}
+                  )
+                  : (
+                    <SearchableSelect
+                      options={industryOptions}
+                      value={formData.industry || ""}
+                      onChange={(val) => handleIndustryChange(val)}
+                      placeholder="Search or select from list..."
+                      onAddNew={() => setIsCustomIndustry(true)}
+                      error={!!errors.industry}
+                    />
+                  )}
                 {errors.industry && (
                   <p className="text-red-500 text-sm mt-1">{errors.industry}</p>
                 )}
@@ -1339,8 +1344,7 @@ export function VendorMaster() {
                 <textarea
                   value={formData.description}
                   onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
+                    setFormData({ ...formData, description: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -1374,27 +1378,29 @@ export function VendorMaster() {
                     {isCustomCountry ? "Select List" : "Add New"}
                   </button>
                 </label>
-                {isCustomCountry ? (
-                  <input
-                    type="text"
-                    placeholder="Enter country name..."
-                    value={formData.country || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, country: e.target.value })
-                    }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${errors.country ? "border-red-500" : "border-blue-400"
+                {isCustomCountry
+                  ? (
+                    <input
+                      type="text"
+                      placeholder="Enter country name..."
+                      value={formData.country || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, country: e.target.value })}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        errors.country ? "border-red-500" : "border-blue-400"
                       }`}
-                    autoFocus
-                  />
-                ) : (
-                  <SearchableSelect
-                    options={countryOptions.map((c) => c.name)}
-                    value={formData.country || ""}
-                    onChange={handleCountryChange}
-                    placeholder="Select from 5 countries"
-                    error={!!errors.country}
-                  />
-                )}
+                      autoFocus
+                    />
+                  )
+                  : (
+                    <SearchableSelect
+                      options={countryOptions.map((c) => c.name)}
+                      value={formData.country || ""}
+                      onChange={handleCountryChange}
+                      placeholder="Select from 5 countries"
+                      error={!!errors.country}
+                    />
+                  )}
                 {errors.country && (
                   <p className="text-red-500 text-[10px] mt-1">
                     {errors.country}
@@ -1405,56 +1411,57 @@ export function VendorMaster() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   State
                 </label>
-                {isCustomCountry ? (
-                  <input
-                    type="text"
-                    value={formData.state || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter state manually"
-                  />
-                ) : (
-                  <SearchableSelect
-                    options={stateOptions.map((s) => s.name)}
-                    value={formData.state || ""}
-                    onChange={handleStateChange}
-                    disabled={!selectedCountryCode}
-                    placeholder={
-                      selectedCountryCode
+                {isCustomCountry
+                  ? (
+                    <input
+                      type="text"
+                      value={formData.state || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, state: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter state manually"
+                    />
+                  )
+                  : (
+                    <SearchableSelect
+                      options={stateOptions.map((s) => s.name)}
+                      value={formData.state || ""}
+                      onChange={handleStateChange}
+                      disabled={!selectedCountryCode}
+                      placeholder={selectedCountryCode
                         ? "Select State"
-                        : "Pick Country first"
-                    }
-                  />
-                )}
+                        : "Pick Country first"}
+                    />
+                  )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   City
                 </label>
                 {isCustomCountry ||
-                  (selectedCountryCode && stateOptions.length === 0) ? (
-                  <input
-                    type="text"
-                    value={formData.city || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter city manually"
-                  />
-                ) : (
-                  <SearchableSelect
-                    options={cityOptions.map((c) => c.name)}
-                    value={formData.city || ""}
-                    onChange={(val) => setFormData({ ...formData, city: val })}
-                    disabled={!selectedStateCode}
-                    placeholder={
-                      selectedStateCode ? "Select City" : "Pick State first"
-                    }
-                  />
-                )}
+                    (selectedCountryCode && stateOptions.length === 0)
+                  ? (
+                    <input
+                      type="text"
+                      value={formData.city || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter city manually"
+                    />
+                  )
+                  : (
+                    <SearchableSelect
+                      options={cityOptions.map((c) => c.name)}
+                      value={formData.city || ""}
+                      onChange={(val) =>
+                        setFormData({ ...formData, city: val })}
+                      disabled={!selectedStateCode}
+                      placeholder={selectedStateCode
+                        ? "Select City"
+                        : "Pick State first"}
+                    />
+                  )}
               </div>
               <div className="hidden md:block"></div>
               <div className="col-span-2">
@@ -1464,8 +1471,7 @@ export function VendorMaster() {
                 <textarea
                   value={formData.address}
                   onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
+                    setFormData({ ...formData, address: e.target.value })}
                   rows={2}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Street name, Building, Area..."
@@ -1479,8 +1485,7 @@ export function VendorMaster() {
                   type="text"
                   value={formData.tax_info}
                   onChange={(e) =>
-                    setFormData({ ...formData, tax_info: e.target.value })
-                  }
+                    setFormData({ ...formData, tax_info: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1495,22 +1500,19 @@ export function VendorMaster() {
                     </div>
                     <input
                       type="text"
-                      placeholder={
-                        logoFile
-                          ? "Image File Selected"
-                          : "https://example.com/logo.png"
-                      }
-                      value={
-                        logoFile
-                          ? `File: ${logoFile.name}`
-                          : formData.vendor_logo_url
-                      }
+                      placeholder={logoFile
+                        ? "Image File Selected"
+                        : "https://example.com/logo.png"}
+                      value={logoFile
+                        ? `File: ${logoFile.name}`
+                        : formData.vendor_logo_url}
                       onChange={handleUrlInput}
                       disabled={!!logoFile}
-                      className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${logoFile
-                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : "border-gray-300"
-                        }`}
+                      className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        logoFile
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                          : "border-gray-300"
+                      }`}
                     />
                     {(formData.vendor_logo_url || logoFile) && (
                       <button
@@ -1524,11 +1526,9 @@ export function VendorMaster() {
                     )}
                   </div>
                   <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white h-[42px]">
-                    {uploadingLogo ? (
-                      <Loader2 className="animate-spin" size={18} />
-                    ) : (
-                      <Upload size={18} className="text-gray-600" />
-                    )}
+                    {uploadingLogo
+                      ? <Loader2 className="animate-spin" size={18} />
+                      : <Upload size={18} className="text-gray-600" />}
                     <span className="text-sm font-medium text-gray-700">
                       Upload
                     </span>
@@ -1581,163 +1581,156 @@ export function VendorMaster() {
               )}
             </div>
             <div className="space-y-4">
-              {deptCount === 0 ? (
-                <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 text-sm italic">
-                  No contacts added yet.
-                </div>
-              ) : (
-                Array.from({ length: deptCount }).map((_, index) => {
-                  const num = index + 1;
-                  return (
-                    <div
-                      key={num}
-                      className="p-4 border border-gray-200 rounded-2xl bg-gray-50/30 hover:bg-white hover:shadow-md transition-all group relative"
-                    >
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                          <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
-                            {num}
+              {deptCount === 0
+                ? (
+                  <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-2xl text-gray-400 text-sm italic">
+                    No contacts added yet.
+                  </div>
+                )
+                : (
+                  Array.from({ length: deptCount }).map((_, index) => {
+                    const num = index + 1;
+                    return (
+                      <div
+                        key={num}
+                        className="p-4 border border-gray-200 rounded-2xl bg-gray-50/30 hover:bg-white hover:shadow-md transition-all group relative"
+                      >
+                        <div className="flex justify-between items-center mb-4">
+                          <span className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px]">
+                              {num}
+                            </div>
+                            Contact {num}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                [`dept${num}_poc_name`]: "",
+                                [`dept${num}_poc_designation`]: "",
+                                [`dept${num}_email`]: "",
+                                [`dept${num}_phone`]: "",
+                              }));
+                              setDeptCount((prev) => prev - 1);
+                              setErrors((prev) => {
+                                const newErrors = { ...prev };
+                                delete newErrors[`dept${num}_poc_name`];
+                                delete newErrors[`dept${num}_email`];
+                                delete newErrors[`dept${num}_phone`];
+                                return newErrors;
+                              });
+                            }}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                              Full Name
+                            </label>
+                            <input
+                              type="text"
+                              value={formData[
+                                `dept${num}_poc_name` as keyof typeof formData
+                              ] || ""}
+                              onChange={(e) => {
+                                setFormData({
+                                  ...formData,
+                                  [`dept${num}_poc_name`]: e.target.value,
+                                });
+                                if (errors[`dept${num}_poc_name`]) {
+                                  setErrors((prev) => {
+                                    const newErrors = { ...prev };
+                                    delete newErrors[`dept${num}_poc_name`];
+                                    return newErrors;
+                                  });
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g. John Doe"
+                            />
+                            {errors[`dept${num}_poc_name`] && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {errors[`dept${num}_poc_name`]}
+                              </p>
+                            )}
                           </div>
-                          Contact {num}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              [`dept${num}_poc_name`]: "",
-                              [`dept${num}_poc_designation`]: "",
-                              [`dept${num}_email`]: "",
-                              [`dept${num}_phone`]: "",
-                            }));
-                            setDeptCount((prev) => prev - 1);
-                            setErrors((prev) => {
-                              const newErrors = { ...prev };
-                              delete newErrors[`dept${num}_poc_name`];
-                              delete newErrors[`dept${num}_email`];
-                              delete newErrors[`dept${num}_phone`];
-                              return newErrors;
-                            });
-                          }}
-                          className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                            Full Name
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData[
-                              `dept${num}_poc_name` as keyof typeof formData
-                              ] || ""
-                            }
-                            onChange={(e) => {
-                              setFormData({
-                                ...formData,
-                                [`dept${num}_poc_name`]: e.target.value,
-                              });
-                              if (errors[`dept${num}_poc_name`]) {
-                                setErrors((prev) => {
-                                  const newErrors = { ...prev };
-                                  delete newErrors[`dept${num}_poc_name`];
-                                  return newErrors;
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                              Designation
+                            </label>
+                            <input
+                              type="text"
+                              value={formData[
+                                `dept${num}_poc_designation` as keyof typeof formData
+                              ] || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  [`dept${num}_poc_designation`]:
+                                    e.target.value,
+                                })}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder="e.g. Sales Manager"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                              Email Address
+                            </label>
+                            <input
+                              type="email"
+                              value={formData[
+                                `dept${num}_email` as keyof typeof formData
+                              ] || ""}
+                              onChange={(e) => {
+                                setFormData({
+                                  ...formData,
+                                  [`dept${num}_email`]: e.target.value,
                                 });
-                              }
-                            }}
-                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                            placeholder="e.g. John Doe"
-                          />
-                          {errors[`dept${num}_poc_name`] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors[`dept${num}_poc_name`]}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                            Designation
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData[
-                              `dept${num}_poc_designation` as keyof typeof formData
-                              ] || ""
-                            }
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [`dept${num}_poc_designation`]: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                            placeholder="e.g. Sales Manager"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                            Email Address
-                          </label>
-                          <input
-                            type="email"
-                            value={
-                              formData[
-                              `dept${num}_email` as keyof typeof formData
-                              ] || ""
-                            }
-                            onChange={(e) => {
-                              setFormData({
-                                ...formData,
-                                [`dept${num}_email`]: e.target.value,
-                              });
-                              if (errors[`dept${num}_email`]) {
-                                setErrors((prev) => {
-                                  const newErrors = { ...prev };
-                                  delete newErrors[`dept${num}_email`];
-                                  return newErrors;
-                                });
-                              }
-                            }}
-                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                            placeholder="email@company.com"
-                          />
-                          {errors[`dept${num}_email`] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors[`dept${num}_email`]}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-                            Phone Number
-                          </label>
-                          <input
-                            type="text"
-                            value={
-                              formData[
-                              `dept${num}_phone` as keyof typeof formData
-                              ] || ""
-                            }
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                [`dept${num}_phone`]: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                            placeholder="+1..."
-                          />
+                                if (errors[`dept${num}_email`]) {
+                                  setErrors((prev) => {
+                                    const newErrors = { ...prev };
+                                    delete newErrors[`dept${num}_email`];
+                                    return newErrors;
+                                  });
+                                }
+                              }}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder="email@company.com"
+                            />
+                            {errors[`dept${num}_email`] && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {errors[`dept${num}_email`]}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                              Phone Number
+                            </label>
+                            <input
+                              type="text"
+                              value={formData[
+                                `dept${num}_phone` as keyof typeof formData
+                              ] || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  [`dept${num}_phone`]: e.target.value,
+                                })}
+                              className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                              placeholder="+1..."
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
               {deptCount < 10 && (
                 <button
                   type="button"
@@ -1766,19 +1759,18 @@ export function VendorMaster() {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${submitting
-              ? "opacity-70 cursor-not-allowed"
-              : "hover:bg-blue-700"
-              }`}
+            className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+              submitting ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-700"
+            }`}
           >
-            {submitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>{editingVendor ? "Update" : "Add"} Vendor</>
-            )}
+            {submitting
+              ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Saving...
+                </>
+              )
+              : <>{editingVendor ? "Update" : "Add"} Vendor</>}
           </button>
         </div>
       </Drawer>
