@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
   X,
+  XCircle,
 } from "lucide-react";
 import { Vendor } from "../types/vendor";
 import Drawer from "../components/Drawer";
@@ -70,6 +71,23 @@ export function VendorMaster() {
       setSelectedCodes(new Set(filteredVendors.map((v) => v.vendor_code)));
     }
   };
+  const handleToggleStatus = async (vendor: Vendor) => {
+    try {
+      setLoading(true);
+      await MasterAPI.update("vendors", vendor.vendor_code, {
+        is_active: !vendor.is_active,
+      });
+      setToast({
+        message: `Vendor "${vendor.vendor_name}" is now ${!vendor.is_active ? "Active" : "Inactive"}`,
+        type: "success",
+      });
+      loadVendors();
+    } catch (error) {
+      setToast({ message: "Failed to update status", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleBulkStatusChange = async (active: boolean) => {
     const codes = Array.from(selectedCodes);
     try {
@@ -95,7 +113,7 @@ export function VendorMaster() {
     const obj: any = {};
     for (let i = 1; i <= 10; i++) {
       obj[`dept${i}_poc_name`] = "";
-      obj[`dept${i}_designation`] = "";
+      obj[`dept${i}_poc_designation`] = "";
       obj[`dept${i}_email`] = "";
       obj[`dept${i}_phone`] = "";
     }
@@ -298,6 +316,20 @@ export function VendorMaster() {
     if (duplicateVendor) {
       newErrors.vendor_name = "A vendor with this name already exists";
     }
+    for (let i = 1; i <= deptCount; i++) {
+      const pocName = formData[
+        `dept${i}_poc_name` as keyof typeof formData
+      ] as string;
+      const pocEmail = formData[
+        `dept${i}_email` as keyof typeof formData
+      ] as string;
+      if (!pocName) {
+        newErrors[`dept${i}_poc_name`] = "Contact Name is required";
+      }
+      if (pocEmail?.trim() && !/\S+@\S+\.\S+/.test(pocEmail.trim())) {
+        newErrors[`dept${i}_email`] = "Invalid email format";
+      }
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -309,7 +341,7 @@ export function VendorMaster() {
       for (let i = 1; i <= 10; i++) {
         if (i > deptCount) {
           sanitizedData[`dept${i}_poc_name`] = "";
-          sanitizedData[`dept${i}_designation`] = "";
+          sanitizedData[`dept${i}_poc_designation`] = "";
           sanitizedData[`dept${i}_email`] = "";
           sanitizedData[`dept${i}_phone`] = "";
         }
@@ -767,12 +799,14 @@ export function VendorMaster() {
       ) as any,
       width: "40px",
       render: (_: any, row: Vendor) => (
-        <input
-          type="checkbox"
-          checked={selectedCodes.has(row.vendor_code)}
-          onChange={() => toggleSelect(row.vendor_code)}
-          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedCodes.has(row.vendor_code)}
+            onChange={() => toggleSelect(row.vendor_code)}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
       ),
     },
     { key: "vendor_name", label: "Vendor Name", sortable: true },
@@ -815,11 +849,14 @@ export function VendorMaster() {
             <Edit size={16} />
           </button>
           <button
-            onClick={() => setDeleteModal({ isOpen: true, vendor: row })}
-            className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors"
-            title="Delete"
+            onClick={() => handleToggleStatus(row)}
+            className={`p-1.5 rounded-lg transition-colors ${row.is_active
+              ? "hover:bg-red-100 text-red-600"
+              : "hover:bg-green-100 text-green-600"
+              }`}
+            title={row.is_active ? "Deactivate Vendor" : "Activate Vendor"}
           >
-            <Trash2 size={16} />
+            {row.is_active ? <XCircle size={16} /> : <CheckCircle size={16} />}
           </button>
         </div>
       ),
@@ -827,52 +864,54 @@ export function VendorMaster() {
   ];
   return (
     <div className="space-y-6">
-     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-  <div className="flex-shrink-0">
-    <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Vendor Master</h1>
-    <p className="text-gray-500 mt-1 font-medium">
-      Manage vendor information and contacts
-    </p>
-  </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex-shrink-0">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Vendor Master
+          </h1>
+          <p className="text-gray-500 mt-1 font-medium">
+            Manage vendor information and contacts
+          </p>
+        </div>
 
-  <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
-    <div className="relative w-full md:w-[500px] lg:w-[600px] transition-all duration-300">
-      <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-        <Search size={20} />
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+          <div className="relative w-full md:w-[500px] lg:w-[600px] transition-all duration-300">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Quick Search"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                clearFieldError("vendor_name", setErrors);
+              }}
+              className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setEditingVendor(null);
+              resetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+          >
+            <Plus size={20} />
+            Add Vendor
+          </button>
+        </div>
       </div>
-      <input
-        type="text"
-        placeholder="Quick Search"
-        value={searchTerm}
-        onChange={(e) => {
-          setSearchTerm(e.target.value);
-          clearFieldError("vendor_name", setErrors);
-        }}
-        className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
-      />
-      {searchTerm && (
-        <button
-          onClick={() => setSearchTerm("")}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-        >
-          <X size={20} />
-        </button>
-      )}
-    </div>
-
-    <button
-      onClick={() => {
-        setEditingVendor(null);
-        resetForm();
-        setIsDrawerOpen(true);
-      }}
-      className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
-    >
-      <Plus size={20} />
-      Add Vendor
-    </button>
-  </div>
-</div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -1064,7 +1103,7 @@ export function VendorMaster() {
         }}
         title={editingVendor ? "Edit Vendor" : "Add Vendor"}
       >
-        <div className="p-6 space-y-6">
+        <div className="p-6 pb-15  space-y-6">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {editingVendor && (
@@ -1116,7 +1155,10 @@ export function VendorMaster() {
                 <select
                   value={formData.is_active ? "Active" : "Inactive"}
                   onChange={(e) => {
-                    setFormData({ ...formData, is_active: e.target.value === "Active" });
+                    setFormData({
+                      ...formData,
+                      is_active: e.target.value === "Active",
+                    });
                   }}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all ${formData.is_active
                     ? "bg-green-50 border-green-200 text-green-700"
@@ -1126,7 +1168,6 @@ export function VendorMaster() {
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
-
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1561,7 +1602,23 @@ export function VendorMaster() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setDeptCount((prev) => prev - 1)}
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              [`dept${num}_poc_name`]: "",
+                              [`dept${num}_poc_designation`]: "",
+                              [`dept${num}_email`]: "",
+                              [`dept${num}_phone`]: "",
+                            }));
+                            setDeptCount((prev) => prev - 1);
+                            setErrors((prev) => {
+                              const newErrors = { ...prev };
+                              delete newErrors[`dept${num}_poc_name`];
+                              delete newErrors[`dept${num}_email`];
+                              delete newErrors[`dept${num}_phone`];
+                              return newErrors;
+                            });
+                          }}
                           className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
                         >
                           <Trash2 size={16} />
@@ -1579,15 +1636,27 @@ export function VendorMaster() {
                               `dept${num}_poc_name` as keyof typeof formData
                               ] || ""
                             }
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData({
                                 ...formData,
                                 [`dept${num}_poc_name`]: e.target.value,
-                              })
-                            }
+                              });
+                              if (errors[`dept${num}_poc_name`]) {
+                                setErrors((prev) => {
+                                  const newErrors = { ...prev };
+                                  delete newErrors[`dept${num}_poc_name`];
+                                  return newErrors;
+                                });
+                              }
+                            }}
                             className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                             placeholder="e.g. John Doe"
                           />
+                          {errors[`dept${num}_poc_name`] && (
+                            <p className="text-red-500 text-xs mt-1">
+                              {errors[`dept${num}_poc_name`]}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
@@ -1597,13 +1666,13 @@ export function VendorMaster() {
                             type="text"
                             value={
                               formData[
-                              `dept${num}_designation` as keyof typeof formData
+                              `dept${num}_poc_designation` as keyof typeof formData
                               ] || ""
                             }
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
-                                [`dept${num}_designation`]: e.target.value,
+                                [`dept${num}_poc_designation`]: e.target.value,
                               })
                             }
                             className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
@@ -1621,15 +1690,27 @@ export function VendorMaster() {
                               `dept${num}_email` as keyof typeof formData
                               ] || ""
                             }
-                            onChange={(e) =>
+                            onChange={(e) => {
                               setFormData({
                                 ...formData,
                                 [`dept${num}_email`]: e.target.value,
-                              })
-                            }
+                              });
+                              if (errors[`dept${num}_email`]) {
+                                setErrors((prev) => {
+                                  const newErrors = { ...prev };
+                                  delete newErrors[`dept${num}_email`];
+                                  return newErrors;
+                                });
+                              }
+                            }}
                             className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                             placeholder="email@company.com"
                           />
+                          {errors[`dept${num}_email`] && (
+                            <p className="text-red-500 text-xs mt-1">
+                              {errors[`dept${num}_email`]}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
@@ -1669,35 +1750,36 @@ export function VendorMaster() {
               )}
             </div>
           </div>
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              onClick={() => {
-                setIsDrawerOpen(false);
-                setEditingVendor(null);
-                resetForm();
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting}
-              className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${submitting
-                ? "opacity-70 cursor-not-allowed"
-                : "hover:bg-blue-700"
-                }`}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>{editingVendor ? "Update" : "Add"} Vendor</>
-              )}
-            </button>
-          </div>
+        </div>
+
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6  shadow-lg flex gap-3">
+          <button
+            onClick={() => {
+              setIsDrawerOpen(false);
+              setEditingVendor(null);
+              resetForm();
+            }}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${submitting
+              ? "opacity-70 cursor-not-allowed"
+              : "hover:bg-blue-700"
+              }`}
+          >
+            {submitting ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>{editingVendor ? "Update" : "Add"} Vendor</>
+            )}
+          </button>
         </div>
       </Drawer>
       <Modal

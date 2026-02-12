@@ -21,7 +21,7 @@ import { Brand } from "../types/brand";
 import { Vendor } from "../types/vendor";
 import { Category } from "../types/category";
 import { Industry } from "../types/industry";
-import CustomDownloadIcon from "../assets/download-custom.png"
+import CustomDownloadIcon from "../assets/download-custom.png";
 
 import { ProductVariant } from "../types/variant";
 import Drawer from "../components/Drawer";
@@ -370,14 +370,14 @@ export function Products() {
       meta_title: "",
       meta_desc: "",
       meta_keywords: "",
-      price:0,
-      sale_price:0,
-      list_price:0,
-      base_price:0,
-      regular_price:0,
-      retail_price:0,
-      msrp:0,
-      map_price:0
+      price: 0,
+      sale_price: 0,
+      list_price: 0,
+      base_price: 0,
+      regular_price: 0,
+      retail_price: 0,
+      msrp: 0,
+      map_price: 0,
     });
     setErrors({});
     setActiveTab("basic");
@@ -423,8 +423,12 @@ export function Products() {
       const bundleAssets = (row: any, type: string) => {
         const assets: Record<string, { name: string; url: string }> = {};
         Object.keys(row).forEach((key) => {
-          const urlMatch = key.match(new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),);
-          const nameMatch = key.match(new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),);
+          const urlMatch = key.match(
+            new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),
+          );
+          const nameMatch = key.match(
+            new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),
+          );
 
           if (urlMatch) {
             const idx = urlMatch[1];
@@ -651,24 +655,22 @@ export function Products() {
 
             if (Object.keys(documents).length === 0) {
               let docCount = 1;
-              const allKeys=Object.keys(row)
-              allKeys.forEach((key,idx) => {
+              const allKeys = Object.keys(row);
+              allKeys.forEach((key, idx) => {
                 const value = String(row[key] || "").trim();
                 if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
-                  let docName=''
-                  if(idx>0)
-                  {
-                    const prevKey=allKeys[idx-1]
-                    const prevValue=String(row[prevKey]||"").trim()
-                    if(prevValue && !prevValue.startsWith('http'))
-                    {
-                      docName=prevValue
+                  let docName = "";
+                  if (idx > 0) {
+                    const prevKey = allKeys[idx - 1];
+                    const prevValue = String(row[prevKey] || "").trim();
+                    if (prevValue && !prevValue.startsWith("http")) {
+                      docName = prevValue;
                     }
                   }
-                  if(!docName)
-                  {
+                  if (!docName) {
                     docName = key.replace(/_/g, " ").replace(/url/i, "").trim();
-                    docName = docName.charAt(0).toUpperCase() + docName.slice(1);
+                    docName =
+                      docName.charAt(0).toUpperCase() + docName.slice(1);
                   }
                   // let name = key.replace(/_/g, " ").trim();
 
@@ -811,8 +813,7 @@ export function Products() {
           errorCount++;
         }
       }
-          loadData();
-
+      loadData();
 
       const masterDataMessage = [];
       if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
@@ -950,8 +951,6 @@ export function Products() {
       document_url_4: "https://example.com/docs/gpsmap-8617-quickstart.pdf",
       document_name_5: "010-02092-00-Warranty",
       document_url_5: "https://example.com/docs/gpsmap-8617-warranty.pdf",
-
-      
     };
 
     exportToCSV([template], "product_import_template.csv");
@@ -976,14 +975,24 @@ export function Products() {
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
     { key: "product_name", label: "Name", sortable: true },
-    { key: "brand_name", label: "Brand", sortable: true, render: (_: any, row: any) => row.brand?.brand_name || "N/A" },
-    { key: "vendor_name", label: "Vendor", sortable: true,render: (_: any, row: any) => row.vendor?.vendor_name || "N/A"},
+    {
+      key: "brand_name",
+      label: "Brand",
+      sortable: true,
+      render: (_: any, row: any) => row.brand?.brand_name || "N/A",
+    },
+    {
+      key: "vendor_name",
+      label: "Vendor",
+      sortable: true,
+      render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
+    },
     { key: "industry_name", label: "Industry", sortable: true },
     {
       key: "category",
       label: "Category",
       sortable: false,
-      width:'400px',
+      width: "400px",
       render: (_: any, row: Product) => (
         <span className="text-sm text-gray-600">
           {getCategoryBreadcrumb(row)}
@@ -1059,7 +1068,7 @@ export function Products() {
   ];
   return (
     <div className="space-y-6">
-     <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Product Master</h1>
           <p className="text-gray-600 mt-1">
@@ -1222,9 +1231,11 @@ export function Products() {
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               title="Download Template"
             >
-              <img src={CustomDownloadIcon}
+              <img
+                src={CustomDownloadIcon}
                 alt="Download"
-                className="w-7 h-7 object-contain"/>
+                className="w-7 h-7 object-contain"
+              />
             </button>
           </div>
         </div>
@@ -1233,12 +1244,12 @@ export function Products() {
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
-          industryFilter ||
-          brandFilter ||
-          vendorFilter ||
-          variantStatusFilter ||
-          category1Filter ||
-          productTypeFilter ? (
+            industryFilter ||
+            brandFilter ||
+            vendorFilter ||
+            variantStatusFilter ||
+            category1Filter ||
+            productTypeFilter ? (
             <span>
               Showing <strong>{filteredProducts.length}</strong> matching
               results out of {products.length} total products.
@@ -1257,21 +1268,21 @@ export function Products() {
           variantStatusFilter ||
           category1Filter ||
           productTypeFilter) && (
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setIndustryFilter("");
-              setBrandFilter("");
-              setVendorFilter("");
-              setVariantStatusFilter("");
-              setCategory1Filter("");
-              setProductTypeFilter("");
-            }}
-            className="text-sm text-blue-600 hover:underline font-medium"
-          >
-            Clear all filters
-          </button>
-        )}
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setIndustryFilter("");
+                setBrandFilter("");
+                setVendorFilter("");
+                setVariantStatusFilter("");
+                setCategory1Filter("");
+                setProductTypeFilter("");
+              }}
+              className="text-sm text-blue-600 hover:underline font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
       </div>
 
       <DataTable
@@ -1303,17 +1314,16 @@ export function Products() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
-                activeTab === tab.id
+              className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
           ))}
         </div>
-        <div className="p-6 space-y-6">
+        <div className="p-6 pb-22 space-y-6">
           {activeTab === "basic" && (
             <div className="space-y-4">
               {/* <h3 className="font-semibold text-gray-900">Basic Information</h3> */}
@@ -1801,105 +1811,125 @@ export function Products() {
               </h3>
 
               {formData.attributes &&
-              Object.keys(formData.attributes).length > 0 ? (
+                Object.keys(formData.attributes).length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-  {Object.entries(formData.attributes).map(([key, attr]: any) => (
-    <div
-      key={key}
-      className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
-    >
-      <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
-        {/* If it's ATTR-001, show 'A', otherwise show the number */}
-        {key.startsWith("ATTR") ? "A" : key}
-      </div>
-      <div className="flex-1 grid grid-cols-3 gap-4">
-        {/* 1. Name Column (Read Only) */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Name</label>
-          <input
-            type="text"
-            value={attr.name}
-            readOnly
-            className="w-full px-2 py-1 border border-gray-300 rounded bg-white font-medium"
-          />
-        </div>
+                  {Object.entries(formData.attributes).map(
+                    ([key, attr]: any) => (
+                      <div
+                        key={key}
+                        className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
+                      >
+                        <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
+                          {/* If it's ATTR-001, show 'A', otherwise show the number */}
+                          {key.startsWith("ATTR") ? "A" : key}
+                        </div>
+                        <div className="flex-1 grid grid-cols-3 gap-4">
+                          {/* 1. Name Column (Read Only) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={attr.name}
+                              readOnly
+                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white font-medium"
+                            />
+                          </div>
 
-        {/* 2. Value Column (Dropdown OR Input) */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Value</label>
-          
-          {/* ✅ LOGIC: If options exist, show Select. If not, show Input. */}
-          {attr.options && attr.options.length > 0 ? (
-            <select
-              value={attr.value || ""}
-              onChange={(e) => {
-                const selectedOpt = attr.options.find((opt: any) => opt.value === e.target.value);
-                setFormData((prev) => ({
-                  ...prev,
-                  attributes: {
-                    ...prev.attributes,
-                    [key]: {
-                      ...prev.attributes![key],
-                      value: e.target.value,
-                      // Auto-update UOM based on selection
-                      uom: selectedOpt ? selectedOpt.uom : attr.uom
-                    }
-                  }
-                }));
-              }}
-              className="w-full px-2 py-1 border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select...</option>
-              {attr.options.map((opt: any, idx: number) => (
-                <option key={idx} value={opt.value}>
-                  {opt.value}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              type="text"
-              value={attr.value}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  attributes: {
-                    ...prev.attributes,
-                    [key]: { ...prev.attributes![key], value: e.target.value }
-                  }
-                }));
-              }}
-              className="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:border-blue-500"
-            />
-          )}
-        </div>
+                          {/* 2. Value Column (Dropdown OR Input) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              Value
+                            </label>
 
-        {/* 3. UOM Column (Auto-updated or Read Only) */}
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">UOM</label>
-          <input
-            type="text"
-            value={attr.uom || "-"}
-            // Make editable only if it's NOT a master attribute (optional)
-            readOnly={!!(attr.options && attr.options.length > 0)}
-            onChange={(e) => {
-               if(!attr.options) {
-                   setFormData((prev) => ({
-                    ...prev,
-                    attributes: {
-                        ...prev.attributes,
-                        [key]: { ...prev.attributes![key], uom: e.target.value }
-                    }
-                   }));
-               }
-            }}
-            className={`w-full px-2 py-1 border border-gray-300 rounded ${attr.options ? 'bg-gray-100 text-gray-500' : 'bg-white'}`}
-          />
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
+                            {/* ✅ LOGIC: If options exist, show Select. If not, show Input. */}
+                            {attr.options && attr.options.length > 0 ? (
+                              <select
+                                value={attr.value || ""}
+                                onChange={(e) => {
+                                  const selectedOpt = attr.options.find(
+                                    (opt: any) => opt.value === e.target.value,
+                                  );
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    attributes: {
+                                      ...prev.attributes,
+                                      [key]: {
+                                        ...prev.attributes![key],
+                                        value: e.target.value,
+                                        // Auto-update UOM based on selection
+                                        uom: selectedOpt
+                                          ? selectedOpt.uom
+                                          : attr.uom,
+                                      },
+                                    },
+                                  }));
+                                }}
+                                className="w-full px-2 py-1 border border-blue-300 rounded bg-white focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select...</option>
+                                {attr.options.map((opt: any, idx: number) => (
+                                  <option key={idx} value={opt.value}>
+                                    {opt.value}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                value={attr.value}
+                                onChange={(e) => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    attributes: {
+                                      ...prev.attributes,
+                                      [key]: {
+                                        ...prev.attributes![key],
+                                        value: e.target.value,
+                                      },
+                                    },
+                                  }));
+                                }}
+                                className="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:border-blue-500"
+                              />
+                            )}
+                          </div>
+
+                          {/* 3. UOM Column (Auto-updated or Read Only) */}
+                          <div>
+                            <label className="block text-xs text-gray-500 mb-1">
+                              UOM
+                            </label>
+                            <input
+                              type="text"
+                              value={attr.uom || "-"}
+                              // Make editable only if it's NOT a master attribute (optional)
+                              readOnly={
+                                !!(attr.options && attr.options.length > 0)
+                              }
+                              onChange={(e) => {
+                                if (!attr.options) {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    attributes: {
+                                      ...prev.attributes,
+                                      [key]: {
+                                        ...prev.attributes![key],
+                                        uom: e.target.value,
+                                      },
+                                    },
+                                  }));
+                                }
+                              }}
+                              className={`w-full px-2 py-1 border border-gray-300 rounded ${attr.options ? "bg-gray-100 text-gray-500" : "bg-white"}`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
               ) : (
                 <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
                   <p>No dynamic attributes found for this product.</p>
@@ -1983,7 +2013,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `related_product_${num}_mpn` as keyof Product
+                        `related_product_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -1999,7 +2029,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `related_product_${num}_name` as keyof Product
+                        `related_product_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2045,7 +2075,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `pairs_well_with_${num}_mpn` as keyof Product
+                        `pairs_well_with_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2061,7 +2091,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                          `pairs_well_with_${num}_name` as keyof Product
+                        `pairs_well_with_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2101,7 +2131,7 @@ export function Products() {
                           placeholder="Image Name"
                           value={asset.name}
                           onChange={(e) => {
-                            const currentImages = formData.images || {}; 
+                            const currentImages = formData.images || {};
                             const updatedImages = {
                               ...currentImages,
                               [num]: { ...asset, name: e.target.value },
@@ -2115,7 +2145,7 @@ export function Products() {
                           placeholder="Image URL"
                           value={asset.url}
                           onChange={(e) => {
-                            const currentImages = formData.images || {}; 
+                            const currentImages = formData.images || {};
                             const updatedImages = {
                               ...currentImages,
                               [num]: { ...asset, url: e.target.value },
@@ -2241,25 +2271,27 @@ export function Products() {
                 })}
               </div>
             </div>
+
           )}
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              onClick={() => {
-                setIsDrawerOpen(false);
-                setEditingProduct(null);
-                resetForm();
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {editingProduct ? "Update" : "Add"} Product
-            </button>
-          </div>
+        </div>
+
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 shadow-lg flex gap-3">
+          <button
+            onClick={() => {
+              setIsDrawerOpen(false);
+              setEditingProduct(null);
+              resetForm();
+            }}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {editingProduct ? "Update" : "Add"} Product
+          </button>
         </div>
       </Drawer>
       <Modal

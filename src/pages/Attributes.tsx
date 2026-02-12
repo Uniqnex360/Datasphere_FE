@@ -1358,8 +1358,9 @@ export function Attributes() {
               </div>
             )}
           </div>
+          </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+            <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6  shadow-lg flex gap-3">
             <button
               onClick={() => {
                 setIsDrawerOpen(false);
@@ -1376,7 +1377,6 @@ export function Attributes() {
             >
               {editingAttribute ? "Update" : "Add"} Attribute
             </button>
-          </div>
         </div>
       </Drawer>
 

@@ -6,8 +6,11 @@ export interface Brand {
   mfg_code: string;
   mfg_name: string;
   mfg_logo: string;
+  is_active?:boolean;
   created_at?: string;
   updated_at?: string;
+  brand_website?:string
+  manufacturer_website?:string
 }
 
 export interface BrandFormData extends Partial<Brand> {}
