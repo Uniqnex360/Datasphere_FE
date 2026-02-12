@@ -934,33 +934,33 @@ export function VendorMaster() {
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
               <select
-                value={businessTypeFilter}
-                onChange={(e) => setBusinessTypeFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Types</option>
-                <option value="Wholesaler">Wholesaler</option>
-                <option value="Manufacturer">Manufacturer</option>
-                <option value="Distributor">Distributor</option>
-              </select>
+  value={businessTypeFilter}
+  onChange={(e) => setBusinessTypeFilter(e.target.value)}
+  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+>
+  <option value="" hidden={!!businessTypeFilter}> Business Types</option>
+  <option value="Wholesaler">Wholesaler</option>
+  <option value="Manufacturer">Manufacturer</option>
+  <option value="Distributor">Distributor</option>
+</select>
               <select
-                value={industryFilter}
-                onChange={(e) => setIndustryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Industries</option>
-                {industryOptions.map((ind) => (
-                  <option key={ind} value={ind}>
-                    {ind}
-                  </option>
-                ))}
-              </select>
+  value={industryFilter}
+  onChange={(e) => setIndustryFilter(e.target.value)}
+  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+>
+  <option value="" hidden={!!industryFilter}> Industries</option>
+  {industryOptions.map((ind) => (
+    <option key={ind} value={ind}>
+      {ind}
+    </option>
+  ))}
+</select>
               <select
-                value={countryFilter}
-                onChange={(e) => setCountryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Countries</option>
+  value={countryFilter}
+  onChange={(e) => setCountryFilter(e.target.value)}
+  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+>
+  <option value="" hidden={!!countryFilter}>Countries</option>
                 {ALLOWED_COUNTRIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -974,15 +974,16 @@ export function VendorMaster() {
                     </option>
                   ))}
               </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+             
+<select
+  value={statusFilter}
+  onChange={(e) => setStatusFilter(e.target.value)}
+  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+>
+  <option value="" hidden={!!statusFilter}>Status</option>
+  <option value="Active">Active</option>
+  <option value="Inactive">Inactive</option>
+</select>
           </div>
           <div className="flex items-center gap-2 w-full lg:w-auto border-t lg:border-t-0 lg:border-l pt-4 lg:pt-0 lg:pl-4 border-gray-100">
             <button
@@ -1034,6 +1035,7 @@ export function VendorMaster() {
         {(searchTerm ||
           businessTypeFilter ||
           industryFilter ||
+          statusFilter||
           countryFilter) && (
           <button
             onClick={() => {
@@ -1041,6 +1043,7 @@ export function VendorMaster() {
               setBusinessTypeFilter("");
               setIndustryFilter("");
               setCountryFilter("");
+              setStatusFilter("")
             }}
             className="text-sm text-blue-600 hover:underline font-medium"
           >

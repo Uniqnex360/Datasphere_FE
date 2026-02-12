@@ -760,7 +760,7 @@ export function Categories() {
                 onChange={(e) => setIndustryFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">All Industries</option>
+                <option value="" hidden={!!industryFilter}> Industries</option>
                 {industries
                   .filter((ind) => ind && ind.industry_code)
                   .map((ind) => (
