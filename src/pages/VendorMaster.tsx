@@ -1079,7 +1079,7 @@ export function VendorMaster() {
               onChange={(e) => setBusinessTypeFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select Business Type</option>
+              <option value="" hidden>Select Business Type</option>
               <option value="Wholesaler">Wholesaler</option>
               <option value="Manufacturer">Manufacturer</option>
               <option value="Distributor">Distributor</option>
@@ -1091,7 +1091,7 @@ export function VendorMaster() {
               onChange={(e) => setIndustryFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value=""> Select Industry</option>
+              <option value="" hidden> Select Industry</option>
               {industryOptions.map((ind) => (
                 <option key={ind} value={ind}>
                   {ind}
@@ -1103,7 +1103,7 @@ export function VendorMaster() {
               onChange={(e) => setCountryFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select Country</option>
+              <option value="" hidden>Select Country</option>
               {ALLOWED_COUNTRIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -1123,7 +1123,7 @@ export function VendorMaster() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="">Select Status</option>
+              <option value=""hidden>Select Status</option>
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
