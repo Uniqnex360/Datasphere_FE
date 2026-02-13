@@ -4,7 +4,7 @@ interface Column {
   key: string;
   label: string;
   sortable?: boolean;
-  width?: string; 
+  width?: string;
   render?: (value: any, row: any) => React.ReactNode;
 }
 
@@ -47,32 +47,32 @@ export default function DataTable({
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse"> 
+        <table className="w-full border-collapse">
           <thead className="bg-gray-50 border-b">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   style={{ width: column.width || 'auto' }}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500  tracking-wider"
                 >
                   {column.sortable ? (
-  <button
-    onClick={() => onSort(column.key)}
-    className="flex items-center justify-between gap-2 hover:text-gray-700 transition-colors w-full"
-  >
-    <span className="truncate">{column.label}</span>
-    <span className="flex-shrink-0">
-      {sortKey === column.key ? (
-        sortDirection === 'asc' ? <ChevronUp size={14} className="text-blue-600" /> : <ChevronDown size={14} className="text-blue-600" />
-      ) : (
-        <ChevronDown size={14} className="text-gray-300" /> 
-      )}
-    </span>
-  </button>
-) : (
-  <span className="truncate">{column.label}</span>
-)}
+                    <button
+                      onClick={() => onSort(column.key)}
+                      className="flex items-center justify-between gap-2 hover:text-gray-700 transition-colors w-full"
+                    >
+                      <span className="truncate">{column.label}</span>
+                      <span className="flex-shrink-0">
+                        {sortKey === column.key ? (
+                          sortDirection === 'asc' ? <ChevronUp size={14} className="text-blue-600" /> : <ChevronDown size={14} className="text-blue-600" />
+                        ) : (
+                          <ChevronDown size={14} className="text-gray-300" />
+                        )}
+                      </span>
+                    </button>
+                  ) : (
+                    <span className="truncate">{column.label}</span>
+                  )}
                 </th>
               ))}
             </tr>
@@ -81,14 +81,17 @@ export default function DataTable({
             {data.map((row, index) => (
               <tr key={index} className="hover:bg-gray-50 transition-colors">
                 {columns.map((column) => (
-                  <td 
-                    key={column.key} 
+                  <td
+                    key={column.key}
                     className="px-6 py-4 text-sm text-gray-900"
                   >
-                   
-                    <div className="truncate" title={String(row[column.key] || '')}>
-                      {column.render 
-                        ? column.render(row[column.key], row) 
+
+                     <div 
+    className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]" 
+    title={String(row[column.key] || '')}
+  >
+                      {column.render
+                        ? column.render(row[column.key], row)
                         : (row[column.key] || '-')}
                     </div>
                   </td>

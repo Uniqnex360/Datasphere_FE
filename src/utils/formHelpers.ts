@@ -14,10 +14,12 @@ export const clearFieldError = (
 export const formatWebsiteUrl=(url:string):string=>{
   if(!url)return ""
   let cleanUrl=url.trim().toLowerCase()
-  if(!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://'))
-  {
-    cleanUrl=`https://${cleanUrl}`
-  }
+  const domain = cleanUrl.replace(/^(https?:\/\/)?(www\.)?/, "");
+  cleanUrl = `https://www.${domain}`;
+  // if(!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://'))
+  // {
+  //   cleanUrl=`https://${cleanUrl}`
+  // }
   try {
     const urlObj=new URL(cleanUrl)
     return urlObj.href

@@ -596,7 +596,7 @@
 
       return (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between -mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Brand Master</h1>
               <p className="text-gray-600 mt-1">
@@ -610,13 +610,13 @@
                 </div>
                 <input
                   type="text"
-                  placeholder="Quick Search"
+                  placeholder="Brand Search"
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
                     clearFieldError("vendor_name", setErrors);
                   }}
-                  className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+                  className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400 italic"
                 />
                 {searchTerm && (
                   <button
