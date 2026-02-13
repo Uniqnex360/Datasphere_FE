@@ -295,7 +295,6 @@ export default function Inventory() {
         </select>
       </section>
 
-      {/* --- Dynamic Filter Status Info Bar --- */}
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm || statusFilter !== "all" ? (
@@ -336,7 +335,6 @@ export default function Inventory() {
   <div className="p-6 space-y-6">
     {selectedProduct && (
       <>
-        {/* Info Panel */}
         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 space-y-3">
           <div>
             <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">Product</p>

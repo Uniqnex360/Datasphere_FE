@@ -622,7 +622,7 @@ export function BrandMaster() {
             </div>
             <input
               type="text"
-              placeholder="Brand Search"
+              placeholder="Search Brand"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);

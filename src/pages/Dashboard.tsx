@@ -748,7 +748,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     key={activity.id}
                     className="flex items-start gap-3 pb-4 border-b last:border-0"
                   >
-                    {/* Activity Image Thumbnail */}
                     <div className="w-12 h-12 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
                       {activity.image ? (
                         <img 

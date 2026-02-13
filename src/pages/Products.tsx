@@ -1240,7 +1240,6 @@ export function Products() {
           </div>
         </div>
       </div>
-      {/* Dynamic Count Info Bar */}
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
@@ -1818,11 +1817,9 @@ export function Products() {
                         className="flex gap-4 p-3 border border-gray-200 rounded-lg bg-gray-50 items-center"
                       >
                         <div className="w-8 h-8 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-sm font-bold">
-                          {/* If it's ATTR-001, show 'A', otherwise show the number */}
                           {key.startsWith("ATTR") ? "A" : key}
                         </div>
                         <div className="flex-1 grid grid-cols-3 gap-4">
-                          {/* 1. Name Column (Read Only) */}
                           <div>
                             <label className="block text-xs text-gray-500 mb-1">
                               Name
@@ -1835,13 +1832,11 @@ export function Products() {
                             />
                           </div>
 
-                          {/* 2. Value Column (Dropdown OR Input) */}
                           <div>
                             <label className="block text-xs text-gray-500 mb-1">
                               Value
                             </label>
 
-                            {/* ✅ LOGIC: If options exist, show Select. If not, show Input. */}
                             {attr.options && attr.options.length > 0 ? (
                               <select
                                 value={attr.value || ""}
@@ -1894,7 +1889,6 @@ export function Products() {
                             )}
                           </div>
 
-                          {/* 3. UOM Column (Auto-updated or Read Only) */}
                           <div>
                             <label className="block text-xs text-gray-500 mb-1">
                               UOM
@@ -1902,7 +1896,6 @@ export function Products() {
                             <input
                               type="text"
                               value={attr.uom || "-"}
-                              // Make editable only if it's NOT a master attribute (optional)
                               readOnly={
                                 !!(attr.options && attr.options.length > 0)
                               }
@@ -2216,7 +2209,6 @@ export function Products() {
                 })}
               </div>
 
-              {/* --- DOCUMENTS SECTION (Apply same pattern) --- */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <FileText size={20} className="text-orange-600" />
