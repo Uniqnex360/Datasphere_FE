@@ -535,6 +535,7 @@ export function BrandMaster() {
       key: "brand_logo",
       label: "Brand Logo",
       sortable: false,
+      width: "150px",
       render: (value: string) =>
         value ? (
           <img
@@ -548,9 +549,10 @@ export function BrandMaster() {
           </div>
         ),
     },
-    { key: "brand_name", label: "Brand Name", sortable: true },
+    { key: "brand_name", label: "Brand Name", sortable: true, width: "100px",},
     {
       key: "mfg_logo",
+       width: "100px",
       label: "Mfg Logo",
       sortable: false,
       render: (value: string) =>
@@ -562,11 +564,12 @@ export function BrandMaster() {
           </div>
         ),
     },
-    { key: "mfg_name", label: "Manufacturer", sortable: true },
+    { key: "mfg_name", label: "Manufacturer", sortable: true, width: "100px", },
     {
       key: "is_active",
       label: "Status",
       sortable: true,
+      width: "120px", 
       render: (val: boolean) => (
         <span
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${val
@@ -582,6 +585,7 @@ export function BrandMaster() {
       key: "actions",
       label: "Actions",
       sortable: false,
+      width: "20px",
       render: (_: any, row: Brand) => (
         <div className="flex items-center gap-2">
           <button
