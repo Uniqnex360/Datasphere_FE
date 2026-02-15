@@ -537,17 +537,23 @@ export function Products() {
               if (existingVendor) {
                 mapped.vendor_code = existingVendor.vendor_code;
               } else {
-                const vendorCode = `VEND-${vendorName
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
-                mapped.vendor_code = vendorCode;
-                vendorsToCreate.set(vendorCode, {
+                // const vendorCode = `VEND-${vendorName
+                //   .substring(0, 8)
+                //   .toUpperCase()
+                //   .replace(/[^A-Z0-9]/g, "")}`;
+                const vendorCode = ""; 
+                mapped.vendor_code = vendorCode;  
+                if(vendorName)
+                {
+
+                vendorsToCreate.set(vendorName.toLowerCase(), {
                   vendor_code: vendorCode,
                   vendor_name: vendorName,
                   contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
                   contact_phone: "000-000-0000",
                 });
+                }
+
               }
             }
 
@@ -739,29 +745,49 @@ export function Products() {
         }
       }
 
+      // if (vendorsToCreate.size > 0) {
+      //   try {
+      //     const existingVendors = await MasterAPI.getVendors();
+      //     const existingCodes = new Set(
+      //       existingVendors.map((v: any) => v.vendor_code),
+      //     );
+      //     const newVendors = Array.from(vendorsToCreate.values()).filter(
+      //       (v) => !existingCodes.has(v.vendor_code),
+      //     );
+
+      //     for (const vendor of newVendors) {
+      //       try {
+      //         await MasterAPI.create("vendors", vendor);
+      //         createdVendors++;
+      //       } catch (err) {
+      //         console.warn("Vendor create failed", err);
+      //       }
+      //     }
+      //   } catch (e) {
+      //     console.error("Vendor sync error", e);
+      //   }
+      // }
       if (vendorsToCreate.size > 0) {
-        try {
-          const existingVendors = await MasterAPI.getVendors();
-          const existingCodes = new Set(
-            existingVendors.map((v: any) => v.vendor_code),
-          );
-          const newVendors = Array.from(vendorsToCreate.values()).filter(
-            (v) => !existingCodes.has(v.vendor_code),
-          );
+  try {
+    const existingVendors = await MasterAPI.getVendors();
+    const existingNames = new Set(existingVendors.map((v: any) => v.vendor_name.toLowerCase()));
+    
+    const newVendors = Array.from(vendorsToCreate.values()).filter(
+      (v) => !existingNames.has(v.vendor_name.toLowerCase())
+    );
 
-          for (const vendor of newVendors) {
-            try {
-              await MasterAPI.create("vendors", vendor);
-              createdVendors++;
-            } catch (err) {
-              console.warn("Vendor create failed", err);
-            }
-          }
-        } catch (e) {
-          console.error("Vendor sync error", e);
-        }
+    for (const vendor of newVendors) {
+      try {
+        await MasterAPI.create("vendors", vendor);
+        createdVendors++;
+      } catch (err) {
+        console.warn("Vendor create failed", err);
       }
-
+    }
+  } catch (e) {
+    console.error("Vendor sync error", e);
+  }
+}
       if (categoriesToCreate.size > 0) {
         try {
           const existingCategories = await MasterAPI.getCategories();
