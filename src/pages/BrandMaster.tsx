@@ -212,12 +212,16 @@ export function BrandMaster() {
       if (typeof sanitized.mfg_logo === 'string' && sanitized.mfg_logo?.startsWith("blob:")) {
         sanitized.mfg_logo = "";
       }
-      if (!sanitized.brand_code && !editingBrand) {
-        sanitized.brand_code = generateEntityCode(
-          "brand",
-          typeof sanitized.brand_name === 'string' ? sanitized.brand_name : "",
-        );
-      }
+      // if (!sanitized.brand_code && !editingBrand) {
+      //   sanitized.brand_code = generateEntityCode(
+      //     "brand",
+      //     typeof sanitized.brand_name === 'string' ? sanitized.brand_name : "",
+      //   );
+      // }
+       if (!editingBrand) {
+      delete sanitized.brand_code;
+      delete sanitized.mfg_code;
+    }
       let payload: any = sanitized;
       if (brandLogoFile || mfgLogoFile) {
         const data = new FormData();
@@ -242,15 +246,15 @@ export function BrandMaster() {
         await MasterAPI.update("brands", editingBrand.brand_code, payload);
         setToast({ message: "Brand updated successfully", type: "success" });
       } else {
-        if (!(payload instanceof FormData)) {
-          payload.brand_code = generateEntityCode(
-            "brand",
-            payload.brand_name || "",
-          );
-        }
-        if (!(payload instanceof FormData)) {
-          payload.mfg_code = generateEntityCode("mfg", payload.mfg_name || "");
-        }
+        // if (!(payload instanceof FormData)) {
+        //   payload.brand_code = generateEntityCode(
+        //     "brand",
+        //     payload.brand_name || "",
+        //   );
+        // }
+        // if (!(payload instanceof FormData)) {
+        //   payload.mfg_code = generateEntityCode("mfg", payload.mfg_name || "");
+        // }
 
         await MasterAPI.create("brands", payload);
         setToast({ message: "Brand added successfully", type: "success" });
@@ -432,15 +436,15 @@ export function BrandMaster() {
 
           });
 
-          if (
-            brandData.brand_code === "" ||
-            brandData.brand_code === undefined
-          ) {
-            brandData.brand_code = generateEntityCode(
-              "brand",
-              brandData.brand_name || "",
-            );
-          }
+          // if (
+          //   brandData.brand_code === "" ||
+          //   brandData.brand_code === undefined
+          // ) {
+          //   brandData.brand_code = generateEntityCode(
+          //     "brand",
+          //     brandData.brand_name || "",
+          //   );
+          // }
           validData.push(brandData);
         }
       });
@@ -549,10 +553,10 @@ export function BrandMaster() {
           </div>
         ),
     },
-    { key: "brand_name", label: "Brand Name", sortable: true, width: "100px",},
+    { key: "brand_name", label: "Brand Name", sortable: true, width: "100px", },
     {
       key: "mfg_logo",
-       width: "100px",
+      width: "100px",
       label: "Mfg Logo",
       sortable: false,
       render: (value: string) =>
@@ -569,7 +573,7 @@ export function BrandMaster() {
       key: "is_active",
       label: "Status",
       sortable: true,
-      width: "120px", 
+      width: "120px",
       render: (val: boolean) => (
         <span
           className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${val
@@ -917,80 +921,79 @@ export function BrandMaster() {
                   )}
                 </div>
                 <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Manufacturer Logo
-  </label>
-  <div className="flex gap-2 items-start">
-    <div className="relative flex-1">
-      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-        <ImageIcon size={16} />
-      </div>
-      <input
-        type="text"
-        value={
-          mfgLogoFile
-            ? `File: ${mfgLogoFile.name}`
-            : formData.mfg_logo
-        }
-        onChange={(e) =>
-          setFormData({ ...formData, mfg_logo: e.target.value })
-        }
-        disabled={!!mfgLogoFile}
-        placeholder={
-          mfgLogoFile
-            ? "Image File Selected"
-            : "https://example.com/logo.png"
-        }
-        className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-          mfgLogoFile
-            ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-            : "border-gray-300"
-        }`}
-      />
-      {(formData.mfg_logo || mfgLogoFile) && (
-        <button
-          type="button"
-          onClick={handleRemoveMfgLogo}
-          title="Remove Logo"
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
-        >
-          <X size={16} />
-        </button>
-      )}
-    </div>
-    <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white h-[42px]">
-      <Upload size={18} className="text-gray-600" />
-      <span className="text-sm font-medium text-gray-700">
-        Upload
-      </span>
-      <input
-        type="file"
-        accept="image/*"
-        onChange={handleMfgLogoUpload}
-        className="hidden"
-      />
-    </label>
-  </div>
-  {formData.mfg_logo && (
-    <div className="mt-3">
-      <span className="text-xs text-gray-500 mb-1 block">
-        Preview:
-      </span>
-      <div className="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2 relative group">
-        <img
-          src={formData.mfg_logo}
-          alt="Mfg logo preview"
-          className="max-w-full max-h-full object-contain"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-            e.currentTarget.parentElement!.innerHTML =
-              '<span class="text-xs text-red-400 text-center">Invalid Image</span>';
-          }}
-        />
-      </div>
-    </div>
-  )}
-</div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Manufacturer Logo
+                  </label>
+                  <div className="flex gap-2 items-start">
+                    <div className="relative flex-1">
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <ImageIcon size={16} />
+                      </div>
+                      <input
+                        type="text"
+                        value={
+                          mfgLogoFile
+                            ? `File: ${mfgLogoFile.name}`
+                            : formData.mfg_logo
+                        }
+                        onChange={(e) =>
+                          setFormData({ ...formData, mfg_logo: e.target.value })
+                        }
+                        disabled={!!mfgLogoFile}
+                        placeholder={
+                          mfgLogoFile
+                            ? "Image File Selected"
+                            : "https://example.com/logo.png"
+                        }
+                        className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${mfgLogoFile
+                            ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                            : "border-gray-300"
+                          }`}
+                      />
+                      {(formData.mfg_logo || mfgLogoFile) && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveMfgLogo}
+                          title="Remove Logo"
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white h-[42px]">
+                      <Upload size={18} className="text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">
+                        Upload
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleMfgLogoUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {formData.mfg_logo && (
+                    <div className="mt-3">
+                      <span className="text-xs text-gray-500 mb-1 block">
+                        Preview:
+                      </span>
+                      <div className="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2 relative group">
+                        <img
+                          src={formData.mfg_logo}
+                          alt="Mfg logo preview"
+                          className="max-w-full max-h-full object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                            e.currentTarget.parentElement!.innerHTML =
+                              '<span class="text-xs text-red-400 text-center">Invalid Image</span>';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Website
