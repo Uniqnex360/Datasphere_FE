@@ -340,7 +340,6 @@ export function Attributes() {
         });
         
       } else {
-        // Use helper with local state
         const duplicate = findDuplicateAttribute(
           attributes,
           formData.attribute_name || "",

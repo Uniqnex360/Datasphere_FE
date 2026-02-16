@@ -871,7 +871,14 @@ const clearAllLevels = () => {
   setOpenDropdown(null);
   setLevelSearchQueries({});
 };
-
+  const getSelectedBreadcrumb = (): string => {
+  const parts: string[] = [];
+  for (let i = 1; i <= 8; i++) {
+    if (selectedLevels[i]) parts.push(selectedLevels[i]);
+    else break;
+  }
+  return parts.join(" > ");
+};
 const handleAddAtLevel = (level: number) => {
   setIsEditing(false);
   resetForm();
@@ -1318,7 +1325,7 @@ const handleAddAtLevel = (level: number) => {
             Hierarchy Path
           </label>
           <p className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700 font-medium">
-            {selectedCategory.breadcrumb}
+            {getSelectedBreadcrumb() || selectedCategory.breadcrumb}
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4">

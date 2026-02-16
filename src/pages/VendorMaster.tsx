@@ -1077,7 +1077,7 @@ export function VendorMaster() {
             <select
               value={businessTypeFilter}
               onChange={(e) => setBusinessTypeFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="" hidden>Select Business Type</option>
               <option value="Wholesaler">Wholesaler</option>

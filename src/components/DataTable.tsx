@@ -86,10 +86,10 @@ export default function DataTable({
                     className="px-6 py-4 text-sm text-gray-900"
                   >
 
-                     <div 
-    className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]" 
-    title={String(row[column.key] || '')}
-  >
+                    <div
+                      className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
+                      title={String(row[column.key] || '')}
+                    >
                       {column.render
                         ? column.render(row[column.key], row)
                         : (row[column.key] || '-')}
