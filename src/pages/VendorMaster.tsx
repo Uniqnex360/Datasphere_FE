@@ -92,6 +92,7 @@ export function VendorMaster() {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -104,6 +105,7 @@ export function VendorMaster() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  
   const handleBulkStatusChange = async (active: boolean) => {
     const codes = Array.from(selectedCodes);
     try {

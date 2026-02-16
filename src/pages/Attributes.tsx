@@ -11,8 +11,9 @@ import {
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
+
 import { Attribute, AttributeValue } from "../types/attribute";
-import CustomDownloadIcon from "../assets/download-custom.png"
+import CustomDownloadIcon from "../assets/download-custom.png";
 import { Category } from "../types/category";
 import { Industry } from "../types/industry";
 import Drawer from "../components/Drawer";
@@ -22,13 +23,12 @@ import DataTable from "../components/DataTable";
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI } from "../lib/api";
 import { validateImportFormat } from "../utils/importValidator";
-import { useIndustryManager } from "../hooks/useIndustryManager";
 import { SearchableSelect } from "../components/SearchableSelect";
-import { generateEntityCode } from "../utils/codeGenerator";
+import { exportToExcel } from "../utils/ExcelHelper";
+
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
   attributeName: string,
-  industryName: string,
   excludeCode?: string,
 ): Attribute | null => {
   return (
@@ -36,8 +36,6 @@ const findDuplicateAttribute = (
       (attr) =>
         attr.attribute_name.trim().toLowerCase() ===
           attributeName.trim().toLowerCase() &&
-        attr.industry_name.trim().toLowerCase() ===
-          industryName.trim().toLowerCase() &&
         attr.attribute_code !== excludeCode,
     ) || null
   );
@@ -61,6 +59,7 @@ const generateAttributeCode = (allAttributes: Attribute[]): string => {
   const nextNumber = lastNumber + 1;
   return `ATTR-${String(nextNumber).padStart(6, "0")}`;
 };
+
 const mergeAttributeValues = (
   existing: Attribute,
   newValues: AttributeValue[],
@@ -117,7 +116,7 @@ export function Attributes() {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [filteredAttributes, setFilteredAttributes] = useState<Attribute[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingAttribute, setEditingAttribute] = useState<Attribute | null>(
@@ -131,18 +130,20 @@ export function Attributes() {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [tablefilteredAttributes, settablefilteredAttributes] = useState<
+    Attribute[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("");
   const [attributeTypeFilter, setAttributeTypeFilter] = useState("");
   const [dataTypeFilter, setDataTypeFilter] = useState("");
   const [sortKey, setSortKey] = useState("attribute_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [industryOptions, setIndustryOptions] = useState<string[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<Partial<Attribute>>({
     attribute_name: "",
-    industry_name: "",
-    industry_attribute_name: "",
+    category_path: "",
     description: "",
     applicable_categories: "",
     attribute_type: "",
@@ -164,7 +165,6 @@ export function Attributes() {
   useEffect(() => {
     loadAttributes();
     loadCategories();
-    loadIndustries();
   }, []);
 
   useEffect(() => {
@@ -189,28 +189,18 @@ export function Attributes() {
       setLoading(false);
     }
   };
-  const {
-    isCustom: isCustomIndustry,
-    handleIndustryChange,
-    setIsCustom: setIsCustomIndustry,
-  } = useIndustryManager(industries, setFormData, setErrors, "industry_name");
+
   const loadCategories = async () => {
     try {
       const data = await MasterAPI.getCategories();
       setCategories(data || []);
+      const breadcrumbs = (data || []).map((item: any) => {
+        // Customize the breadcrumb format as needed
+        return `${item.breadcrumb}`;
+      });
+      setCategoryOptions(breadcrumbs || []);
     } catch (error: any) {
       console.error("Error loading categories:", error);
-    }
-  };
-
-  const loadIndustries = async () => {
-    try {
-      const data = await MasterAPI.getIndustries();
-      setIndustries(data || []);
-      const names = data.map((i: any) => i.industry_name).sort();
-      setIndustryOptions(names);
-    } catch (error: any) {
-      console.error("Error loading industries:", error);
     }
   };
 
@@ -224,10 +214,6 @@ export function Attributes() {
           a.attribute_code.toLowerCase().includes(term) ||
           a.attribute_name.toLowerCase().includes(term),
       );
-    }
-
-    if (industryFilter) {
-      filtered = filtered.filter((a) => a.industry_name === industryFilter);
     }
 
     if (attributeTypeFilter) {
@@ -251,6 +237,7 @@ export function Attributes() {
     });
 
     setFilteredAttributes(filtered);
+    settablefilteredAttributes(filtered);
   };
 
   const getValueCount = (attribute: Attribute): number => {
@@ -264,14 +251,53 @@ export function Attributes() {
     return count;
   };
 
+  // handling table row selection
+  const toggleSelect = (code: string) => {
+    const newSet = new Set(selectedCodes);
+    if (newSet.has(code)) newSet.delete(code);
+    else newSet.add(code);
+    setSelectedCodes(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCodes.size === tablefilteredAttributes.length) {
+      setSelectedCodes(new Set());
+    } else {
+      setSelectedCodes(
+        new Set(tablefilteredAttributes.map((v) => v.attribute_code)),
+      );
+    }
+  };
+
+  const handleBulkStatusChange = async (active: boolean) => {
+    const codes = Array.from(selectedCodes);
+    try {
+      setLoading(true);
+      await Promise.all(
+        codes.map((code) =>
+          MasterAPI.update("attributes", code, { is_active: active }),
+        ),
+      );
+      setToast({
+        message: `Successfully updated ${codes.length} attributes`,
+        type: "success",
+      });
+      setSelectedCodes(new Set());
+    } catch (error) {
+      setToast({ message: "Bulk update failed", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.attribute_name?.trim()) {
       newErrors.attribute_name = "Attribute name is required";
     }
-    if (!formData.industry_name?.trim()) {
-      newErrors.industry_name = "Industry is required";
+    if (!formData.category_path?.trim()) {
+      newErrors.category_path = "Category is required";
     }
     if (
       (formData.attribute_type === "Multi-select" ||
@@ -295,29 +321,6 @@ export function Attributes() {
     if (!validateForm()) return;
 
     try {
-      if (isCustomIndustry && formData.industry_name) {
-        const industryName = formData.industry_name.trim();
-        const existingIndusty = industries.find(
-          (f) => f.industry_name?.toLowerCase() == industryName.toLowerCase(),
-        );
-        if (!existingIndusty) {
-          try {
-            const industryCode = generateEntityCode("industry", industryName);
-            await MasterAPI.create("industries", {
-              industry_code: industryCode,
-              industry_name: industryName,
-              is_active: true,
-            });
-            await loadIndustries();
-          } catch (error: any) {
-            setToast({
-              message: `Failed to create industry ${error.message}`,
-              type: "error",
-            });
-            return;
-          }
-        }
-      }
       const dataToSubmit: any = {
         ...formData,
         applicable_categories: selectedCategories.join(","),
@@ -338,13 +341,12 @@ export function Attributes() {
           message: "Attribute updated successfully",
           type: "success",
         });
-        
       } else {
         // Use helper with local state
         const duplicate = findDuplicateAttribute(
           attributes,
           formData.attribute_name || "",
-          formData.industry_name || "",
+          formData.category_path || "",
         );
 
         if (duplicate) {
@@ -440,8 +442,7 @@ export function Attributes() {
     setFormData({
       attribute_code: "",
       attribute_name: "",
-      industry_name: "",
-      industry_attribute_name: "",
+      category_path: "",
       description: "",
       applicable_categories: "",
       attribute_type: "",
@@ -720,11 +721,10 @@ export function Attributes() {
   const downloadTemplate = () => {
     const template: any = {
       attribute_name: "Example Attribute",
-      industry_name: "HVAC",
-      industry_attribute_name: "",
+      category_path: "",
       description: "Sample description",
       applicable_categories: "CAT001,CAT002",
-      attribute_type: "Multi-select",
+      attribute_type: "",
       data_type: "list",
       unit: "",
       filter: "Yes",
@@ -736,7 +736,16 @@ export function Attributes() {
       template[`attribute_uom_${i}`] = i === 1 ? "UOM 1" : "";
     }
 
-    exportToCSV([template], "attribute_import_template.csv");
+    exportToExcel({
+      data: [template],
+      fileName: "attribute_import_template.xlsx",
+      dropdowns: {
+        category_path: categoryOptions,
+        data_type: ["Text", "Number", "Decimal", "Boolean", "List"],
+        filter: ["Yes", "No"],
+        attribute_type: ["Multi-select", "Single-select"],
+      },
+    });
   };
 
   const toggleCategory = (categoryCode: string) => {
@@ -770,10 +779,33 @@ export function Attributes() {
 
   const columns = [
     // { key: "attribute_code", label: "Code", sortable: true },
+    {
+      key: "selection",
+      label: (
+        <input
+          type="checkbox"
+          checked={
+            selectedCodes.size === filteredAttributes.length &&
+            filteredAttributes.length > 0
+          }
+          onChange={toggleSelectAll}
+          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+        />
+      ) as any,
+      width: "100px",
+      render: (_: any, row: Attribute) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedCodes.has(row.attribute_code)}
+            onChange={() => toggleSelect(row.attribute_code)}
+            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+          />
+        </div>
+      ),
+    },
     { key: "attribute_name", label: "Name", sortable: true },
-    { key: "industry_name", label: "Industry", sortable: true },
     { key: "attribute_type", label: "Attr Type", sortable: true },
-    { key: "data_type", label: "Data Type", sortable: true },
     {
       key: "value_count",
       label: "# Values",
@@ -833,7 +865,7 @@ export function Attributes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-[-26px]">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Attributes Master
@@ -841,6 +873,29 @@ export function Attributes() {
           <p className="text-gray-600 mt-1">
             Define and manage product attributes
           </p>
+        </div>
+
+        {/* serach */}
+
+        <div className="relative w-full  flex-1 transition-all duration-300 mx-2">
+          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+            <Search size={20} />
+          </div>
+          <input
+            type="text"
+            placeholder="Search code or name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm("")}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
         <button
           onClick={() => {
@@ -857,34 +912,6 @@ export function Attributes() {
 
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="Search code or name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <select
-            value={industryFilter}
-            onChange={(e) => setIndustryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Industries</option>
-            {industries.map((industry) => (
-              <option
-                key={industry.industry_code}
-                value={industry.industry_name}
-              >
-                {industry.industry_name}
-              </option>
-            ))}
-          </select>
           <select
             value={attributeTypeFilter}
             onChange={(e) => setAttributeTypeFilter(e.target.value)}
@@ -929,9 +956,11 @@ export function Attributes() {
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               title="Download Template"
             >
-             <img src={CustomDownloadIcon}
+              <img
+                src={CustomDownloadIcon}
                 alt="Download"
-                className="w-7 h-7 object-contain"/>
+                className="w-7 h-7 object-contain"
+              />
             </button>
           </div>
         </div>
@@ -970,6 +999,37 @@ export function Attributes() {
           </button>
         )}
       </div>
+      {selectedCodes.size > 0 && (
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+              {selectedCodes.size} selected
+            </span>
+            <p className="text-sm font-medium">Bulk Actions:</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleBulkStatusChange(true)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
+            >
+              <CheckCircle size={14} /> Set Active
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange(false)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
+            >
+              <X size={14} /> Set Inactive
+            </button>
+            <div className="w-px h-6 bg-white/20 mx-2"></div>
+            <button
+              onClick={() => setSelectedCodes(new Set())}
+              className="px-3 py-1.5 hover:bg-white/10 rounded-lg text-xs font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       <DataTable
         columns={columns}
         data={filteredAttributes}
@@ -991,7 +1051,6 @@ export function Attributes() {
         onClose={() => {
           setIsDrawerOpen(false);
           setEditingAttribute(null);
-          setIsCustomIndustry(false);
           resetForm();
           loadAttributes();
         }}
@@ -1013,7 +1072,6 @@ export function Attributes() {
                   disabled
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
-                
               </div>
             )}
             <div>
@@ -1035,93 +1093,22 @@ export function Attributes() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                <span className="flex items-center gap-2">
-                  Industry <span className="text-red-500">*</span>
-                  {isCustomIndustry && formData.industry_name?.trim() && (
-                    <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
-                      New
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCustomIndustry(!isCustomIndustry);
-                    if (isCustomIndustry)
-                      setFormData({ ...formData, industry_name: "" });
-                  }}
-                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  {isCustomIndustry ? <X size={12} /> : <Plus size={12} />}
-                  {isCustomIndustry ? "Select List" : "Add New"}
-                </button>
-              </label>
-
-              {isCustomIndustry ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Enter new industry name..."
-                      value={formData.industry_name || ""}
-                      onChange={(e) => handleIndustryChange(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && e.currentTarget.blur()
-                      }
-                      className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                        errors.industry_name
-                          ? "border-red-500"
-                          : "border-blue-400"
-                      }`}
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-200"
-                      title="Confirmed"
-                    >
-                      <CheckCircle size={20} />
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-gray-400 italic flex items-center gap-1">
-                    <AlertCircle size={10} /> This will be added to Master Data
-                    on save.
-                  </p>
-                </div>
-              ) : (
-                <SearchableSelect
-                  options={industryOptions}
-                  value={formData.industry_name || ""}
-                  onChange={(val) => handleIndustryChange(val)}
-                  placeholder="Select or Search Industry"
-                  onAddNew={() => setIsCustomIndustry(true)}
-                  error={!!errors.industry_name}
-                />
-              )}
-
-              {errors.industry_name && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.industry_name}
-                </p>
-              )}
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Industry Attribute Name
+                Category <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={formData.industry_attribute_name}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    industry_attribute_name: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              <SearchableSelect
+                options={categoryOptions}
+                value={formData.category_path || ""}
+                placeholder="Select or Search category..."
+                onChange={(selectedValue) => {
+                  setFormData((prev) => ({
+                    ...prev,
+                    category_path: selectedValue,
+                  }));
+                }}
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description
@@ -1141,6 +1128,44 @@ export function Attributes() {
             <h3 className="font-semibold text-gray-900">
               Applicability & Type
             </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Attribute Type
+              </label>
+              <select
+                value={formData.attribute_type}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    attribute_type: e.target.value as any,
+                  })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select type</option>
+                <option value="Multi-select">Multi-select</option>
+                <option value="Single-select">Single-select</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data Type
+              </label>
+              <select
+                value={formData.data_type}
+                onChange={(e) =>
+                  setFormData({ ...formData, data_type: e.target.value as any })
+                }
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select data type</option>
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="decimal">Decimal</option>
+                <option value="boolean">Boolean</option>
+                <option value="list">List</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Applicable Categories
@@ -1193,44 +1218,7 @@ export function Attributes() {
                 </div>
               )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Attribute Type
-              </label>
-              <select
-                value={formData.attribute_type}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    attribute_type: e.target.value as any,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select type</option>
-                <option value="Multi-select">Multi-select</option>
-                <option value="Single-select">Single-select</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Type
-              </label>
-              <select
-                value={formData.data_type}
-                onChange={(e) =>
-                  setFormData({ ...formData, data_type: e.target.value as any })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select data type</option>
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="decimal">Decimal</option>
-                <option value="boolean">Boolean</option>
-                <option value="list">List</option>
-              </select>
-            </div>
+
             {(formData.data_type === "number" ||
               formData.data_type === "decimal") && (
               <div>
@@ -1356,25 +1344,25 @@ export function Attributes() {
               </div>
             )}
           </div>
-          </div>
+        </div>
 
-            <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6  shadow-lg flex gap-3">
-            <button
-              onClick={() => {
-                setIsDrawerOpen(false);
-                setEditingAttribute(null);
-                resetForm();
-              }}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {editingAttribute ? "Update" : "Add"} Attribute
-            </button>
+        <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6  shadow-lg flex gap-3">
+          <button
+            onClick={() => {
+              setIsDrawerOpen(false);
+              setEditingAttribute(null);
+              resetForm();
+            }}
+            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {editingAttribute ? "Update" : "Add"} Attribute
+          </button>
         </div>
       </Drawer>
 
