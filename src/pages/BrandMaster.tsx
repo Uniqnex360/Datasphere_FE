@@ -8,7 +8,6 @@ import {
   Plus,
   Search,
   Tag,
-  Trash2,
   Upload,
   X,
   XCircle,

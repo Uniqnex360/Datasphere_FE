@@ -515,13 +515,13 @@ export function Products() {
               if (existingBrand) {
                 mapped.brand_code = existingBrand.brand_code;
               } else {
-                const brandCode = `BRND-${brandName
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
-                mapped.brand_code = brandCode;
-                brandsToCreate.set(brandCode, {
-                  brand_code: brandCode,
+                // const brandCode = `BRND-${brandName
+                //   .substring(0, 8)
+                //   .toUpperCase()
+                //   .replace(/[^A-Z0-9]/g, "")}`;
+                // mapped.brand_code = brandCode;
+                brandsToCreate.set(brandName, {
+                  // brand_code: brandCode,
                   brand_name: brandName,
                   mfg_name: mfgName || brandName,
                 });
