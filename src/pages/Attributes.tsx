@@ -295,9 +295,6 @@ export function Attributes() {
     if (!formData.attribute_name?.trim()) {
       newErrors.attribute_name = "Attribute name is required";
     }
-    if (!formData.industry_name?.trim()) {
-      newErrors.industry_name = "Industry is required";
-    }
     if (
       (formData.attribute_type === "Multi-select" ||
         formData.data_type === "list") &&
@@ -477,7 +474,7 @@ export function Attributes() {
         console.log("First Row Sample:", data[0]);
       }
 
-      const requiredColumns = ["attribute_name", "industry_name"];
+      const requiredColumns = ["attribute_name"];
       const validation = validateImportFormat(data, requiredColumns);
       if (!validation.isValid) {
         setToast({
@@ -517,9 +514,6 @@ export function Attributes() {
         try {
           const attributeData: any = {};
           attributeData.attribute_name = row.attribute_name;
-          attributeData.industry_name = row.industry_name || "";
-          attributeData.industry_attribute_name =
-            row.industry_attribute_name || "";
           attributeData.description = row.description || "";
           attributeData.applicable_categories = row.applicable_categories || "";
           attributeData.attribute_type = row.attribute_type || "";
@@ -550,7 +544,6 @@ export function Attributes() {
           const duplicate = findDuplicateAttribute(
             currentAttributes,
             row.attribute_name,
-            row.industry_name || "",
           );
 
           if (duplicate) {
