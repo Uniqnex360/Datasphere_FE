@@ -12,6 +12,8 @@ import {
   Film,
   FileText,
   X,
+  Eye,
+  Heading1,
 } from "lucide-react";
 import {
   Product,
@@ -181,6 +183,7 @@ export function Products() {
         productsData || [],
       );
       setProducts(productsWithStatus);
+      console.log(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
       const prossedCategories = processCategoryData(categoriesData || []);
@@ -1038,6 +1041,18 @@ export function Products() {
   const getCategoryBreadcrumb = (product: Product): string => {
     return generateBreadcrumb(product as any);
   };
+  interface ImageItem {
+    url?: string;
+    name?: string;
+  }
+
+  interface ImagesObj {
+    [key: string]: ImageItem;
+  }
+
+  interface Row {
+    images?: ImagesObj;
+  }
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
     { key: "product_name", label: "Name", sortable: true },
@@ -1047,6 +1062,45 @@ export function Products() {
       sortable: true,
       render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
+
+    {
+      key: "image",
+      label: "Image",
+      render: (_: any, row: Row) => {
+        const imagesObj = row?.images;
+
+        if (!imagesObj || Object.keys(imagesObj).length === 0) {
+          return "N/A";
+        }
+
+        // Convert object to array
+        const imagesArray = Object.values(imagesObj).filter(
+          (img): img is ImageItem => !!img?.url,
+        );
+
+        if (imagesArray.length === 0) {
+          return "N/A";
+        }
+
+        // Pick a random image
+        const randomIndex = Math.floor(Math.random() * imagesArray.length);
+        const randomImage = imagesArray[randomIndex];
+
+        return (
+          <img
+            src={randomImage.url}
+            alt={randomImage.name || "Vendor Image"}
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}
+          />
+        );
+      },
+    },
+
     {
       key: "vendor_name",
       label: "Vendor",
@@ -1104,10 +1158,10 @@ export function Products() {
           </button>
           <button
             onClick={() => setDeleteModal({ isOpen: true, product: row })}
-            className="p-1 hover:bg-red-100 text-red-600 rounded transition-colors"
+            className="p-1 hover:bg-gray-100 text-gray-600 rounded transition-colors"
             title="Delete"
           >
-            <Trash2 size={16} />
+            <Eye size={16} />
           </button>
         </div>
       ),
