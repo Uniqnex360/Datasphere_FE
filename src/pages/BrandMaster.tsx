@@ -354,7 +354,7 @@ export function BrandMaster() {
   const handleToggleStatus = async (brand: Brand) => {
     try {
       setLoading(true);
-      await MasterAPI.update("brands", brand.brand_code, {
+      await MasterAPI.changeStatus("brands", brand.brand_code, {
         is_active: !brand.is_active,
       });
       setToast({
@@ -604,7 +604,7 @@ export function BrandMaster() {
               ? "hover:bg-red-100 text-green-600"
               : "hover:bg-green-100 text-red-600"
               }`}
-            title={row.is_active ? "Deactivate Vendor" : "Activate Vendor"}
+            title={row.is_active ? "Deactivate Brand" : "Activate Brand"}
           >
             {row.is_active ? <CheckCircle size={16} /> : <XCircle size={16} />}
           </button>

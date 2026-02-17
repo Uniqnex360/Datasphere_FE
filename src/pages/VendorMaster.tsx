@@ -312,12 +312,12 @@ export function VendorMaster() {
     if (searchTerm) {
       filtered = filtered.filter(
         (v) =>
-          v.vendor_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.business_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.vendor_website.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.country?.toLowerCase().includes(searchTerm.toLowerCase()),
+          (v.vendor_code||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.vendor_name||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.business_type||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.industry||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.vendor_website||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.country||"")?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
     if (businessTypeFilter) {
@@ -1027,7 +1027,7 @@ export function VendorMaster() {
   ];
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
+      <div className="sticky top-0 z-40 bg-white pb-4 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
         <div className="flex-shrink-0">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Vendor Master
@@ -1073,7 +1073,8 @@ export function VendorMaster() {
           </button>
         </div>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+      <div className="sticky top-24 z-30 bg-white rounded-xl shadow-sm border border-gray-200 p-3">
+
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <select
@@ -1159,7 +1160,8 @@ export function VendorMaster() {
           </div>
         </div>
       </div>
-      <div className="flex items-center justify-between px-1">
+      <div className="sticky top-44 z-20 bg-white py-2 flex items-center justify-between px-1">
+
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
           businessTypeFilter ||
