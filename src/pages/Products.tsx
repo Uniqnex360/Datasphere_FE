@@ -11,6 +11,7 @@ import {
   ImageIcon,
   Film,
   FileText,
+  X,
 } from "lucide-react";
 import {
   Product,
@@ -108,14 +109,12 @@ export function Products() {
     loadData();
   }, []);
 
-  
   const processCategoryData = (categories: Category[]): Category[] => {
-
     /**
      * if available brudcrumb's is
-     * X > Y > Z 
+     * X > Y > Z
      * X > Y
-     * 
+     *
      * returns
      * X > Y > Z
      */
@@ -142,7 +141,7 @@ export function Products() {
 
       if (!isPrefix) {
         result.push(cat);
-      } 
+      }
     });
 
     return result;
@@ -184,7 +183,7 @@ export function Products() {
       setProducts(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
-      const prossedCategories = processCategoryData(categoriesData || [])
+      const prossedCategories = processCategoryData(categoriesData || []);
       setCategories(prossedCategories || []);
       setIndustries(industriesData || []);
     } catch (error: any) {
@@ -1055,7 +1054,7 @@ export function Products() {
       render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
     },
     { key: "mpn", label: "MPN" },
-    { key: "model_no", label: "Model No"},
+    { key: "model_no", label: "Model No" },
     // { key: "product_type", label: "Type", sortable: true },
     // {
     //   key: "variant_status",
@@ -1125,237 +1124,273 @@ export function Products() {
   ];
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Product Master</h1>
-          <p className="text-gray-600 mt-1">
-            Manage your complete product catalog
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingProduct(null);
-            resetForm();
-            setIsDrawerOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Add Product
-        </button>
-      </div>
-      <div className="sticky top-24 z-30   bg-white rounded-xl border border-slate-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <select
-            value={industryFilter}
-            onChange={(e) => setIndustryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Industries</option>
-            {industries.map((industry) => (
-              <option
-                key={industry.industry_code}
-                value={industry.industry_name}
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 left-0">
+          <div className="flex items-center justify-between ">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Product Master
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Manage your complete product catalog
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+              <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                  <Search size={20} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search categories or product types..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X size={20} />
+                  </button>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  resetForm();
+                  setIsDrawerOpen(true);
+                }}
+                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
               >
-                {industry.industry_name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={brandFilter}
-            onChange={(e) => setBrandFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Brands</option>
-            {Array.from(
-              new Set(
-                products.filter((p) => p.brand_name).map((p) => p.brand_name),
-              ),
-            )
-              .sort()
-              .map((brandName) => (
-                <option key={brandName} value={brandName}>
-                  {brandName}
-                </option>
-              ))}
-          </select>
-          <select
-            value={vendorFilter}
-            onChange={(e) => setVendorFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Vendors</option>
-            {Array.from(
-              new Set(
-                products.filter((p) => p.vendor_name).map((p) => p.vendor_name),
-              ),
-            )
-              .sort()
-              .map((vendorName) => (
-                <option key={vendorName} value={vendorName}>
-                  {vendorName}
-                </option>
-              ))}
-          </select>
-          <select
-            value={variantStatusFilter}
-            onChange={(e) => setVariantStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Status</option>
-            <option value="Base">Base</option>
-            <option value="Variant">Variant</option>
-            <option value="Parent">Parent</option>
-          </select>
-          <select
-            value={category1Filter}
-            onChange={(e) => {
-              setCategory1Filter(e.target.value);
-              setProductTypeFilter("");
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="">All Category 1</option>
-            {Array.from(
-              new Set(
-                categories.filter((c) => c.category_1).map((c) => c.category_1),
-              ),
-            )
-              .sort()
-              .map((cat1) => (
-                <option key={cat1} value={cat1}>
-                  {cat1}
-                </option>
-              ))}
-          </select>
-          <select
-            value={productTypeFilter}
-            onChange={(e) => setProductTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={!category1Filter}
-          >
-            <option value="">All Product Types</option>
-            {category1Filter &&
-              Array.from(
-                new Set(
-                  products
-                    .filter(
-                      (p) => p.category_1 === category1Filter && p.product_type,
-                    )
-                    .map((p) => p.product_type),
-                ),
-              )
-                .sort()
-                .map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+                <Plus size={20} />
+                Add Product
+              </button>
+            </div>
+          </div>
+          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <select
+                value={industryFilter}
+                onChange={(e) => setIndustryFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Industries</option>
+                {industries.map((industry) => (
+                  <option
+                    key={industry.industry_code}
+                    value={industry.industry_name}
+                  >
+                    {industry.industry_name}
                   </option>
                 ))}
-          </select>
-          <div className="flex gap-2">
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Download size={20} />
-              Export
-            </button>
-            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-              <Upload size={20} />
-              Import
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleImport}
-                className="hidden"
-              />
-            </label>
-            <button
-              onClick={downloadTemplate}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              title="Download Template"
-            >
-              <img
-                src={CustomDownloadIcon}
-                alt="Download"
-                className="w-7 h-7 object-contain"
-              />
-            </button>
+              </select>
+              <select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Brands</option>
+                {Array.from(
+                  new Set(
+                    products
+                      .filter((p) => p.brand_name)
+                      .map((p) => p.brand_name),
+                  ),
+                )
+                  .sort()
+                  .map((brandName) => (
+                    <option key={brandName} value={brandName}>
+                      {brandName}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={vendorFilter}
+                onChange={(e) => setVendorFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Vendors</option>
+                {Array.from(
+                  new Set(
+                    products
+                      .filter((p) => p.vendor_name)
+                      .map((p) => p.vendor_name),
+                  ),
+                )
+                  .sort()
+                  .map((vendorName) => (
+                    <option key={vendorName} value={vendorName}>
+                      {vendorName}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={variantStatusFilter}
+                onChange={(e) => setVariantStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="Base">Base</option>
+                <option value="Variant">Variant</option>
+                <option value="Parent">Parent</option>
+              </select>
+              <select
+                value={category1Filter}
+                onChange={(e) => {
+                  setCategory1Filter(e.target.value);
+                  setProductTypeFilter("");
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Category 1</option>
+                {Array.from(
+                  new Set(
+                    categories
+                      .filter((c) => c.category_1)
+                      .map((c) => c.category_1),
+                  ),
+                )
+                  .sort()
+                  .map((cat1) => (
+                    <option key={cat1} value={cat1}>
+                      {cat1}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={productTypeFilter}
+                onChange={(e) => setProductTypeFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!category1Filter}
+              >
+                <option value="">All Product Types</option>
+                {category1Filter &&
+                  Array.from(
+                    new Set(
+                      products
+                        .filter(
+                          (p) =>
+                            p.category_1 === category1Filter && p.product_type,
+                        )
+                        .map((p) => p.product_type),
+                    ),
+                  )
+                    .sort()
+                    .map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleExport}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <Download size={20} />
+                  Export
+                </button>
+                <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                  <Upload size={20} />
+                  Import
+                  <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handleImport}
+                    className="hidden"
+                  />
+                </label>
+                {/* <button
+                onClick={downloadTemplate}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
+                title="Download Template"
+              >
+                <img
+                  src={CustomDownloadIcon}
+                  alt="Download"
+                  className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
+                />
+              </button> */}
+                <button
+                  onClick={downloadTemplate}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  title="Download template"
+                >
+                  <img
+                    src={CustomDownloadIcon}
+                    className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
+                    alt="Template"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-1 py-4">
+            <p className="text-sm text-gray-500 italic">
+              {industryFilter ||
+              brandFilter ||
+              vendorFilter ||
+              variantStatusFilter ||
+              category1Filter ||
+              productTypeFilter ? (
+                <span>
+                  Showing <strong>{filteredProducts.length}</strong> matching
+                  results out of {products.length} total products
+                </span>
+              ) : (
+                <span>
+                  Showing all <strong>{products.length}</strong> products
+                </span>
+              )}
+            </p>
+
+            {(searchTerm ||
+              industryFilter ||
+              brandFilter ||
+              vendorFilter ||
+              variantStatusFilter ||
+              category1Filter ||
+              productTypeFilter) && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setIndustryFilter("");
+                  setBrandFilter("");
+                  setVendorFilter("");
+                  setVariantStatusFilter("");
+                  setCategory1Filter("");
+                  setProductTypeFilter("");
+                }}
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
-      </div>
-      <div className="flex items-center justify-between px-1">
-        <p className="text-sm text-gray-500 italic">
-          {searchTerm ||
-          industryFilter ||
-          brandFilter ||
-          vendorFilter ||
-          variantStatusFilter ||
-          category1Filter ||
-          productTypeFilter ? (
-            <span>
-              Showing <strong>{filteredProducts.length}</strong> matching
-              results out of {products.length} total products
-            </span>
-          ) : (
-            <span>
-              Showing all <strong>{products.length}</strong> products
-            </span>
-          )}
-        </p>
 
-        {(searchTerm ||
-          industryFilter ||
-          brandFilter ||
-          vendorFilter ||
-          variantStatusFilter ||
-          category1Filter ||
-          productTypeFilter) && (
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setIndustryFilter("");
-              setBrandFilter("");
-              setVendorFilter("");
-              setVariantStatusFilter("");
-              setCategory1Filter("");
-              setProductTypeFilter("");
+        <div className="">
+          <DataTable
+            columns={columns}
+            data={filteredProducts}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={(key) => {
+              if (sortKey === key) {
+                setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+              } else {
+                setSortKey(key);
+                setSortDirection("asc");
+              }
             }}
-            className="text-sm text-blue-600 hover:underline font-medium"
-          >
-            Clear all filters
-          </button>
-        )}
+            isLoading={loading}
+          />
+        </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filteredProducts}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSort={(key) => {
-          if (sortKey === key) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-          } else {
-            setSortKey(key);
-            setSortDirection("asc");
-          }
-        }}
-        isLoading={loading}
-      />
       <Drawer
         isOpen={isDrawerOpen}
         onClose={() => {
