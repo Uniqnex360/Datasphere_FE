@@ -541,19 +541,16 @@ export function Products() {
                 //   .substring(0, 8)
                 //   .toUpperCase()
                 //   .replace(/[^A-Z0-9]/g, "")}`;
-                const vendorCode = ""; 
-                mapped.vendor_code = vendorCode;  
-                if(vendorName)
-                {
-
-                vendorsToCreate.set(vendorName.toLowerCase(), {
-                  vendor_code: vendorCode,
-                  vendor_name: vendorName,
-                  contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-                  contact_phone: "000-000-0000",
-                });
+                const vendorCode = "";
+                mapped.vendor_code = vendorCode;
+                if (vendorName) {
+                  vendorsToCreate.set(vendorName.toLowerCase(), {
+                    vendor_code: vendorCode,
+                    vendor_name: vendorName,
+                    contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+                    contact_phone: "000-000-0000",
+                  });
                 }
-
               }
             }
 
@@ -768,26 +765,28 @@ export function Products() {
       //   }
       // }
       if (vendorsToCreate.size > 0) {
-  try {
-    const existingVendors = await MasterAPI.getVendors();
-    const existingNames = new Set(existingVendors.map((v: any) => v.vendor_name.toLowerCase()));
-    
-    const newVendors = Array.from(vendorsToCreate.values()).filter(
-      (v) => !existingNames.has(v.vendor_name.toLowerCase())
-    );
+        try {
+          const existingVendors = await MasterAPI.getVendors();
+          const existingNames = new Set(
+            existingVendors.map((v: any) => v.vendor_name.toLowerCase()),
+          );
 
-    for (const vendor of newVendors) {
-      try {
-        await MasterAPI.create("vendors", vendor);
-        createdVendors++;
-      } catch (err) {
-        console.warn("Vendor create failed", err);
+          const newVendors = Array.from(vendorsToCreate.values()).filter(
+            (v) => !existingNames.has(v.vendor_name.toLowerCase()),
+          );
+
+          for (const vendor of newVendors) {
+            try {
+              await MasterAPI.create("vendors", vendor);
+              createdVendors++;
+            } catch (err) {
+              console.warn("Vendor create failed", err);
+            }
+          }
+        } catch (e) {
+          console.error("Vendor sync error", e);
+        }
       }
-    }
-  } catch (e) {
-    console.error("Vendor sync error", e);
-  }
-}
       if (categoriesToCreate.size > 0) {
         try {
           const existingCategories = await MasterAPI.getCategories();
@@ -1269,12 +1268,12 @@ export function Products() {
       <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
-            industryFilter ||
-            brandFilter ||
-            vendorFilter ||
-            variantStatusFilter ||
-            category1Filter ||
-            productTypeFilter ? (
+          industryFilter ||
+          brandFilter ||
+          vendorFilter ||
+          variantStatusFilter ||
+          category1Filter ||
+          productTypeFilter ? (
             <span>
               Showing <strong>{filteredProducts.length}</strong> matching
               results out of {products.length} total products
@@ -1293,21 +1292,21 @@ export function Products() {
           variantStatusFilter ||
           category1Filter ||
           productTypeFilter) && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setIndustryFilter("");
-                setBrandFilter("");
-                setVendorFilter("");
-                setVariantStatusFilter("");
-                setCategory1Filter("");
-                setProductTypeFilter("");
-              }}
-              className="text-sm text-blue-600 hover:underline font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setIndustryFilter("");
+              setBrandFilter("");
+              setVendorFilter("");
+              setVariantStatusFilter("");
+              setCategory1Filter("");
+              setProductTypeFilter("");
+            }}
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
       </div>
 
       <DataTable
@@ -1339,10 +1338,11 @@ export function Products() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
+              className={`px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === tab.id
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
-                }`}
+              }`}
             >
               {tab.label}
             </button>
@@ -1364,7 +1364,6 @@ export function Products() {
                       disabled
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                     />
-                   
                   </div>
                 )}
                 <div>
@@ -1834,7 +1833,7 @@ export function Products() {
               </h3>
 
               {formData.attributes &&
-                Object.keys(formData.attributes).length > 0 ? (
+              Object.keys(formData.attributes).length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
                   {Object.entries(formData.attributes).map(
                     ([key, attr]: any) => (
@@ -2030,7 +2029,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                        `related_product_${num}_mpn` as keyof Product
+                          `related_product_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2046,7 +2045,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                        `related_product_${num}_name` as keyof Product
+                          `related_product_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2092,7 +2091,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                        `pairs_well_with_${num}_mpn` as keyof Product
+                          `pairs_well_with_${num}_mpn` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2108,7 +2107,7 @@ export function Products() {
                       type="text"
                       value={
                         formData[
-                        `pairs_well_with_${num}_name` as keyof Product
+                          `pairs_well_with_${num}_name` as keyof Product
                         ] || ""
                       }
                       onChange={(e) =>
@@ -2287,7 +2286,6 @@ export function Products() {
                 })}
               </div>
             </div>
-
           )}
         </div>
 

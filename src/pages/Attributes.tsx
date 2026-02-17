@@ -295,6 +295,9 @@ export function Attributes() {
     if (!formData.attribute_name?.trim()) {
       newErrors.attribute_name = "Attribute name is required";
     }
+    if (!formData.industry_name?.trim()) {
+      newErrors.industry_name = "Industry is required";
+    }
     if (
       (formData.attribute_type === "Multi-select" ||
         formData.data_type === "list") &&
@@ -338,7 +341,6 @@ export function Attributes() {
           type: "success",
         });
       } else {
-        // Use helper with local state
         const duplicate = findDuplicateAttribute(
           attributes,
           formData.attribute_name || "",
@@ -733,6 +735,7 @@ export function Attributes() {
       data: [template],
       fileName: "attribute_import_template.xlsx",
       dropdowns: {
+        category_path: categoryOptions,
         data_type: ["Text", "Number", "Decimal", "Boolean", "List"],
         filter: ["Yes", "No"],
         attribute_type: ["Multi-select", "Single-select"],
