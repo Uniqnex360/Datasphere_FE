@@ -312,12 +312,12 @@ export function VendorMaster() {
     if (searchTerm) {
       filtered = filtered.filter(
         (v) =>
-          v.vendor_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.vendor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.business_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.vendor_website.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          v.country?.toLowerCase().includes(searchTerm.toLowerCase()),
+          (v.vendor_code||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.vendor_name||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.business_type||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.industry||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.vendor_website||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.country||"")?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
     if (businessTypeFilter) {
