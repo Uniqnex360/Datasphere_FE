@@ -354,7 +354,7 @@ export function BrandMaster() {
   const handleToggleStatus = async (brand: Brand) => {
     try {
       setLoading(true);
-      await MasterAPI.update("brands", brand.brand_code, {
+      await MasterAPI.changeStatus("brands", brand.brand_code, {
         is_active: !brand.is_active,
       });
       setToast({
