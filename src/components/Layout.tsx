@@ -16,7 +16,8 @@ import {
   Grid2x2,
   Tag,
   LogOut,
-  CircleDollarSign
+  CircleDollarSign,
+  Factory
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,6 +34,8 @@ const navigation = [
   { name: 'Brands', icon: Tag, page: 'brands' },
   { name: 'Categories', icon: FolderTree, page: 'categories' },
   { name: 'Attributes', icon: Sliders, page: 'attributes' },
+  { name: 'Industries', icon: Factory, page: 'industries' },
+
   { name: 'Products', icon: Package, page: 'products' },
   { name: 'Price', icon: CircleDollarSign, page: 'price' },
   { name: 'Inventory', icon: Grid2x2, page: 'inventory' },
