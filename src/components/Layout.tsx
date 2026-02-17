@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -29,24 +29,27 @@ interface LayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', icon: LayoutDashboard, page: 'dashboard' },
-  { name: 'Vendors', icon: Building2, page: 'vendors' },
-  { name: 'Brands', icon: Tag, page: 'brands' },
-  { name: 'Categories', icon: FolderTree, page: 'categories' },
-  { name: 'Attributes', icon: Sliders, page: 'attributes' },
-  { name: 'Industries', icon: Factory, page: 'industries' },
-
-  { name: 'Products', icon: Package, page: 'products' },
-  { name: 'Price', icon: CircleDollarSign, page: 'price' },
-  { name: 'Inventory', icon: Grid2x2, page: 'inventory' },
-  { name: 'Digital Assets', icon: Image, page: 'assets' },
-  { name: 'Enrichment', icon: FileCheck, page: 'enrichment' },
-  { name: 'Channels', icon: Share2, page: 'channels' },
-  { name: 'Users', icon: Users, page: 'users' },
-  { name: 'Settings', icon: SettingsIcon, page: 'settings' },
+  { name: "Dashboard", icon: LayoutDashboard, page: "dashboard" },
+  { name: "Vendors", icon: Building2, page: "vendors" },
+  { name: "Brands", icon: Tag, page: "brands" },
+  { name: "Categories", icon: FolderTree, page: "categories" },
+  { name: "Attributes", icon: Sliders, page: "attributes" },
+  { name: "Products", icon: Package, page: "products" },
+  { name: "Price", icon: CircleDollarSign, page: "price" },
+  { name: "Inventory", icon: Grid2x2, page: "inventory" },
+  { name: "Digital Assets", icon: Image, page: "assets" },
+  { name: "Enrichment", icon: FileCheck, page: "enrichment" },
+  { name: "Channels", icon: Share2, page: "channels" },
+  { name: "Users", icon: Users, page: "users" },
+  { name: "Settings", icon: SettingsIcon, page: "settings" },
 ];
 
-export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutProps) {
+export function Layout({
+  children,
+  currentPage,
+  onNavigate,
+  onLogout,
+}: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -60,7 +63,11 @@ export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutPr
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
           <div className="flex items-center gap-2">
-              <img src="/Datasphere-logo (1).png" alt="DataSphere Logo" className="w-7 h-7" />
+            <img
+              src="/Datasphere-logo (1).png"
+              alt="DataSphere Logo"
+              className="w-7 h-7"
+            />
 
             <h1 className="text-xl font-bold text-gray-900">DataSphere</h1>
           </div>
@@ -77,7 +84,7 @@ export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutPr
 
       <div
         className={`fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-10 transition-transform duration-300 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
         <nav className="p-4 space-y-1">
@@ -93,8 +100,8 @@ export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutPr
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <Icon size={20} />
@@ -105,8 +112,13 @@ export function Layout({ children, currentPage, onNavigate, onLogout }: LayoutPr
         </nav>
       </div>
 
-      <div className="pt-16 lg:pl-64">
+      {/* <div className="pt-16 lg:pl-64">
         <main className="p-1">{children}</main>
+      </div> */}
+      <div className="pt-16 lg:pl-64 h-screen overflow-hidden">
+        <main className="p-1 h-[calc(100vh-4rem)] flex flex-col">
+          <div className="flex-1 overflow-y-auto">{children}</div>
+        </main>
       </div>
 
       {sidebarOpen && (
