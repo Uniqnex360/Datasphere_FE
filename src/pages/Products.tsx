@@ -107,6 +107,47 @@ export function Products() {
   useEffect(() => {
     loadData();
   }, []);
+
+  
+  const processCategoryData = (categories: Category[]): Category[] => {
+
+    /**
+     * if available brudcrumb's is
+     * X > Y > Z 
+     * X > Y
+     * 
+     * returns
+     * X > Y > Z
+     */
+
+    // Sort categories by breadcrumb length descending (deepest first)
+    const sorted = [...categories].sort(
+      (a, b) => b.breadcrumb.split(">").length - a.breadcrumb.split(">").length,
+    );
+
+    const result: Category[] = [];
+
+    sorted.forEach((cat) => {
+      const catParts = cat.breadcrumb.split(">").map((s) => s.trim());
+
+      // Check if this breadcrumb is a prefix of any already added breadcrumb
+      const isPrefix = result.some((existing) => {
+        const existingParts = existing.breadcrumb
+          .split(">")
+          .map((s) => s.trim());
+        if (catParts.length >= existingParts.length) return false;
+        // Check if all parts match up to the length of catParts
+        return catParts.every((part, idx) => part === existingParts[idx]);
+      });
+
+      if (!isPrefix) {
+        result.push(cat);
+      } 
+    });
+
+    return result;
+  };
+
   useEffect(() => {
     filterAndSortProducts();
   }, [
@@ -143,7 +184,8 @@ export function Products() {
       setProducts(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
-      setCategories(categoriesData || []);
+      const prossedCategories = processCategoryData(categoriesData || [])
+      setCategories(prossedCategories || []);
       setIndustries(industriesData || []);
     } catch (error: any) {
       setToast({ message: "Failed to load data", type: "error" });
@@ -1012,26 +1054,16 @@ export function Products() {
       sortable: true,
       render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
     },
-    { key: "industry_name", label: "Industry", sortable: true },
-    {
-      key: "category",
-      label: "Category",
-      sortable: false,
-      width: "400px",
-      render: (_: any, row: Product) => (
-        <span className="text-sm text-gray-600">
-          {getCategoryBreadcrumb(row)}
-        </span>
-      ),
-    },
+    { key: "mpn", label: "MPN" },
+    { key: "model_no", label: "Model No"},
     // { key: "product_type", label: "Type", sortable: true },
-    {
-      key: "variant_status",
-      label: "Status",
-      sortable: false,
-      render: (_: any, row: ProductWithVariantStatus) =>
-        getVariantStatusBadge(row.variant_status),
-    },
+    // {
+    //   key: "variant_status",
+    //   label: "Status",
+    //   sortable: false,
+    //   render: (_: any, row: ProductWithVariantStatus) =>
+    //     getVariantStatusBadge(row.variant_status),
+    // },
     {
       key: "completeness_score",
       label: "Quality Score",
@@ -1465,19 +1497,6 @@ export function Products() {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product Type
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.product_type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, product_type: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
