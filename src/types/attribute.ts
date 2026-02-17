@@ -1,9 +1,8 @@
 export interface Attribute {
   attribute_code: string;
   attribute_name: string;
-  industry_name: string;
+  category_path: string;
   usage_count?: number;
-  industry_attribute_name: string;
   description: string;
   applicable_categories: string;
   attribute_type: 'Multi-select' | 'Single-select' | '';
