@@ -505,6 +505,7 @@ export function Products() {
       const brandsToCreate = new Map<string, any>();
       const vendorsToCreate = new Map<string, any>();
       const categoriesToCreate = new Map<string, any>();
+      const industriesToCreate = new Map<string, any>();
 
       const data = rawData
         .map((row: any, index: number) => {
@@ -549,6 +550,22 @@ export function Products() {
 
             const brandName = row.brand_name?.trim();
             const mfgName = row.mfg_name?.trim();
+            const industryName = row.industry_name?.trim();
+            mapped.industry_name = industryName || "";
+            if (industryName) {
+              const industryKey = industryName.toLowerCase().trim();
+              if (!industriesToCreate.has(industryKey)) {
+                industriesToCreate.set(industryKey, {
+                  industry_code:
+                    row.industry_code?.trim() ||
+                    industryName
+                      .substring(0, 4)
+                      .toUpperCase()
+                      .replace(/[^A-Z]/g, ""),
+                  industry_name: industryName,
+                });
+              }
+            }
 
             if (brandName) {
               mapped.brand_name = brandName;
@@ -591,6 +608,7 @@ export function Products() {
                   vendorsToCreate.set(vendorName.toLowerCase(), {
                     vendor_code: vendorCode,
                     vendor_name: vendorName,
+                    industry_name: industryName,
                     contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
                     contact_phone: "000-000-0000",
                   });
@@ -598,8 +616,8 @@ export function Products() {
               }
             }
 
-            const industryName = row.industry_name?.trim();
-            mapped.industry_name = industryName || "";
+            // const industryName = row.industry_name?.trim();
+            // mapped.industry_name = industryName || "";
 
             const categoryLevels: string[] = [];
             Object.keys(row).forEach((key) => {
@@ -762,6 +780,9 @@ export function Products() {
       let createdBrands = 0;
       let createdVendors = 0;
       let createdCategories = 0;
+      let createdIndustries = 0;
+      let createdCount = 0;
+      let skippedCount = 0;
 
       if (brandsToCreate.size > 0) {
         try {
@@ -783,6 +804,34 @@ export function Products() {
           }
         } catch (e) {
           console.error("Brand sync error", e);
+        }
+      }
+      if (industriesToCreate.size > 0) {
+        try {
+          const existingIndustries = await MasterAPI.getIndustries();
+          const existingNames = new Set(
+            (existingIndustries || []).map((i: any) =>
+              (i.industry_name || "").toLowerCase().trim(),
+            ),
+          );
+          const newIndustries = Array.from(industriesToCreate.values()).filter(
+            (i) => !existingNames.has((i.industry_name || "").toLowerCase()),
+          );
+          if (newIndustries.length > 0) {
+            for (const ind of newIndustries) {
+              try {
+                await MasterAPI.create("industries", ind);
+                createdIndustries++;
+              } catch (error) {
+                console.warn(
+                  `Failed to create industry: ${ind.industry_name}`,
+                  error,
+                );
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Industry sync error", error);
         }
       }
 
@@ -808,11 +857,25 @@ export function Products() {
       //     console.error("Vendor sync error", e);
       //   }
       // }
+      // Create Vendors
+          const latestIndustries = await MasterAPI.getIndustries();
+
+      const industryNameToIdMap = new Map(
+        (latestIndustries || [])
+          .filter((i: any) => i.industry_name)
+          .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id])
+      );
       if (vendorsToCreate.size > 0) {
         try {
+          const industryNameToIdMap = new Map(
+            (latestIndustries || [])
+              .filter((i: any) => i.industry_name)
+              .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
+          );
+
           const existingVendors = await MasterAPI.getVendors();
           const existingNames = new Set(
-            existingVendors.map((v: any) => v.vendor_name.toLowerCase()),
+            existingVendors.map((v: any) => v.vendor_name.toLowerCase().trim()),
           );
 
           const newVendors = Array.from(vendorsToCreate.values()).filter(
@@ -821,6 +884,13 @@ export function Products() {
 
           for (const vendor of newVendors) {
             try {
+              const indName = (vendor as any).industry_name
+                ?.toLowerCase()
+                .trim();
+              if (indName && industryNameToIdMap.has(indName)) {
+                vendor.industry_id = industryNameToIdMap.get(indName);
+              }
+
               await MasterAPI.create("vendors", vendor);
               createdVendors++;
             } catch (err) {
@@ -835,7 +905,7 @@ export function Products() {
         try {
           const existingCategories = await MasterAPI.getCategories();
           const existingCodes = new Set(
-            existingCategories.map((c: any) => c.category_code),
+            (existingCategories || []).map((c: any) => c.category_code),
           );
           const newCategories = Array.from(categoriesToCreate.values()).filter(
             (c) => !existingCodes.has(c.category_code),
@@ -843,8 +913,16 @@ export function Products() {
 
           for (const category of newCategories) {
             try {
+              const catIndName = (category as any).industry_name
+                ?.toLowerCase()
+                .trim();
+              if (catIndName && industryNameToIdMap.has(catIndName)) {
+                (category as any).industry_id =
+                  industryNameToIdMap.get(catIndName);
+              }
+
               await MasterAPI.create("categories", category);
-              createdCategories++;
+              createdCategories++; // Use the variable that shows up in your toast!
             } catch (err) {
               console.warn("Category create failed", err);
             }
@@ -890,7 +968,9 @@ export function Products() {
         masterDataMessage.push(`${createdVendors} vendors`);
       if (createdCategories > 0)
         masterDataMessage.push(`${createdCategories} categories`);
-
+      if (createdIndustries > 0) {
+        masterDataMessage.push(`${createdIndustries} industries`);
+      }
       const masterDataText =
         masterDataMessage.length > 0
           ? ` (Auto-created: ${masterDataMessage.join(", ")})`
@@ -1224,20 +1304,126 @@ export function Products() {
               </button>
             </div>
           </div>
-          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              <select
-                value={industryFilter}
-                onChange={(e) => setIndustryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Industries</option>
-                {industries.map((industry) => (
-                  <option
-                    key={industry.industry_code}
-                    value={industry.industry_name}
-                  >
-                    {industry.industry_name}
+          <select
+            value={industryFilter}
+            onChange={(e) => setIndustryFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" hidden>
+              Industry
+            </option>
+            {[...industries]
+              .sort((a, b) =>
+                (a.industry_name || "").localeCompare(b.industry_name || ""),
+              )
+              .map((industry) => (
+                <option
+                  key={industry.industry_code}
+                  value={industry.industry_name}
+                >
+                  {industry.industry_name}
+                </option>
+              ))}
+          </select>
+          <select
+            value={brandFilter}
+            onChange={(e) => setBrandFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" hidden>
+              Brand
+            </option>
+            {Array.from(
+              new Set(
+                products.filter((p) => p.brand_name).map((p) => p.brand_name),
+              ),
+            )
+              .sort()
+              .map((brandName) => (
+                <option key={brandName} value={brandName}>
+                  {brandName}
+                </option>
+              ))}
+          </select>
+          <select
+            value={vendorFilter}
+            onChange={(e) => setVendorFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" hidden>
+              Vendor
+            </option>
+            {Array.from(
+              new Set(
+                products.filter((p) => p.vendor_name).map((p) => p.vendor_name),
+              ),
+            )
+              .sort()
+              .map((vendorName) => (
+                <option key={vendorName} value={vendorName}>
+                  {vendorName}
+                </option>
+              ))}
+          </select>
+          <select
+            value={variantStatusFilter}
+            onChange={(e) => setVariantStatusFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" hidden>
+              Status
+            </option>
+            <option value="Base">Base</option>
+            <option value="Parent">Parent</option>
+
+            <option value="Variant">Variant</option>
+          </select>
+          <select
+            value={category1Filter}
+            onChange={(e) => {
+              setCategory1Filter(e.target.value);
+              setProductTypeFilter("");
+            }}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="" hidden>
+              Category 1
+            </option>
+            {Array.from(
+              new Set(
+                categories.filter((c) => c.category_1).map((c) => c.category_1),
+              ),
+            )
+              .sort()
+              .map((cat1) => (
+                <option key={cat1} value={cat1}>
+                  {cat1}
+                </option>
+              ))}
+          </select>
+          <select
+            value={productTypeFilter}
+            onChange={(e) => setProductTypeFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={!category1Filter}
+          >
+            <option value="" hidden>
+              Product Type
+            </option>
+            {category1Filter &&
+              Array.from(
+                new Set(
+                  products
+                    .filter(
+                      (p) => p.category_1 === category1Filter && p.product_type,
+                    )
+                    .map((p) => p.product_type),
+                ),
+              )
+                .sort()
+                .map((type) => (
+                  <option key={type} value={type}>
+                    {type}
                   </option>
                 ))}
               </select>
@@ -1515,11 +1701,15 @@ export function Products() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand.brand_code} value={brand.brand_code}>
-                        {brand.brand_name}
-                      </option>
-                    ))}
+                    {[...brands]
+                      .sort((a, b) =>
+                        (a.brand_name || "").localeCompare(b.brand_name || ""),
+                      )
+                      .map((brand) => (
+                        <option key={brand.brand_code} value={brand.brand_code}>
+                          {brand.brand_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
@@ -1532,14 +1722,20 @@ export function Products() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select vendor</option>
-                    {vendors.map((vendor) => (
-                      <option
-                        key={vendor.vendor_code}
-                        value={vendor.vendor_code}
-                      >
-                        {vendor.vendor_name}
-                      </option>
-                    ))}
+                    {[...vendors]
+                      .sort((a, b) =>
+                        (a.vendor_name || "").localeCompare(
+                          b.vendor_name || "",
+                        ),
+                      )
+                      .map((vendor) => (
+                        <option
+                          key={vendor.vendor_code}
+                          value={vendor.vendor_code}
+                        >
+                          {vendor.vendor_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
@@ -1552,14 +1748,18 @@ export function Products() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select category</option>
-                    {categories.map((category) => (
-                      <option
-                        key={category.category_code}
-                        value={category.category_code}
-                      >
-                        {category.breadcrumb}
-                      </option>
-                    ))}
+                    {[...categories]
+                      .sort((a, b) =>
+                        (a.breadcrumb || "").localeCompare(b.breadcrumb || ""),
+                      )
+                      .map((category) => (
+                        <option
+                          key={category.category_code}
+                          value={category.category_code}
+                        >
+                          {category.breadcrumb}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>
@@ -1577,14 +1777,20 @@ export function Products() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select industry</option>
-                    {industries.map((industry) => (
-                      <option
-                        key={industry.industry_code}
-                        value={industry.industry_name}
-                      >
-                        {industry.industry_name}
-                      </option>
-                    ))}
+                    {[...industries]
+                      .sort((a, b) =>
+                        (a.industry_name || "").localeCompare(
+                          b.industry_name || "",
+                        ),
+                      )
+                      .map((industry) => (
+                        <option
+                          key={industry.industry_code}
+                          value={industry.industry_name}
+                        >
+                          {industry.industry_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div>

@@ -1027,7 +1027,7 @@ export function VendorMaster() {
   ];
   return (
     <div className="space-y-6">
-      <div className="sticky top-0 z-40 bg-white pb-4 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
         <div className="flex-shrink-0">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Vendor Master
@@ -1073,8 +1073,7 @@ export function VendorMaster() {
           </button>
         </div>
       </div>
-      <div className="sticky top-24 z-30 bg-white rounded-xl shadow-sm border border-gray-200 p-3">
-
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             <select
@@ -1083,11 +1082,11 @@ export function VendorMaster() {
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="" hidden>Select Business Type</option>
-              <option value="Wholesaler">Wholesaler</option>
+              <option value=" Dealer"> Dealer</option>
+              <option value=" Distributor"> Distributor</option>
               <option value="Manufacturer">Manufacturer</option>
-              <option value="Distributor">Distributor</option>
-              <option value="Dealer">Dealer</option>
-              <option value="Retailer">Retailer</option>
+              <option value="Retailer"> Retailer</option>
+              <option value="Wholesaler">Wholesaler</option>
             </select>
             <select
               value={industryFilter}
@@ -1113,7 +1112,7 @@ export function VendorMaster() {
                 </option>
               ))}
               {Array.from(new Set(vendors.map((v) => v.country)))
-                .filter((c) => c && !ALLOWED_COUNTRIES.includes(c))
+                .filter((c) => c && !ALLOWED_COUNTRIES.includes(c)).sort()
                 .map((c) => (
                   <option key={c} value={c!}>
                     {c}
@@ -1160,8 +1159,7 @@ export function VendorMaster() {
           </div>
         </div>
       </div>
-      <div className="sticky top-44 z-20 bg-white py-2 flex items-center justify-between px-1">
-
+      <div className="flex items-center justify-between px-1">
         <p className="text-sm text-gray-500 italic">
           {searchTerm ||
           businessTypeFilter ||
@@ -1294,7 +1292,6 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status
@@ -1317,6 +1314,170 @@ export function VendorMaster() {
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
+                <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                  <span className="flex items-center gap-2">
+                    Country <span className="text-red-500">*</span>
+                    {formData.country &&
+                      !ALLOWED_COUNTRIES.includes(formData.country) && (
+                        <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                          CUSTOM
+                        </span>
+                      )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomCountry(!isCustomCountry);
+                      if (!isCustomCountry) {
+                        setFormData({
+                          ...formData,
+                          country: "",
+                          state: "",
+                          city: "",
+                        });
+                      }
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    {isCustomCountry ? <X size={12} /> : <Plus size={12} />}
+                    {isCustomCountry ? "Select from List" : "Add New"}
+                  </button>
+                </label>
+
+                {isCustomCountry ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Type country name..."
+                      value={formData.country || ""}
+                      onChange={(e) => {
+                        handleCountryChange(e.target.value);
+                        setShowCountrySuggestions(true);
+                      }}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none ${
+                        errors.country ? "border-red-500" : "border-gray-300"
+                      }`}
+                    />
+                    {showCountrySuggestions &&
+                      formData.country &&
+                      allSelectableCountries.some((c) =>
+                        c
+                          .toLowerCase()
+                          .includes(formData.country?.toLowerCase() || ""),
+                      ) && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                          <div className="px-3 py-1 text-xs text-gray-500 border-b">
+                            Existing countries:
+                          </div>
+                          {allSelectableCountries
+                            .filter((c) =>
+                              c
+                                .toLowerCase()
+                                .includes(
+                                  formData.country?.toLowerCase() || "",
+                                ),
+                            )
+                            .slice(0, 5)
+                            .map((country) => (
+                              <div
+                                key={country}
+                                onClick={() => {
+                                  handleCountryChange(country);
+                                  setCustomCountry(false);
+                                  setShowCountrySuggestions(false);
+                                }}
+                                className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 text-gray-700"
+                              >
+                                {country}
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                  </div>
+                ) : (
+                  <SearchableSelect
+                    options={allSelectableCountries}
+                    value={formData.country || ""}
+                    onChange={handleCountryChange}
+                    placeholder="Select country"
+                    onAddNew={() => setCustomCountry(true)}
+                    error={!!errors.country}
+                  />
+                )}
+
+                {errors.country && (
+                  <p className="text-red-500 text-[10px] mt-1">
+                    {errors.country}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  State
+                </label>
+                {isCustomCountry ||
+                (selectedCountryCode && stateOptions.length === 0) ? (
+                  <input
+                    type="text"
+                    value={formData.state || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    placeholder="Enter state"
+                  />
+                ) : !selectedCountryCode || isCustomCountry ? (
+                  <input
+                    type="text"
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
+                    placeholder="Select Country first"
+                  />
+                ) : (
+                  <SearchableSelect
+                    options={stateOptions.map((s) => s.name)}
+                    value={formData.state || ""}
+                    onChange={handleStateChange}
+                    placeholder="Select State"
+                  />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  City
+                </label>
+                {isCustomCountry ||
+                (selectedStateCode && cityOptions.length === 0) ? (
+                  /* Manual input for custom countries */
+                  <input
+                    type="text"
+                    value={formData.city || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, city: e.target.value })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    placeholder="Enter city"
+                  />
+                ) : !selectedStateCode ? (
+                  /* Locked state if no state is picked yet */
+                  <input
+                    type="text"
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
+                    placeholder="Pick State first"
+                  />
+                ) : (
+                  /* Dropdown for Top 5 countries */
+                  <SearchableSelect
+                    options={cityOptions.map((c) => c.name)}
+                    value={formData.city || ""}
+                    onChange={(val) => setFormData({ ...formData, city: val })}
+                    placeholder="Select City"
+                  />
+                )}
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Email <span className="text-red-500">*</span>
@@ -1455,20 +1616,20 @@ export function VendorMaster() {
                     }`}
                   >
                     <option value="">Select Business Type</option>
-                    <option value="Wholesaler" className="text-gray-900">
-                      Wholesaler
-                    </option>
-                    <option value="Manufacturer" className="text-gray-900">
-                      Manufacturer
+                    <option value=" Dealer" className="text-gray-900">
+                       Dealer
                     </option>
                     <option value="Distributor" className="text-gray-900">
-                      Distributor
+                       Distributor
                     </option>
-                    <option value="Dealer" className="text-gray-900">
-                      Dealer
+                    <option value=" Manufacturer" className="text-gray-900">
+                      Manufacturer
                     </option>
                     <option value="Retailer" className="text-gray-900">
-                      Retailer
+                       Retailer
+                    </option>
+                    <option value=" Wholesaler" className="text-gray-900">
+                      Wholesaler
                     </option>
                   </select>
 
@@ -1523,170 +1684,10 @@ export function VendorMaster() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                  <span className="flex items-center gap-2">
-                    Country <span className="text-red-500">*</span>
-                    {formData.country &&
-                      !ALLOWED_COUNTRIES.includes(formData.country) && (
-                        <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                          CUSTOM
-                        </span>
-                      )}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomCountry(!isCustomCountry);
-                      if (!isCustomCountry) {
-                        setFormData({
-                          ...formData,
-                          country: "",
-                          state: "",
-                          city: "",
-                        });
-                      }
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                  >
-                    {isCustomCountry ? <X size={12} /> : <Plus size={12} />}
-                    {isCustomCountry ? "Select from List" : "Add New"}
-                  </button>
-                </label>
+              
+              
 
-                {isCustomCountry ? (
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Type country name..."
-                      value={formData.country || ""}
-                      onChange={(e) => {
-                        handleCountryChange(e.target.value);
-                        setShowCountrySuggestions(true);
-                      }}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none ${
-                        errors.country ? "border-red-500" : "border-gray-300"
-                      }`}
-                    />
-                    {showCountrySuggestions &&
-                      formData.country &&
-                      allSelectableCountries.some((c) =>
-                        c
-                          .toLowerCase()
-                          .includes(formData.country?.toLowerCase() || ""),
-                      ) && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                          <div className="px-3 py-1 text-xs text-gray-500 border-b">
-                            Existing countries:
-                          </div>
-                          {allSelectableCountries
-                            .filter((c) =>
-                              c
-                                .toLowerCase()
-                                .includes(
-                                  formData.country?.toLowerCase() || "",
-                                ),
-                            )
-                            .slice(0, 5)
-                            .map((country) => (
-                              <div
-                                key={country}
-                                onClick={() => {
-                                  handleCountryChange(country);
-                                  setCustomCountry(false);
-                                  setShowCountrySuggestions(false);
-                                }}
-                                className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 text-gray-700"
-                              >
-                                {country}
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                  </div>
-                ) : (
-                  <SearchableSelect
-                    options={allSelectableCountries}
-                    value={formData.country || ""}
-                    onChange={handleCountryChange}
-                    placeholder="Select country"
-                    onAddNew={() => setCustomCountry(true)}
-                    error={!!errors.country}
-                  />
-                )}
-
-                {errors.country && (
-                  <p className="text-red-500 text-[10px] mt-1">
-                    {errors.country}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  State
-                </label>
-                {isCustomCountry ||
-                (selectedCountryCode && stateOptions.length === 0) ? (
-                  <input
-                    type="text"
-                    value={formData.state || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, state: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                    placeholder="Enter state"
-                  />
-                ) : !selectedCountryCode || isCustomCountry ? (
-                  <input
-                    type="text"
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
-                    placeholder="Select Country first"
-                  />
-                ) : (
-                  <SearchableSelect
-                    options={stateOptions.map((s) => s.name)}
-                    value={formData.state || ""}
-                    onChange={handleStateChange}
-                    placeholder="Select State"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  City
-                </label>
-                {isCustomCountry ||
-                (selectedStateCode && cityOptions.length === 0) ? (
-                  /* Manual input for custom countries */
-                  <input
-                    type="text"
-                    value={formData.city || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
-                    placeholder="Enter city"
-                  />
-                ) : !selectedStateCode ? (
-                  /* Locked state if no state is picked yet */
-                  <input
-                    type="text"
-                    disabled
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
-                    placeholder="Pick State first"
-                  />
-                ) : (
-                  /* Dropdown for Top 5 countries */
-                  <SearchableSelect
-                    options={cityOptions.map((c) => c.name)}
-                    value={formData.city || ""}
-                    onChange={(val) => setFormData({ ...formData, city: val })}
-                    placeholder="Select City"
-                  />
-                )}
-              </div>
+              
               <div className="hidden md:block"></div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">

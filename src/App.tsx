@@ -15,6 +15,7 @@ import { Login } from './pages/Login';
 import DigitalAssets from './pages/DigitalAssets';
 import Price from './pages/PriceManagement';
 import Inventory from './pages/Inventory';
+import { IndustryMaster } from './pages/IndustryMaster';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -47,6 +48,8 @@ function App() {
         return <Products />;
       case 'price':
         return <Price />;
+      case 'industries':
+        return <IndustryMaster/>
       case 'inventory':
         return <Inventory />;
       case 'enrichment':

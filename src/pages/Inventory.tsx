@@ -290,7 +290,7 @@ export default function Inventory() {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
           className="border border-gray-300 rounded-lg px-4 py-2 bg-white"
         >
-          <option value="all">All Statuses</option>
+          <option value="all" hidden>Status</option>
           {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
       </section>
