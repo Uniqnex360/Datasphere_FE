@@ -143,7 +143,6 @@ export function Attributes() {
 
   const [formData, setFormData] = useState<Partial<Attribute>>({
     attribute_name: "",
-    category_path: "",
     description: "",
     applicable_categories: "",
     attribute_type: "",
@@ -296,9 +295,6 @@ export function Attributes() {
     if (!formData.attribute_name?.trim()) {
       newErrors.attribute_name = "Attribute name is required";
     }
-    if (!formData.category_path?.trim()) {
-      newErrors.category_path = "Category is required";
-    }
     if (
       (formData.attribute_type === "Multi-select" ||
         formData.data_type === "list") &&
@@ -345,7 +341,6 @@ export function Attributes() {
         const duplicate = findDuplicateAttribute(
           attributes,
           formData.attribute_name || "",
-          formData.category_path || "",
         );
 
         if (duplicate) {
@@ -441,7 +436,6 @@ export function Attributes() {
     setFormData({
       attribute_code: "",
       attribute_name: "",
-      category_path: "",
       description: "",
       applicable_categories: "",
       attribute_type: "",
@@ -480,7 +474,7 @@ export function Attributes() {
         console.log("First Row Sample:", data[0]);
       }
 
-      const requiredColumns = ["attribute_name", "industry_name"];
+      const requiredColumns = ["attribute_name"];
       const validation = validateImportFormat(data, requiredColumns);
       if (!validation.isValid) {
         setToast({
@@ -520,9 +514,6 @@ export function Attributes() {
         try {
           const attributeData: any = {};
           attributeData.attribute_name = row.attribute_name;
-          attributeData.industry_name = row.industry_name || "";
-          attributeData.industry_attribute_name =
-            row.industry_attribute_name || "";
           attributeData.description = row.description || "";
           attributeData.applicable_categories = row.applicable_categories || "";
           attributeData.attribute_type = row.attribute_type || "";
@@ -553,7 +544,6 @@ export function Attributes() {
           const duplicate = findDuplicateAttribute(
             currentAttributes,
             row.attribute_name,
-            row.industry_name || "",
           );
 
           if (duplicate) {
@@ -720,7 +710,6 @@ export function Attributes() {
   const downloadTemplate = () => {
     const template: any = {
       attribute_name: "Example Attribute",
-      category_path: "",
       description: "Sample description",
       applicable_categories: "CAT001,CAT002",
       attribute_type: "",
@@ -805,6 +794,7 @@ export function Attributes() {
     },
     { key: "attribute_name", label: "Name", sortable: true },
     { key: "attribute_type", label: "Attr Type", sortable: true },
+    {key: "applicable_categories", label: "Categories"},
     {
       key: "value_count",
       label: "# Values",
@@ -864,7 +854,8 @@ export function Attributes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-[-26px]">
+      <div className="flex items-center justify-between mb-[-24px]">
+        {/* headings */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Attributes Master
@@ -874,41 +865,43 @@ export function Attributes() {
           </p>
         </div>
 
-        {/* serach */}
-
-        <div className="relative w-full  flex-1 transition-all duration-300 mx-2">
-          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <Search size={20} />
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+          <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search code or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            placeholder="Search code or name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-12 py-3 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-            >
-              <X size={20} />
-            </button>
-          )}
+
+          <button
+            onClick={() => {
+              setEditingAttribute(null);
+              resetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+          >
+            <Plus size={20} />
+            Add Attribute
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setEditingAttribute(null);
-            resetForm();
-            setIsDrawerOpen(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus size={20} />
-          Add Attribute
-        </button>
       </div>
 
+      {/* filter fields */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <select
@@ -1029,6 +1022,7 @@ export function Attributes() {
           </div>
         </div>
       )}
+
       <DataTable
         columns={columns}
         data={filteredAttributes}
@@ -1075,7 +1069,7 @@ export function Attributes() {
             )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Attribute Name <span className="text-red-500">*</span>
+                Attribute Display Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -1091,22 +1085,74 @@ export function Attributes() {
                 </p>
               )}
             </div>
+
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Applicable Categories
+              </label>
+              <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
+                {categories.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No categories available
+                  </p>
+                ) : (
+                  categories.map((cat) => (
+                    <label
+                      key={cat.category_code}
+                      className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedCategories.includes(cat.category_code)}
+                        onChange={() => toggleCategory(cat.category_code)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {cat.breadcrumb}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {selectedCategories.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {selectedCategories.map((code) => {
+                    const cat = categories.find(
+                      (c) => c.category_code === code,
+                    );
+                    return (
+                      <span
+                        key={code}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                      >
+                        {cat?.breadcrumb || code}
+                        <button
+                          onClick={() => toggleCategory(code)}
+                          className="hover:text-blue-900"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
                 options={categoryOptions}
-                value={formData.category_path || ""}
                 placeholder="Select or Search category..."
                 onChange={(selectedValue) => {
                   setFormData((prev) => ({
                     ...prev,
-                    category_path: selectedValue,
                   }));
                 }}
               />
-            </div>
+            </div> */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1164,58 +1210,6 @@ export function Attributes() {
                 <option value="boolean">Boolean</option>
                 <option value="list">List</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Applicable Categories
-              </label>
-              <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                {categories.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    No categories available
-                  </p>
-                ) : (
-                  categories.map((cat) => (
-                    <label
-                      key={cat.category_code}
-                      className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(cat.category_code)}
-                        onChange={() => toggleCategory(cat.category_code)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {cat.breadcrumb}
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {selectedCategories.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedCategories.map((code) => {
-                    const cat = categories.find(
-                      (c) => c.category_code === code,
-                    );
-                    return (
-                      <span
-                        key={code}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
-                      >
-                        {cat?.breadcrumb || code}
-                        <button
-                          onClick={() => toggleCategory(code)}
-                          className="hover:text-blue-900"
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
             </div>
 
             {(formData.data_type === "number" ||
