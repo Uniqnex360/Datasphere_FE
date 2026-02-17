@@ -59,7 +59,7 @@ export default function DataTable({
                   {column.sortable ? (
                     <button
                       onClick={() => onSort(column.key)}
-                      className="flex items-center justify-between gap-2 hover:text-gray-700 transition-colors w-full"
+                      className="flex items-center gap-3 hover:text-gray-700 transition-colors w-full"
                     >
                       <span className="truncate">{column.label}</span>
                       <span className="flex-shrink-0">
@@ -71,7 +71,7 @@ export default function DataTable({
                       </span>
                     </button>
                   ) : (
-                    <span className="truncate">{column.label}</span>
+                    <span className="truncate ">{column.label}</span>
                   )}
                 </th>
               ))}
