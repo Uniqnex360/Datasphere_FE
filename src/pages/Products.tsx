@@ -316,6 +316,7 @@ export function Products() {
     if (!validateForm()) return;
     try {
       if (editingProduct) {
+        console.log("form data", formData)
         await ProductAPI.update(editingProduct.product_code, formData);
         setToast({ message: "Product updated successfully", type: "success" });
       } else {

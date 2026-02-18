@@ -13,7 +13,7 @@ import {
   ExternalLink,
   AlertCircle,
 } from "lucide-react";
-import { DigitalAssetAPI } from "../lib/api";
+import { DigitalAssetAPI, MasterAPI } from "../lib/api";
 
 const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_API_KEY_NAME,
@@ -31,6 +31,11 @@ interface DigitalAsset {
   user_id: string;
   is_archived?: boolean;
 }
+
+type BrandMeta = {
+  id: string;
+  name: string;
+};
 
 export default function DigitalAssets() {
   const [assets, setAssets] = useState<DigitalAsset[]>([]);
@@ -54,6 +59,58 @@ export default function DigitalAssets() {
   const heighDiv = useRef<HTMLDivElement | null>(null);
   const [height, setHeight] = useState(0);
 
+  // filter brands states
+  const [brands, setBrands] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string>("");
+
+  const loadBrandData = async () => {
+    const data: BrandMeta[] = await MasterAPI.getBrandMeta();
+    const brandName = data.map((brand) => brand.name);
+    setBrands(brandName);
+  };
+  // filter category states
+  const [category, setCategories] = useState<CategoryMeta[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+
+  type CategoryMeta = {
+    id: string;
+    code: string;
+    value: string;
+  };
+
+  const loadCategoryData = async () => {
+    // Make the function async
+    try {
+      const data: CategoryMeta[] = await MasterAPI.getCategorymeta();
+
+      // Map to objects with only code and value
+      const category = data.map((category) => ({
+        id: category.id,
+        code: category.code,
+        value: category.value,
+      }));
+
+      setCategories(category);
+    } catch (error) {
+      console.error("Failed to load categories:", error);
+    }
+  };
+
+  // filter mpn states
+  const [mpn, setMpn] = useState<string[]>([]);
+  const [selectedMpn, setSelectedMpn] = useState<string>("");
+
+  type MPNData = {
+    id: string;
+    mpn: string;
+  };
+
+  const loadMPN = async () => {
+    const data: MPNData[] = await MasterAPI.getProductMPNMeta();
+    const mpnData = data.map((value) => value.mpn);
+    setMpn(mpnData);
+  };
+
   const updateHeight = () => {
     if (heighDiv.current) {
       const top = heighDiv.current.getBoundingClientRect().top;
@@ -73,10 +130,17 @@ export default function DigitalAssets() {
   }, [searchTerm]);
 
   useEffect(() => {
+    loadAssets();
+  }, [selectedBrand, selectedCategory, selectedMpn]);
+
+  useEffect(() => {
     const auth = localStorage.getItem("isAuthenticated");
     if (auth === "true") {
       setIsAuthenticated(true);
       loadAssets();
+      loadBrandData();
+      loadCategoryData();
+      loadMPN();
     }
   }, []);
 
@@ -84,7 +148,6 @@ export default function DigitalAssets() {
     // delay to let DOM paint
 
     updateHeight(); // calculate after DOM has rendered
-
 
     window.addEventListener("resize", updateHeight);
     return () => {
@@ -95,7 +158,12 @@ export default function DigitalAssets() {
   const loadAssets = async () => {
     setLoading(true);
     try {
-      const data = await DigitalAssetAPI.getAll(searchTerm);
+      const data = await DigitalAssetAPI.getAll({
+        search: searchTerm,
+        brand_name: selectedBrand,
+        category: selectedCategory,
+        mpn: selectedMpn,
+      });
       setAssets(data || []);
     } catch (error: any) {
       setToast({
@@ -385,6 +453,51 @@ export default function DigitalAssets() {
                   {assets.filter((a) => a.file_type === "document").length})
                 </button>
               </div>
+
+              {/* filters */}
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Brands</option>
+
+                {brands.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+
+              {/* category filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2 border max-w-40 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Category</option>
+
+                {category.map((c) => (
+                  <option key={c?.id} value={c?.code}>
+                    {c?.value}
+                  </option>
+                ))}
+              </select>
+
+              {/* MPN filters */}
+              <select
+                value={selectedMpn}
+                onChange={(e) => setSelectedMpn(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All MPN</option>
+
+                {mpn.map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand.toUpperCase()}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -411,7 +524,7 @@ export default function DigitalAssets() {
             </button>
           </div>
         ) : (
-          <div ref={heighDiv} style={{ maxHeight: height, overflowY: "auto"}}>
+          <div ref={heighDiv} style={{ maxHeight: height, overflowY: "auto" }}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mt-4">
               {filteredAssets.map((asset) => (
                 <div
@@ -514,10 +627,13 @@ export default function DigitalAssets() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {archiveModal.asset?.is_archived ? "Un Archive Asset" : "Archive Asset"}
+              {archiveModal.asset?.is_archived
+                ? "Un Archive Asset"
+                : "Archive Asset"}
             </h2>
             <p className="text-gray-600">
-              Are you sure you want to {archiveModal.asset?.is_archived ? "Un Archive" : "Archive"}{" "}
+              Are you sure you want to{" "}
+              {archiveModal.asset?.is_archived ? "Un Archive" : "Archive"}{" "}
               <span className="font-semibold">
                 {archiveModal.asset?.file_name}
               </span>
