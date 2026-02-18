@@ -107,11 +107,11 @@ type DigitalAssetFilters = {
 }
 export const DigitalAssetAPI = {
   getAll: async (filters: DigitalAssetFilters) => {
-    const response = await api.get(`/assets`, {params: filters});
+    const response = await api.get(`/assets/`, {params: filters});
     return response.data;
   },
   create: async (data: any) => {
-    const response = await api.post("/assets", data);
+    const response = await api.post("/assets/", data);
     return response.data;
   },
   delete: async (id: string) => {
