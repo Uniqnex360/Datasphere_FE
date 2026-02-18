@@ -314,32 +314,32 @@ export function Enrichment() {
           <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Brand</label>
-                <select
-                  value={filters.brand}
-                  onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Brands</option>
-                  {brands.map(brand => (
-                    <option key={brand} value={brand}>{brand}</option>
-                  ))}
-                </select>
-              </div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">Brand</label>
+  <select
+    value={filters.brand}
+    onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="all"  hidden>Brand</option>
+    {[...brands].sort((a, b) => a.localeCompare(b)).map(brand => (
+      <option key={brand} value={brand}>{brand}</option>
+    ))}
+  </select>
+</div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Categories</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
+  <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
+  <select
+    value={filters.category}
+    onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="all" hidden>Categories</option>
+    {[...categories].sort((a, b) => a.localeCompare(b)).map(category => (
+      <option key={category} value={category}>{category}</option>
+    ))}
+  </select>
+</div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Status Filter</label>
@@ -348,12 +348,16 @@ export function Enrichment() {
                   onChange={(e) => setFilters({ ...filters, status: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="enriched_pending_approval">Pending Approval</option>
+                  <option value="all"hidden>Status</option>
                   <option value="enriched">Enriched</option>
-                  <option value="reviewed">Reviewed</option>
+
+                  <option value="pending">Pending</option>
+
+                  <option value="enriched_pending_approval">Pending Approval</option>
                   <option value="published">Published</option>
+
+
+                  <option value="reviewed">Reviewed</option>
                 </select>
               </div>
             </div>
@@ -366,10 +370,11 @@ export function Enrichment() {
                   onChange={(e) => setFilters({ ...filters, completeness: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Scores</option>
+                  <option value="all"hidden>Score</option>
                   <option value="high">High (80%+)</option>
-                  <option value="medium">Medium (50-79%)</option>
                   <option value="low">Low (&lt;50%)</option>
+
+                  <option value="medium">Medium (50-79%)</option>
                 </select>
               </div>
 

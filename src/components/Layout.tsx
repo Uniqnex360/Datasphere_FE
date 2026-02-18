@@ -17,8 +17,9 @@ import {
   Tag,
   LogOut,
   CircleDollarSign,
-} from "lucide-react";
-import { useState } from "react";
+  Factory
+} from 'lucide-react';
+import { useState } from 'react';
 
 interface LayoutProps {
   children: ReactNode;

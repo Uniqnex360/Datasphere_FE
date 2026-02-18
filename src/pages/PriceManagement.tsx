@@ -65,7 +65,7 @@ export default function PriceManagement() {
         .filter(p => p.vendor_code === selectedVendorCode)
         .map(p => p.brand_code)
     );
-    return allBrands.filter(b => linkedBrandCodes.has(b.brand_code));
+    return allBrands.filter(b => linkedBrandCodes.has(b.brand_code)).sort((a,b)=>a.brand_name.localeCompare(b.brand_name));
   }, [selectedVendorCode, allBrands, allProducts]);
 
   const availableCategories = useMemo(() => {
@@ -75,7 +75,7 @@ export default function PriceManagement() {
         .filter(p => p.brand_code === selectedBrandCode && (!selectedVendorCode || p.vendor_code === selectedVendorCode))
         .map(p => p.category_code)
     );
-    return allCategories.filter(c => linkedCatCodes.has(c.category_code));
+    return allCategories.filter(c => linkedCatCodes.has(c.category_code)).sort((a, b) => (a.breadcrumb || "").localeCompare(b.breadcrumb || ""));
   }, [selectedBrandCode, selectedVendorCode, allCategories, allProducts]);
 
   const handleVendorChange = (val: string) => {
@@ -121,7 +121,7 @@ export default function PriceManagement() {
   return (
     <div className="space-y-6 p-6 max-w-5xl mx-auto">
       <header>
-        <h1 className="text-3xl font-bold text-gray-900">Retail Pricing Schema</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Pricing Schema</h1>
         <p className="text-gray-600 mt-1">Cascading price adjustments based on product relationships</p>
       </header>
 
@@ -133,8 +133,11 @@ export default function PriceManagement() {
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                 <Building2 size={16} className="text-blue-500" /> 1. Select Vendor
               </label>
-              <SearchableSelect 
-                options={allVendors.map(v => v.vendor_name)}
+                            <SearchableSelect 
+                options={[...allVendors]
+                  .sort((a, b) => a.vendor_name.localeCompare(b.vendor_name))
+                  .map(v => v.vendor_name)
+                }
                 value={allVendors.find(v => v.vendor_code === selectedVendorCode)?.vendor_name || ""}
                 onChange={handleVendorChange}
                 placeholder="Choose Vendor..."
