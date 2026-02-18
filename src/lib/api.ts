@@ -224,7 +224,7 @@ export const MasterAPI = {
     return response.data;
   },
   getIndustries: async () => {
-    const response = await api.get("/master/industries");
+    const response = await api.get("/master/industries/");
     return response.data;
   },
   create: async (type: "brands" | "vendors" | "categories" | "industries" | "attributes",data: any,) => {
