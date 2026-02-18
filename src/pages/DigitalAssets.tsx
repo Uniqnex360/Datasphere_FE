@@ -4,7 +4,6 @@ import {
   Search,
   X,
   Archive,
-  Trash2,
   ImageIcon,
   FileText,
   Film,
@@ -12,8 +11,11 @@ import {
   FolderOpen,
   ExternalLink,
   AlertCircle,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { DigitalAssetAPI, MasterAPI } from "../lib/api";
+import DataTable from "../components/DataTable";
 
 const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_API_KEY_NAME,
@@ -30,6 +32,9 @@ interface DigitalAsset {
   public_id: string;
   user_id: string;
   is_archived?: boolean;
+  mpn?: string;
+  brand?: string;
+  category?: string;
 }
 
 type BrandMeta = {
@@ -58,6 +63,7 @@ export default function DigitalAssets() {
   const [searchTerm, setSearchTerm] = useState("");
   const heighDiv = useRef<HTMLDivElement | null>(null);
   const [height, setHeight] = useState(0);
+  const [isGridView, setIsGridView] = useState(true);
 
   // filter brands states
   const [brands, setBrands] = useState<string[]>([]);
@@ -96,21 +102,6 @@ export default function DigitalAssets() {
     }
   };
 
-  // filter mpn states
-  const [mpn, setMpn] = useState<string[]>([]);
-  const [selectedMpn, setSelectedMpn] = useState<string>("");
-
-  type MPNData = {
-    id: string;
-    mpn: string;
-  };
-
-  const loadMPN = async () => {
-    const data: MPNData[] = await MasterAPI.getProductMPNMeta();
-    const mpnData = data.map((value) => value.mpn);
-    setMpn(mpnData);
-  };
-
   const updateHeight = () => {
     if (heighDiv.current) {
       const top = heighDiv.current.getBoundingClientRect().top;
@@ -131,7 +122,7 @@ export default function DigitalAssets() {
 
   useEffect(() => {
     loadAssets();
-  }, [selectedBrand, selectedCategory, selectedMpn]);
+  }, [selectedBrand, selectedCategory]);
 
   useEffect(() => {
     const auth = localStorage.getItem("isAuthenticated");
@@ -140,7 +131,6 @@ export default function DigitalAssets() {
       loadAssets();
       loadBrandData();
       loadCategoryData();
-      loadMPN();
     }
   }, []);
 
@@ -162,7 +152,6 @@ export default function DigitalAssets() {
         search: searchTerm,
         brand_name: selectedBrand,
         category: selectedCategory,
-        mpn: selectedMpn,
       });
       setAssets(data || []);
     } catch (error: any) {
@@ -314,6 +303,57 @@ export default function DigitalAssets() {
   //   );
   // }
 
+  const columns = [
+    {
+      key: "image",
+      label: "Image",
+      render: (_: any, row: DigitalAsset) => {
+        if (!row?.file_url) {
+          return "N/A";
+        }
+
+        return (
+          <img
+            src={row?.file_url}
+            alt={row?.file_name || "Asset Image"}
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}
+          />
+        );
+      },
+    },
+    {
+      key: "file_name",
+      label: "Name",
+      customTruncate: true,
+      truncateLength: 15,
+    },
+    { key: "file_type", label: "File Type" },
+    { key: "mpn", label: "MPN" },
+    { key: "brand", label: "Brand" },
+    { key: "category", label: "Category" },
+    {
+      key: "actions",
+      label: "Actions",
+      sortable: false,
+      render: (_: any, row: DigitalAsset) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setArchiveModal({ isOpen: true, asset: row })}
+            className="p-1 hover:bg-gray-100 text-gray-600 rounded transition-colors"
+            title="Archive"
+          >
+            <Archive size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col">
@@ -404,100 +444,157 @@ export default function DigitalAssets() {
           )}
 
           <div className="bg-white rounded-lg shadow p-4 mt-[-5]">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">
-                Filter by type:
-              </label>
-              <div className="flex gap-2">
+            <div className="flex items-center gap-4 justify-between">
+              <div className="flex gap-4 justify-center items-center">
+                <label className="text-sm font-medium text-gray-700">
+                  Filter by type:
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setFilterType("all")}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filterType === "all"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    All ({assets.length})
+                  </button>
+                  <button
+                    onClick={() => setFilterType("image")}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filterType === "image"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Images (
+                    {assets.filter((a) => a.file_type === "image").length})
+                  </button>
+                  <button
+                    onClick={() => setFilterType("video")}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filterType === "video"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Videos (
+                    {assets.filter((a) => a.file_type === "video").length})
+                  </button>
+                  <button
+                    onClick={() => setFilterType("document")}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      filterType === "document"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    Documents (
+                    {assets.filter((a) => a.file_type === "document").length})
+                  </button>
+                </div>
+
+                {/* filters */}
+                <select
+                  value={selectedBrand}
+                  onChange={(e) => setSelectedBrand(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Brands</option>
+
+                  {brands.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+
+                {/* category filter */}
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="px-4 py-2 border max-w-40 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Category</option>
+
+                  {category.map((c) => (
+                    <option key={c?.id} value={c?.code}>
+                      {c?.value}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* list grid view toggle */}
+              <div className="flex items-center justify-center mx-4 space-x-2">
                 <button
-                  onClick={() => setFilterType("all")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "all"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => setIsGridView(true)}
+                  className={`p-2 rounded flex items-center justify-center transition-colors ${
+                    isGridView
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
                   }`}
                 >
-                  All ({assets.length})
+                  <LayoutGrid size={20} />
                 </button>
+
                 <button
-                  onClick={() => setFilterType("image")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "image"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  onClick={() => setIsGridView(false)}
+                  className={`p-2 rounded flex items-center justify-center transition-colors ${
+                    !isGridView
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
                   }`}
                 >
-                  Images ({assets.filter((a) => a.file_type === "image").length}
-                  )
-                </button>
-                <button
-                  onClick={() => setFilterType("video")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "video"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Videos ({assets.filter((a) => a.file_type === "video").length}
-                  )
-                </button>
-                <button
-                  onClick={() => setFilterType("document")}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    filterType === "document"
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Documents (
-                  {assets.filter((a) => a.file_type === "document").length})
+                  <List size={20} />
                 </button>
               </div>
 
-              {/* filters */}
-              <select
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Brands</option>
-
-                {brands.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-
-              {/* category filter */}
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-4 py-2 border max-w-40 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Category</option>
-
-                {category.map((c) => (
-                  <option key={c?.id} value={c?.code}>
-                    {c?.value}
-                  </option>
-                ))}
-              </select>
-
-              {/* MPN filters */}
-              <select
-                value={selectedMpn}
-                onChange={(e) => setSelectedMpn(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All MPN</option>
-
-                {mpn.map((brand) => (
-                  <option key={brand} value={brand}>
-                    {brand.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              {/* <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={isGridView}
+                  onChange={() => setIsGridView(!isGridView)}
+                />
+                <div className="w-10 h-5 bg-gray-300 rounded-full relative peer-checked:bg-blue-500 transition-colors">
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${
+                      isGridView ? "translate-x-5" : "translate-x-0"
+                    }`}
+                  />
+                </div>
+                {/* <span className="ml-3 text-sm font-medium text-gray-800">
+                  {isGridView ? "List" : "Grid"}
+                </span> 
+              </label> */}
+            </div>
+            <div className="flex items-center justify-between p-1">
+              <p className="text-sm text-gray-500 italic">
+                {searchTerm || selectedBrand || selectedCategory ? (
+                  <span>
+                    Showing <strong>{filteredAssets.length}</strong> matching
+                    results out of {assets.length} total assets
+                  </span>
+                ) : (
+                  <span>
+                    Showing all <strong>{assets.length}</strong> assets
+                  </span>
+                )}
+              </p>
+              {(searchTerm || selectedBrand || selectedCategory) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedBrand("");
+                    setSelectedCategory("");
+                  }}
+                  className="text-sm text-blue-600 hover:underline font-medium"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -523,7 +620,7 @@ export default function DigitalAssets() {
               Upload Asset
             </button>
           </div>
-        ) : (
+        ) : isGridView ? (
           <div ref={heighDiv} style={{ maxHeight: height, overflowY: "auto" }}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mt-4">
               {filteredAssets.map((asset) => (
@@ -581,6 +678,12 @@ export default function DigitalAssets() {
               ))}
             </div>
           </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredAssets}
+            isLoading={loading}
+          />
         )}
       </div>
 

@@ -104,7 +104,6 @@ type DigitalAssetFilters = {
   search: string;
   brand_name: string | null;
   category: string | null;
-  mpn: string | null;
 }
 export const DigitalAssetAPI = {
   getAll: async (filters: DigitalAssetFilters) => {

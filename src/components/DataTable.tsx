@@ -6,6 +6,8 @@ interface Column {
   label: string;
   sortable?: boolean;
   width?: string;
+  customTruncate?: boolean;
+  truncateLength?: number;
   render?: (value: any, row: any) => React.ReactNode;
 }
 
@@ -42,6 +44,11 @@ export default function DataTable({
     window.addEventListener("resize", updateHeight); // recalc on resize
     return () => window.removeEventListener("resize", updateHeight);
   }, [data]);
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return "-";
+    return text.length > maxLength ? text.slice(0, maxLength) + "…" : text;
+  };
 
   if (isLoading) {
     return (
@@ -128,9 +135,7 @@ export default function DataTable({
       {/* horizontal scroll */}
       <div className="overflow-x-auto">
         {/* vertical scroll */}
-        <div ref={divRef} 
-        style={{maxHeight: height, overflowY: "auto"}}
-       >
+        <div ref={divRef} style={{ maxHeight: height, overflowY: "auto" }}>
           <table className="w-full border-collapse">
             <thead className="bg-gray-50 border-b sticky top-0 z-10">
               <tr>
@@ -176,13 +181,28 @@ export default function DataTable({
                       key={column.key}
                       className="px-6 py-4 text-sm text-gray-900"
                     >
-                      <div
+                      {/* <div
                         className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
                         title={String(row[column.key] || "")}
                       >
                         {column.render
                           ? column.render(row[column.key], row)
                           : row[column.key] || "-"}
+                      </div> */}
+                      {/* added custom truncate functionality */}
+                      <div
+                        title={String(row[column.key] || "")} // tooltip
+                        className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
+                      >
+                        {column.customTruncate === true
+                          ? truncateText(
+                              String(row[column.key]),
+                              column.truncateLength ?? 15,
+                            )
+                          : column.render
+                            ? column.render(row[column.key], row)
+                            : row[column.key] || "-"}{" "}
+                      
                       </div>
                     </td>
                   ))}

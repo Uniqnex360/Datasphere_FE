@@ -1173,21 +1173,24 @@ export function Products() {
         );
       },
     },
-    { key: "product_name", label: "Name", sortable: true },
+    { key: "mpn", label: "MPN", customTruncate: true, truncateLength:15 },
+    { key: "product_name", label: "Name", sortable: true, customTruncate: true, truncateLength: 50},
+    {
+      key: "vendor_name",
+      label: "Vendor",
+      sortable: true,
+      customTruncate: true, 
+      truncateLength: 15,
+      render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
+    },
     {
       key: "brand_name",
       label: "Brand",
       sortable: true,
+      customTruncate: true, 
+      truncateLength: 15,
       render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
-    // {
-    //   key: "vendor_name",
-    //   label: "Vendor",
-    //   sortable: true,
-    //   render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
-    // },
-    { key: "mpn", label: "MPN" },
-    { key: "model_no", label: "Model No" },
     // { key: "product_type", label: "Type", sortable: true },
     // {
     //   key: "variant_status",
