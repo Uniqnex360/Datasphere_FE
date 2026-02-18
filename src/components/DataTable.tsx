@@ -1,4 +1,5 @@
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useRef, useState, useEffect } from "react";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface Column {
   key: string;
@@ -12,7 +13,7 @@ interface DataTableProps {
   columns: Column[];
   data: any[];
   sortKey: string;
-  sortDirection: 'asc' | 'desc';
+  sortDirection: "asc" | "desc";
   onSort: (key: string) => void;
   isLoading?: boolean;
 }
@@ -25,6 +26,23 @@ export default function DataTable({
   onSort,
   isLoading = false,
 }: DataTableProps) {
+  const divRef = useRef<HTMLDivElement | null>(null);
+  const [height, setHeight] = useState(0);
+
+  const updateHeight = () => {
+    if (divRef.current) {
+      const top = divRef.current.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      setHeight(Math.floor(windowHeight - top)); // remaining height
+    }
+  };
+
+  useEffect(() => {
+    updateHeight(); // calculate on mount
+    window.addEventListener("resize", updateHeight); // recalc on resize
+    return () => window.removeEventListener("resize", updateHeight);
+  }, [data]);
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow">
@@ -107,68 +125,73 @@ export default function DataTable({
     //   </div>
     // </div>
     <div className="bg-white rounded-lg shadow overflow-hidden">
-  {/* horizontal scroll */}
-  <div className="overflow-x-auto">
-    {/* vertical scroll */}
-    <div className="max-h-[400px] overflow-y-auto">
-      <table className="w-full border-collapse">
-        <thead className="bg-gray-50 border-b sticky top-0 z-10">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                style={{ width: column.width || 'auto' }}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider"
-              >
-                {column.sortable ? (
-                  <button
-                    onClick={() => onSort(column.key)}
-                    className="flex items-center gap-3 hover:text-gray-700 transition-colors w-full"
+      {/* horizontal scroll */}
+      <div className="overflow-x-auto">
+        {/* vertical scroll */}
+        <div ref={divRef} 
+        style={{maxHeight: height, overflowY: "auto"}}
+       >
+          <table className="w-full border-collapse">
+            <thead className="bg-gray-50 border-b sticky top-0 z-10">
+              <tr>
+                {columns.map((column) => (
+                  <th
+                    key={column.key}
+                    style={{ width: column.width || "auto" }}
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider"
                   >
-                    <span className="truncate">{column.label}</span>
-                    <span className="flex-shrink-0">
-                      {sortKey === column.key ? (
-                        sortDirection === 'asc' ? (
-                          <ChevronUp size={14} className="text-blue-600" />
-                        ) : (
-                          <ChevronDown size={14} className="text-blue-600" />
-                        )
-                      ) : (
-                        <ChevronDown size={14} className="text-gray-300" />
-                      )}
-                    </span>
-                  </button>
-                ) : (
-                  <span className="truncate">{column.label}</span>
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((row, index) => (
-            <tr key={index} className="hover:bg-gray-50 transition-colors">
-              {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className="px-6 py-4 text-sm text-gray-900"
-                >
-                  <div
-                    className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
-                    title={String(row[column.key] || '')}
-                  >
-                    {column.render
-                      ? column.render(row[column.key], row)
-                      : row[column.key] || '-'}
-                  </div>
-                </td>
+                    {column.sortable ? (
+                      <button
+                        onClick={() => onSort(column.key)}
+                        className="flex items-center gap-3 hover:text-gray-700 transition-colors w-full"
+                      >
+                        <span className="truncate">{column.label}</span>
+                        <span className="flex-shrink-0">
+                          {sortKey === column.key ? (
+                            sortDirection === "asc" ? (
+                              <ChevronUp size={14} className="text-blue-600" />
+                            ) : (
+                              <ChevronDown
+                                size={14}
+                                className="text-blue-600"
+                              />
+                            )
+                          ) : (
+                            <ChevronDown size={14} className="text-gray-300" />
+                          )}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="truncate">{column.label}</span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.map((row, index) => (
+                <tr key={index} className="hover:bg-gray-50 transition-colors">
+                  {columns.map((column) => (
+                    <td
+                      key={column.key}
+                      className="px-6 py-4 text-sm text-gray-900"
+                    >
+                      <div
+                        className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
+                        title={String(row[column.key] || "")}
+                      >
+                        {column.render
+                          ? column.render(row[column.key], row)
+                          : row[column.key] || "-"}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   );
 }

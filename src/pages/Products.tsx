@@ -1135,14 +1135,6 @@ export function Products() {
   }
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
-    { key: "product_name", label: "Name", sortable: true },
-    {
-      key: "brand_name",
-      label: "Brand",
-      sortable: true,
-      render: (_: any, row: any) => row.brand?.brand_name || "N/A",
-    },
-
     {
       key: "image",
       label: "Image",
@@ -1180,13 +1172,19 @@ export function Products() {
         );
       },
     },
-
+    { key: "product_name", label: "Name", sortable: true },
     {
-      key: "vendor_name",
-      label: "Vendor",
+      key: "brand_name",
+      label: "Brand",
       sortable: true,
-      render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
+      render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
+    // {
+    //   key: "vendor_name",
+    //   label: "Vendor",
+    //   sortable: true,
+    //   render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
+    // },
     { key: "mpn", label: "MPN" },
     { key: "model_no", label: "Model No" },
     // { key: "product_type", label: "Type", sortable: true },

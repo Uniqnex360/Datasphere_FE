@@ -100,8 +100,8 @@ export const EnrichmentAPI = {
   },
 };
 export const DigitalAssetAPI = {
-  getAll: async () => {
-    const response = await api.get("/assets/");
+  getAll: async (search: string) => {
+    const response = await api.get(`/assets/?search=${search}`);
     return response.data;
   },
   create: async (data: any) => {
@@ -112,6 +112,10 @@ export const DigitalAssetAPI = {
     const response = await api.delete(`/assets/${id}`);
     return response.data;
   },
+  archive: async (id: string) => {
+    const response = await api.patch(`/assets/${id}`);
+    return response.data;
+  }
 };
 
 export const UserAPI = {
