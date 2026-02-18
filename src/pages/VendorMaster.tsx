@@ -657,7 +657,15 @@ export function VendorMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredVendors, "vendors.csv");
+     const dataToExport = filteredVendors.map(({ 
+    id,              
+         
+    ...cleanVendor   
+  }) => ({
+    ...cleanVendor,
+    industry: cleanVendor.industry || (industry_obj as any)?.industry_name || "N/A"
+  }));
+    exportToCSV(dataToExport, "vendors.csv");
     setToast({ message: "Vendors exported successfully", type: "success" });
   };
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {

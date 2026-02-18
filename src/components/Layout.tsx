@@ -17,7 +17,8 @@ import {
   Tag,
   LogOut,
   CircleDollarSign,
-  Factory
+  Factory,
+  FactoryIcon
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Dashboard", icon: LayoutDashboard, page: "dashboard" },
   { name: "Vendors", icon: Building2, page: "vendors" },
   { name: "Brands", icon: Tag, page: "brands" },
+  { name: "Industries", icon: FactoryIcon, page: "industries" },
   { name: "Categories", icon: FolderTree, page: "categories" },
   { name: "Attributes", icon: Sliders, page: "attributes" },
   { name: "Products", icon: Package, page: "products" },
