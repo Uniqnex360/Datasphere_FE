@@ -316,6 +316,7 @@ export function Products() {
     if (!validateForm()) return;
     try {
       if (editingProduct) {
+        console.log("form data", formData)
         await ProductAPI.update(editingProduct.product_code, formData);
         setToast({ message: "Product updated successfully", type: "success" });
       } else {
@@ -1135,14 +1136,6 @@ export function Products() {
   }
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
-    { key: "product_name", label: "Name", sortable: true },
-    {
-      key: "brand_name",
-      label: "Brand",
-      sortable: true,
-      render: (_: any, row: any) => row.brand?.brand_name || "N/A",
-    },
-
     {
       key: "image",
       label: "Image",
@@ -1180,15 +1173,24 @@ export function Products() {
         );
       },
     },
-
+    { key: "mpn", label: "MPN", customTruncate: true, truncateLength:15 },
+    { key: "product_name", label: "Name", sortable: true, customTruncate: true, truncateLength: 50},
     {
       key: "vendor_name",
       label: "Vendor",
       sortable: true,
+      customTruncate: true, 
+      truncateLength: 15,
       render: (_: any, row: any) => row.vendor?.vendor_name || "N/A",
     },
-    { key: "mpn", label: "MPN" },
-    { key: "model_no", label: "Model No" },
+    {
+      key: "brand_name",
+      label: "Brand",
+      sortable: true,
+      customTruncate: true, 
+      truncateLength: 15,
+      render: (_: any, row: any) => row.brand?.brand_name || "N/A",
+    },
     // { key: "product_type", label: "Type", sortable: true },
     // {
     //   key: "variant_status",
@@ -1304,137 +1306,121 @@ export function Products() {
               </button>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mt-4">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          <select
-            value={industryFilter}
-            onChange={(e) => setIndustryFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Industry
-            </option>
-            {[...industries]
-              .sort((a, b) =>
-                (a.industry_name || "").localeCompare(b.industry_name || ""),
-              )
-              .map((industry) => (
-                <option
-                  key={industry.industry_code}
-                  value={industry.industry_name}
-                >
-                  {industry.industry_name}
-                </option>
-              ))}
-          </select>
-          <select
-            value={brandFilter}
-            onChange={(e) => setBrandFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Brand
-            </option>
-            {Array.from(
-              new Set(
-                products.filter((p) => p.brand_name).map((p) => p.brand_name),
-              ),
-            )
-              .sort()
-              .map((brandName) => (
-                <option key={brandName} value={brandName}>
-                  {brandName}
-                </option>
-              ))}
-          </select>
-          <select
-            value={vendorFilter}
-            onChange={(e) => setVendorFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Vendor
-            </option>
-            {Array.from(
-              new Set(
-                products.filter((p) => p.vendor_name).map((p) => p.vendor_name),
-              ),
-            )
-              .sort()
-              .map((vendorName) => (
-                <option key={vendorName} value={vendorName}>
-                  {vendorName}
-                </option>
-              ))}
-          </select>
-          <select
-            value={variantStatusFilter}
-            onChange={(e) => setVariantStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Status
-            </option>
-            <option value="Base">Base</option>
-            <option value="Parent">Parent</option>
-
-            <option value="Variant">Variant</option>
-          </select>
-          <select
-            value={category1Filter}
-            onChange={(e) => {
-              setCategory1Filter(e.target.value);
-              setProductTypeFilter("");
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Category 1
-            </option>
-            {Array.from(
-              new Set(
-                categories.filter((c) => c.category_1).map((c) => c.category_1),
-              ),
-            )
-              .sort()
-              .map((cat1) => (
-                <option key={cat1} value={cat1}>
-                  {cat1}
-                </option>
-              ))}
-          </select>
-          <select
-            value={productTypeFilter}
-            onChange={(e) => setProductTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={!category1Filter}
-          >
-            <option value="" hidden>
-              Product Type
-            </option>
-            {category1Filter &&
-              Array.from(
-                new Set(
-                  products
-                    .filter(
-                      (p) => p.category_1 === category1Filter && p.product_type,
-                    )
-                    .map((p) => p.product_type),
-                ),
-              )
-                .sort()
-                .map((type) => (
-                  <option key={type} value={type}>
-                    {type}
+          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <select
+                value={industryFilter}
+                onChange={(e) => setIndustryFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Industries</option>
+                {industries.map((industry) => (
+                  <option
+                    key={industry.industry_code}
+                    value={industry.industry_name}
+                  >
+                    {industry.industry_name}
                   </option>
                 ))}
               </select>
-              
-              
-             
-              
-              
+              <select
+                value={brandFilter}
+                onChange={(e) => setBrandFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Brands</option>
+                {Array.from(
+                  new Set(
+                    products
+                      .filter((p) => p.brand_name)
+                      .map((p) => p.brand_name),
+                  ),
+                )
+                  .sort()
+                  .map((brandName) => (
+                    <option key={brandName} value={brandName}>
+                      {brandName}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={vendorFilter}
+                onChange={(e) => setVendorFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Vendors</option>
+                {Array.from(
+                  new Set(
+                    products
+                      .filter((p) => p.vendor_name)
+                      .map((p) => p.vendor_name),
+                  ),
+                )
+                  .sort()
+                  .map((vendorName) => (
+                    <option key={vendorName} value={vendorName}>
+                      {vendorName}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={variantStatusFilter}
+                onChange={(e) => setVariantStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="Base">Base</option>
+                <option value="Variant">Variant</option>
+                <option value="Parent">Parent</option>
+              </select>
+              <select
+                value={category1Filter}
+                onChange={(e) => {
+                  setCategory1Filter(e.target.value);
+                  setProductTypeFilter("");
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">All Category 1</option>
+                {Array.from(
+                  new Set(
+                    categories
+                      .filter((c) => c.category_1)
+                      .map((c) => c.category_1),
+                  ),
+                )
+                  .sort()
+                  .map((cat1) => (
+                    <option key={cat1} value={cat1}>
+                      {cat1}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={productTypeFilter}
+                onChange={(e) => setProductTypeFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!category1Filter}
+              >
+                <option value="">All Product Types</option>
+                {category1Filter &&
+                  Array.from(
+                    new Set(
+                      products
+                        .filter(
+                          (p) =>
+                            p.category_1 === category1Filter && p.product_type,
+                        )
+                        .map((p) => p.product_type),
+                    ),
+                  )
+                    .sort()
+                    .map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+              </select>
               <div className="flex gap-2">
                 <button
                   onClick={handleExport}
@@ -1475,12 +1461,10 @@ export function Products() {
                     alt="Template"
                   />
                 </button>
+              </div>
+            </div>
           </div>
-          </div>
-          </div>
-          
-        </div>
-        <div className="flex items-center justify-between px-1 py-4">
+          <div className="flex items-center justify-between px-1 py-4">
             <p className="text-sm text-gray-500 italic">
               {industryFilter ||
               brandFilter ||
@@ -1522,6 +1506,7 @@ export function Products() {
               </button>
             )}
           </div>
+        </div>
 
         <div className="">
           <DataTable
@@ -2569,7 +2554,6 @@ export function Products() {
           onClose={() => setToast(null)}
         />
       )}
-    </div>
     </div>
   );
 }

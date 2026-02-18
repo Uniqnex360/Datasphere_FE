@@ -99,9 +99,15 @@ export const EnrichmentAPI = {
     return response.data;
   },
 };
+
+type DigitalAssetFilters = {
+  search: string;
+  brand_name: string | null;
+  category: string | null;
+}
 export const DigitalAssetAPI = {
-  getAll: async () => {
-    const response = await api.get("/assets/");
+  getAll: async (filters: DigitalAssetFilters) => {
+    const response = await api.get(`/assets`, {params: filters});
     return response.data;
   },
   create: async (data: any) => {
@@ -112,6 +118,10 @@ export const DigitalAssetAPI = {
     const response = await api.delete(`/assets/${id}`);
     return response.data;
   },
+  archive: async (id: string) => {
+    const response = await api.patch(`/assets/${id}`);
+    return response.data;
+  }
 };
 
 export const UserAPI = {
@@ -194,6 +204,18 @@ export const ChannelAPI = {
 export const MasterAPI = {
   getBrands: async () => {
     const response = await api.get("/master/brands");
+    return response.data;
+  },
+  getBrandMeta: async () => {
+    const response = await api.get("/master/brands/meta");
+    return response.data;
+  },
+  getCategorymeta: async () => {
+    const response =await api.get("/master/categories/meta");
+    return response.data;
+  },
+  getProductMPNMeta: async () => {
+    const response =await api.get("/products/mpn/meta");
     return response.data;
   },
   getVendors: async () => {
