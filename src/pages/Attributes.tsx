@@ -460,13 +460,47 @@ export function Attributes() {
   };
 
   const handleExport = () => {
-
-    const export_data = filteredAttributes.filter(obj => selectedCodes.has(obj.attribute_code));
+    const export_data = filteredAttributes.filter((obj) =>
+      selectedCodes.has(obj.attribute_code),
+    );
     if (export_data.length === 0) {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(export_data, "attributes.csv", ["category_code"]);
+
+    const exportColumns = [
+      { header: "Category Name", key: "category_list_string" },
+      { header: "Attribute Name", key: "attribute_name" },
+      { header: "Attribute Type", key: "attribute_type" },
+      { header: "Data Type", key: "data_type" },
+      { header: "Unit", key: "unit" },
+      { header: "Description", key: "description" },
+      { header: "Filter", key: "filter" },
+      { header: "Filter Display Name", key: "filter_display_name" },
+    ];
+
+    for (let attr = 1; attr <= 50; attr++) {
+      exportColumns.push({
+        header: `attribute_value_${attr.toString()}`,
+        key: `attribute_value_${attr.toString()}`,
+      });
+      exportColumns.push({
+        header: `attribute_uom_${attr.toString()}`,
+        key: `attribute_uom_${attr.toString()}`,
+      });
+    }
+
+    exportToExcel({
+      data: export_data,
+      fileName: "attributes.xlsx",
+      columns: exportColumns,
+      dropdowns: {
+        category_path: categoryOptions,
+        data_type: ["Text", "Number", "Decimal", "Boolean", "List"],
+        filter: ["Yes", "No"],
+        attribute_type: ["Multi-select", "Single-select"],
+      },
+    });
     setToast({ message: "Attributes exported successfully", type: "success" });
   };
 
@@ -718,25 +752,153 @@ export function Attributes() {
     }
   };
   const downloadTemplate = () => {
-    const template: any = {
-      attribute_name: "Example Attribute",
-      description: "Sample description",
-      applicable_categories: "CAT001,CAT002",
-      attribute_type: "",
-      data_type: "list",
-      unit: "",
-      filter: "Yes",
-      filter_display_name: "Example Filter",
-    };
+    const customeDownloadData = [
+      {
+        category_code: null,
+        attribute_value_11: "",
+        attribute_value_27: "",
+        attribute_uom_42: "",
+        category_path: "electroncis > mobile > touch",
+        attribute_uom_11: "",
+        attribute_uom_27: "",
+        attribute_value_43: "",
+        description: "delson",
+        attribute_value_12: "",
+        attribute_value_28: "",
+        attribute_uom_43: "",
+        applicable_categories: "C-ELE-01,C-TES-01",
+        attribute_uom_12: "",
+        attribute_uom_28: "",
+        attribute_value_44: "",
+        attribute_type: "Multi-select",
+        attribute_value_13: "",
+        attribute_value_29: "",
+        attribute_uom_44: "",
+        data_type: "text",
+        attribute_uom_13: "",
+        attribute_uom_29: "",
+        attribute_value_45: "",
+        unit: "",
+        attribute_value_14: "",
+        attribute_value_30: "",
+        attribute_uom_45: "",
+        filter: "Yes",
+        attribute_uom_14: "",
+        attribute_uom_30: "",
+        attribute_value_46: "",
+        filter_display_name: "test",
+        attribute_value_15: "",
+        attribute_value_31: "",
+        attribute_uom_46: "",
+        usage_count: 1,
+        attribute_uom_15: "",
+        attribute_uom_31: "",
+        attribute_value_47: "",
+        values_data: {},
+        attribute_value_16: "",
+        attribute_value_32: "",
+        attribute_uom_47: "",
+        attribute_value_1: "test",
+        attribute_uom_16: "",
+        attribute_uom_32: "",
+        attribute_value_48: "",
+        attribute_uom_1: "test",
+        attribute_value_17: "",
+        attribute_value_33: "",
+        attribute_uom_48: "",
+        attribute_value_2: "",
+        attribute_uom_17: "",
+        attribute_uom_33: "",
+        attribute_value_49: "",
+        attribute_uom_2: "",
+        attribute_value_18: "",
+        attribute_value_34: "",
+        attribute_uom_49: "",
+        attribute_value_3: "",
+        attribute_uom_18: "",
+        attribute_uom_34: "",
+        attribute_value_50: "",
+        attribute_uom_3: "",
+        attribute_value_19: "",
+        attribute_value_35: "",
+        attribute_uom_50: "",
+        attribute_value_4: "",
+        attribute_uom_19: "",
+        attribute_uom_35: "",
+        attribute_uom_4: "",
+        attribute_value_20: "",
+        attribute_value_36: "",
+        attribute_value_5: "",
+        attribute_uom_20: "",
+        attribute_uom_36: "",
+        attribute_uom_9: "",
+        attribute_value_21: "",
+        attribute_value_37: "",
+        attribute_uom_5: "",
+        attribute_uom_21: "",
+        attribute_uom_37: "",
+        attribute_value_6: "",
+        attribute_value_22: "",
+        attribute_value_38: "",
+        attribute_uom_6: "",
+        attribute_uom_22: "",
+        attribute_uom_38: "",
+        attribute_value_7: "",
+        attribute_value_23: "",
+        attribute_value_39: "",
+        attribute_uom_7: "",
+        attribute_uom_23: "",
+        attribute_uom_39: "",
+        created_at: "2026-02-16T12:09:19.936595",
+        attribute_value_8: "",
+        attribute_value_24: "",
+        attribute_value_40: "",
+        attribute_uom_8: "",
+        attribute_uom_24: "",
+        attribute_uom_40: "",
+        id: "9f05ee07-cc61-4fb4-b31f-f1f4cd34f6bf",
+        attribute_value_9: "",
+        attribute_value_25: "",
+        attribute_value_41: "",
+        updated_at: "2026-02-16T13:20:33.621159",
+        attribute_value_10: "",
+        attribute_uom_25: "",
+        attribute_uom_41: "",
+        attribute_code: "ATTR-000002",
+        attribute_uom_10: "",
+        attribute_value_26: "",
+        attribute_value_42: "",
+        attribute_name: "Delson",
+        attribute_uom_26: "",
+        category_list_string: "Y, Z",
+      },
+    ];
+    const customeDownloadColumns = [
+      { header: "Category Name", key: "category_list_string" },
+      { header: "Attribute Name", key: "attribute_name" },
+      { header: "Attribute Type", key: "attribute_type" },
+      { header: "Data Type", key: "data_type" },
+      { header: "Unit", key: "unit" },
+      { header: "Description", key: "description" },
+      { header: "Filter", key: "filter" },
+      { header: "Filter Display Name", key: "filter_display_name" },
+    ];
 
-    for (let i = 1; i <= 50; i++) {
-      template[`attribute_value_${i}`] = i === 1 ? "Value 1" : "";
-      template[`attribute_uom_${i}`] = i === 1 ? "UOM 1" : "";
+    for (let attr = 1; attr <= 50; attr++) {
+      customeDownloadColumns.push({
+        header: `attribute_value_${attr.toString()}`,
+        key: `attribute_value_${attr.toString()}`,
+      });
+      customeDownloadColumns.push({
+        header: `attribute_uom_${attr.toString()}`,
+        key: `attribute_uom_${attr.toString()}`,
+      });
     }
 
     exportToExcel({
-      data: [template],
+      data: customeDownloadData,
       fileName: "attribute_import_template.xlsx",
+      columns: customeDownloadColumns,
       dropdowns: {
         category_path: categoryOptions,
         data_type: ["Text", "Number", "Decimal", "Boolean", "List"],
@@ -752,7 +914,7 @@ export function Attributes() {
         selectedCategories.filter((c) => c !== categoryCode),
       );
     } else {
-      console.log("selected catgory", [...selectedCategories, categoryCode])
+      console.log("selected catgory", [...selectedCategories, categoryCode]);
       setSelectedCategories([...selectedCategories, categoryCode]);
     }
   };
