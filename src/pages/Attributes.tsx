@@ -250,6 +250,14 @@ export function Attributes() {
     return count;
   };
 
+  const getEndCategory = (attribute: Attribute): string => {
+    if (!attribute?.category_path) return "";
+
+    // split by '>', take the last part, trim extra spaces
+    const parts = attribute.category_path.split(">");
+    return parts[parts.length - 1].trim();
+  };
+
   // handling table row selection
   const toggleSelect = (code: string) => {
     const newSet = new Set(selectedCodes);
@@ -452,11 +460,13 @@ export function Attributes() {
   };
 
   const handleExport = () => {
-    if (filteredAttributes.length === 0) {
+
+    const export_data = filteredAttributes.filter(obj => selectedCodes.has(obj.attribute_code));
+    if (export_data.length === 0) {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredAttributes, "attributes.csv");
+    exportToCSV(export_data, "attributes.csv", ["category_code"]);
     setToast({ message: "Attributes exported successfully", type: "success" });
   };
 
@@ -742,6 +752,7 @@ export function Attributes() {
         selectedCategories.filter((c) => c !== categoryCode),
       );
     } else {
+      console.log("selected catgory", [...selectedCategories, categoryCode])
       setSelectedCategories([...selectedCategories, categoryCode]);
     }
   };
@@ -794,7 +805,11 @@ export function Attributes() {
     },
     { key: "attribute_name", label: "Name", sortable: true },
     { key: "attribute_type", label: "Attr Type", sortable: true },
-    {key: "applicable_categories", label: "Categories"},
+    {
+      key: "category_list_string",
+      label: "Category",
+      // render: (_: any, row: Attribute) => getEndCategory(row),
+    },
     {
       key: "value_count",
       label: "# Values",
@@ -872,7 +887,7 @@ export function Attributes() {
             </div>
             <input
               type="text"
-              placeholder="Search code or name..."
+              placeholder="Search attribute name..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
@@ -908,7 +923,9 @@ export function Attributes() {
             onChange={(e) => setAttributeTypeFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value=""hidden>Attribute Type</option>
+            <option value="" hidden>
+              Attribute Type
+            </option>
             <option value="Multi-select">Multi-select</option>
             <option value="Single-select">Single-select</option>
           </select>
@@ -917,7 +934,9 @@ export function Attributes() {
             onChange={(e) => setDataTypeFilter(e.target.value)}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="" hidden>Data Type</option>
+            <option value="" hidden>
+              Data Type
+            </option>
             <option value="text">Boolean </option>
             <option value="number"> Decimal </option>
             <option value="decimal">List </option>
@@ -999,7 +1018,7 @@ export function Attributes() {
             <p className="text-sm font-medium">Bulk Actions:</p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {/* <button
               onClick={() => handleBulkStatusChange(true)}
               className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
             >
@@ -1010,7 +1029,7 @@ export function Attributes() {
               className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
             >
               <X size={14} /> Set Inactive
-            </button>
+            </button> */}
             <div className="w-px h-6 bg-white/20 mx-2"></div>
             <button
               onClick={() => setSelectedCodes(new Set())}
@@ -1204,10 +1223,10 @@ export function Attributes() {
               >
                 <option value="">Select data type</option>
                 <option value="text">Boolean </option>
-            <option value="number"> Decimal </option>
-            <option value="decimal">List </option>
-            <option value="boolean">Number</option>
-            <option value="list">Text</option>
+                <option value="number"> Decimal </option>
+                <option value="decimal">List </option>
+                <option value="boolean">Number</option>
+                <option value="list">Text</option>
               </select>
             </div>
 

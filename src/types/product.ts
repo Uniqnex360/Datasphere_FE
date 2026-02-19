@@ -114,4 +114,5 @@ export type VariantStatus = 'Base' | 'Variant' | 'Parent';
 export interface ProductWithVariantStatus extends Product {
   variant_status: VariantStatus;
   variant_count?: number;
+  category_breadcrumb?: string
 }

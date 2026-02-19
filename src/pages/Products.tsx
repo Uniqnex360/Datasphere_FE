@@ -25,7 +25,7 @@ import { Vendor } from "../types/vendor";
 import { Category } from "../types/category";
 import { Industry } from "../types/industry";
 import CustomDownloadIcon from "../assets/download-custom.png";
-
+import ImageComingSoonIcon from "../assets/image-coming-soon-placeholder.webp";
 import { ProductVariant } from "../types/variant";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
@@ -1143,7 +1143,15 @@ export function Products() {
         const imagesObj = row?.images;
 
         if (!imagesObj || Object.keys(imagesObj).length === 0) {
-          return "N/A";
+          return <img 
+          src={ImageComingSoonIcon} 
+          alt="product default fallback image" 
+          style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}/>
         }
 
         // Convert object to array
@@ -1152,7 +1160,15 @@ export function Products() {
         );
 
         if (imagesArray.length === 0) {
-          return "N/A";
+          return <img 
+          src={ImageComingSoonIcon} 
+          alt="product default fallback image" 
+          style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}/>
         }
 
         // Pick a random image
@@ -1162,7 +1178,7 @@ export function Products() {
         return (
           <img
             src={randomImage.url}
-            alt={randomImage.name || "Vendor Image"}
+            alt={randomImage.name || "Product Image"}
             style={{
               width: 50,
               height: 50,
@@ -1174,7 +1190,26 @@ export function Products() {
       },
     },
     { key: "mpn", label: "MPN", customTruncate: true, truncateLength:15 },
-    { key: "product_name", label: "Name", sortable: true, customTruncate: true, truncateLength: 50},
+    // { key: "product_name", label: "Name", sortable: true, customTruncate: true, truncateLength: 50},
+     {
+  key: "product_name",
+  label: "Name",
+  width: "20%",
+  render: (_: any, row: ProductWithVariantStatus) => (
+    <div
+      className="overflow-hidden break-words text-wrap"
+      style={{
+        display: "-webkit-box",
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: "vertical",
+        textOverflow: "ellipsis",
+      }}
+      title={row.product_name} // optional: show full text on hover
+    >
+      {row.product_name}
+    </div>
+  ),
+},
     {
       key: "vendor_name",
       label: "Vendor",
@@ -1217,6 +1252,25 @@ export function Products() {
           </span>
         );
       },
+    },
+    {
+      key: "category_breadcrumb",
+      label: "Category",
+      width: "20%",
+      render: (_: any, row: ProductWithVariantStatus) => (
+        <div
+          className="overflow-hidden break-words text-wrap"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            textOverflow: "ellipsis",
+          }}
+          title={row.category_breadcrumb} // optional: show full text on hover
+        >
+          {row.category_breadcrumb}
+        </div>
+      ),
     },
     {
       key: "actions",
