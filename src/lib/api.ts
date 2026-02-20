@@ -253,6 +253,10 @@ export const MasterAPI = {
     const response = await api.post(`/master/${type}`, data);
     return response.data;
   },
+  updateVendorStatus: async (type: "brands" | "vendors" | "categories" | "industries" | "attributes", code: string,) => {
+    const response = await api.patch(`/master/${type}/${code}`);
+    return response.data;
+  },
 };
 export const AuthAPI = {
   login: async (params: URLSearchParams) => {

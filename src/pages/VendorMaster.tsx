@@ -60,8 +60,6 @@ export function VendorMaster() {
 
   // use Ref to handle contact phone number
   const contactPhoneNumberInput = useRef<HTMLInputElement>(null);
-  const [contactPhonePlaceHolder, setcontactPhonePlaceHolder] =
-    useState("Enter Phone Number");
 
   const countryOptions = useMemo(
     () =>
@@ -122,7 +120,7 @@ export function VendorMaster() {
       setLoading(true);
       await Promise.all(
         codes.map((code) =>
-          MasterAPI.update("vendors", code, { is_active: active }),
+          MasterAPI.updateVendorStatus("vendors", code),
         ),
       );
       setToast({
@@ -970,7 +968,7 @@ export function VendorMaster() {
       ) as any,
       width: "100px",
       render: (_: any, row: Vendor) => (
-        <div onClick={(e) => e.stopPropagation()}>
+        <div onClick={(e) => {e.stopPropagation()}}>
           <input
             type="checkbox"
             checked={selectedCodes.has(row.vendor_code)}
@@ -1071,6 +1069,11 @@ export function VendorMaster() {
       contactPhoneNumberInput.current.placeholder = `Enter phone number ${formData?.country || ""}`;
     }
   }, [formData.country]);
+
+  // useEffect to update wether to show active or inactive status
+  const selectedVendors = vendors.filter((v) => selectedCodes.has(v.vendor_code));
+  const allActive = selectedVendors.every((v) => v.is_active);
+  const allInactive = selectedVendors.every((v) => !v.is_active);
 
   return (
     <div className="space-y-6">
@@ -1212,7 +1215,7 @@ export function VendorMaster() {
           </button>
         )}
       </div>
-      {selectedCodes.size > 0 && (
+      {/* {selectedCodes.size > 0 && (
         <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center gap-4">
             <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
@@ -1233,6 +1236,45 @@ export function VendorMaster() {
             >
               <X size={14} /> Set Inactive
             </button>
+            <div className="w-px h-6 bg-white/20 mx-2"></div>
+            <button
+              onClick={() => setSelectedCodes(new Set())}
+              className="px-3 py-1.5 hover:bg-white/10 rounded-lg text-xs font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )} */}
+      {selectedCodes.size > 0 && (
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+              {selectedCodes.size} selected
+            </span>
+            <p className="text-sm font-medium">Bulk Actions:</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Show Set Active only if all are inactive or mixed */}
+            {(allInactive || (!allActive && !allInactive)) && (
+              <button
+                onClick={() => handleBulkStatusChange(true)}
+                className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
+              >
+                <CheckCircle size={14} /> Set Active
+              </button>
+            )}
+
+            {/* Show Set Inactive only if all are active or mixed */}
+            {(allActive || (!allActive && !allInactive)) && (
+              <button
+                onClick={() => handleBulkStatusChange(false)}
+                className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
+              >
+                <X size={14} /> Set Inactive
+              </button>
+            )}
+
             <div className="w-px h-6 bg-white/20 mx-2"></div>
             <button
               onClick={() => setSelectedCodes(new Set())}
@@ -1581,7 +1623,6 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
-
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
