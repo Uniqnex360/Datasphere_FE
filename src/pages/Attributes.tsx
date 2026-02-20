@@ -25,6 +25,7 @@ import { MasterAPI } from "../lib/api";
 import { validateImportFormat } from "../utils/importValidator";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { exportToExcel } from "../utils/ExcelHelper";
+import { FilterSelect } from "../components/Filter";
 
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
@@ -982,32 +983,24 @@ export function Attributes() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <select
-            value={attributeTypeFilter}
-            onChange={(e) => setAttributeTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Attribute Type
-            </option>
-            <option value="Multi-select">Multi-select</option>
-            <option value="Single-select">Single-select</option>
-          </select>
-          <select
-            value={dataTypeFilter}
-            onChange={(e) => setDataTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="" hidden>
-              Data Type
-            </option>
-            <option value="text">Boolean </option>
-            <option value="number"> Decimal </option>
-            <option value="decimal">List </option>
-            <option value="boolean">Number</option>
-            <option value="list">Text</option>
-          </select>
+        {/* <div className="grid grid-cols-1 md:grid-cols-5 gap-4"> */}
+        <div className="flex items-center gap-4 justify-between">
+          <div className="">
+            <FilterSelect
+              options={["Multi-select", "Single-select"]}
+              value={attributeTypeFilter}
+              onChange={setAttributeTypeFilter}
+              placeholder="Attribute Type"
+              className="mr-4"
+            />
+            <FilterSelect
+              options={["Boolean", "Decimal", "List", "Number", "Text"]}
+              value={dataTypeFilter}
+              onChange={setDataTypeFilter}
+              placeholder="Data Type"
+            />
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={handleExport}

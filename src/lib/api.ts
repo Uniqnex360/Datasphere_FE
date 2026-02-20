@@ -36,9 +36,9 @@ export const ProductAPI = {
     const response = await api.post("/products/upsert", data);
     return response.data;
   },
-  getAll: async (skip = 0, limit = 100, filters = {}) => {
+getAll: async (skip = 0, limit = 100,  search = "", filters = {}) => {
     const response = await api.get("/products/", {
-      params: { skip, limit, ...filters },
+      params: { skip, limit, search, ...filters },
     });
     return response.data;
   },

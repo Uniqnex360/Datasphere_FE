@@ -38,6 +38,8 @@ import {
   getScoreColorClasses,
 } from "../utils/completenessHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
+import { FilterSelect } from "../components/Filter";
+
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<
@@ -1362,119 +1364,61 @@ export function Products() {
           </div>
           <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              <select
+              <FilterSelect
+                options={industries.map((value) => value.industry_name)}
                 value={industryFilter}
-                onChange={(e) => setIndustryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Industries</option>
-                {industries.map((industry) => (
-                  <option
-                    key={industry.industry_code}
-                    value={industry.industry_name}
-                  >
-                    {industry.industry_name}
-                  </option>
-                ))}
-              </select>
-              <select
+                onChange={setIndustryFilter}
+                placeholder="All Industries"
+              />
+              <FilterSelect
+                options={Array.from(
+                  new Set(products.filter((p) => p.brand_name).map((p) => p.brand_name))
+                ).sort()}
                 value={brandFilter}
-                onChange={(e) => setBrandFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Brands</option>
-                {Array.from(
-                  new Set(
-                    products
-                      .filter((p) => p.brand_name)
-                      .map((p) => p.brand_name),
-                  ),
-                )
-                  .sort()
-                  .map((brandName) => (
-                    <option key={brandName} value={brandName}>
-                      {brandName}
-                    </option>
-                  ))}
-              </select>
-              <select
+                onChange={setBrandFilter}
+                placeholder="All Brands"
+              />
+
+              {/* Vendor Filter */}
+              <FilterSelect
+                options={Array.from(new Set(products.filter(p => p.vendor_name).map(p => p.vendor_name))).sort()}
                 value={vendorFilter}
-                onChange={(e) => setVendorFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Vendors</option>
-                {Array.from(
-                  new Set(
-                    products
-                      .filter((p) => p.vendor_name)
-                      .map((p) => p.vendor_name),
-                  ),
-                )
-                  .sort()
-                  .map((vendorName) => (
-                    <option key={vendorName} value={vendorName}>
-                      {vendorName}
-                    </option>
-                  ))}
-              </select>
-              <select
+                onChange={setVendorFilter}
+                placeholder="All Vendors"
+              />
+
+              {/* Variant Status Filter */}
+              <FilterSelect
+                options={["Base", "Variant", "Parent"]}
                 value={variantStatusFilter}
-                onChange={(e) => setVariantStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="Base">Base</option>
-                <option value="Variant">Variant</option>
-                <option value="Parent">Parent</option>
-              </select>
-              <select
+                onChange={setVariantStatusFilter}
+                placeholder="All Status"
+              />
+
+              {/* Category 1 Filter */}
+              <FilterSelect
+                options={Array.from(new Set(categories.filter(c => c.category_1).map(c => c.category_1))).sort()}
                 value={category1Filter}
-                onChange={(e) => {
-                  setCategory1Filter(e.target.value);
-                  setProductTypeFilter("");
+                onChange={(value) => {
+                  setCategory1Filter(value);
+                  setProductTypeFilter(""); // reset dependent filter
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">All Category 1</option>
-                {Array.from(
-                  new Set(
-                    categories
-                      .filter((c) => c.category_1)
-                      .map((c) => c.category_1),
-                  ),
-                )
-                  .sort()
-                  .map((cat1) => (
-                    <option key={cat1} value={cat1}>
-                      {cat1}
-                    </option>
-                  ))}
-              </select>
-              <select
+                placeholder="All Category"
+              />
+
+              {/* Product Type Filter */}
+              <FilterSelect
+                options={category1Filter
+                  ? Array.from(new Set(products
+                      .filter(p => p.category_1 === category1Filter && p.product_type)
+                      .map(p => p.product_type)))
+                      .sort()
+                  : []}
                 value={productTypeFilter}
-                onChange={(e) => setProductTypeFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={!category1Filter}
-              >
-                <option value="">All Product Types</option>
-                {category1Filter &&
-                  Array.from(
-                    new Set(
-                      products
-                        .filter(
-                          (p) =>
-                            p.category_1 === category1Filter && p.product_type,
-                        )
-                        .map((p) => p.product_type),
-                    ),
-                  )
-                    .sort()
-                    .map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-              </select>
+                onChange={setProductTypeFilter}
+                placeholder="All Product Types"
+              />
+
               <div className="flex gap-2">
                 <button
                   onClick={handleExport}
