@@ -15,6 +15,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { getCountryByCode } from "country-kit";
 import { Vendor } from "../types/vendor";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
@@ -28,6 +29,8 @@ import { clearFieldError, formatWebsiteUrl } from "../utils/formHelpers";
 import { useIndustryManager } from "../hooks/useIndustryManager";
 import { City, Country, State } from "country-state-city";
 import CustomDownloadIcon from "../assets/download-custom.png";
+import { FilterSelect } from "../components/Filter.tsx";
+
 const ALLOWED_COUNTRIES = [
   "United States",
   "United Kingdom",
@@ -35,6 +38,7 @@ const ALLOWED_COUNTRIES = [
   "Australia",
   "United Arab Emirates",
 ];
+
 export function VendorMaster() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
@@ -53,6 +57,12 @@ export function VendorMaster() {
   const [selectedStateCode, setSelectedStateCode] = useState("");
   const [stateOptions, setStateOptions] = useState<any[]>([]);
   const [cityOptions, setCityOptions] = useState<any[]>([]);
+
+  // use Ref to handle contact phone number
+  const contactPhoneNumberInput = useRef<HTMLInputElement>(null);
+  const [contactPhonePlaceHolder, setcontactPhonePlaceHolder] =
+    useState("Enter Phone Number");
+
   const countryOptions = useMemo(
     () =>
       Country.getAllCountries().filter((c) =>
@@ -105,7 +115,7 @@ export function VendorMaster() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
+
   const handleBulkStatusChange = async (active: boolean) => {
     const codes = Array.from(selectedCodes);
     try {
@@ -184,42 +194,42 @@ export function VendorMaster() {
   } = useIndustryManager(industries, setFormData, setErrors, "industry");
 
   const handleCountryChange = (countryName: string) => {
-  const libCountry = Country.getAllCountries().find(
-    (c) => c.name.toLowerCase() === countryName.toLowerCase(),
-  );
+    const libCountry = Country.getAllCountries().find(
+      (c) => c.name.toLowerCase() === countryName.toLowerCase(),
+    );
 
-  const isPreferred = ALLOWED_COUNTRIES.includes(countryName);
+    const isPreferred = ALLOWED_COUNTRIES.includes(countryName);
 
-  if (libCountry) {
-    // Country exists in library - check if it's in preferred list
-    if (isPreferred) {
-      // Top 5 country - use dropdowns
-      setCustomCountry(false);
-      setSelectedCountryCode(libCountry.isoCode);
-      setStateOptions(State.getStatesOfCountry(libCountry.isoCode));
+    if (libCountry) {
+      // Country exists in library - check if it's in preferred list
+      if (isPreferred) {
+        // Top 5 country - use dropdowns
+        setCustomCountry(false);
+        setSelectedCountryCode(libCountry.isoCode);
+        setStateOptions(State.getStatesOfCountry(libCountry.isoCode));
+      } else {
+        // Country exists in library but not in Top 5 - still enable state/city lookups
+        setCustomCountry(false); // Changed from true
+        setSelectedCountryCode(libCountry.isoCode);
+        setStateOptions(State.getStatesOfCountry(libCountry.isoCode));
+      }
     } else {
-      // Country exists in library but not in Top 5 - still enable state/city lookups
-      setCustomCountry(false); // Changed from true
-      setSelectedCountryCode(libCountry.isoCode);
-      setStateOptions(State.getStatesOfCountry(libCountry.isoCode));
+      // Country doesn't exist in library - manual mode
+      setCustomCountry(true);
+      setSelectedCountryCode("");
+      setSelectedStateCode("");
+      setStateOptions([]);
+      setCityOptions([]);
     }
-  } else {
-    // Country doesn't exist in library - manual mode
-    setCustomCountry(true);
-    setSelectedCountryCode("");
-    setSelectedStateCode("");
-    setStateOptions([]);
-    setCityOptions([]);
-  }
 
-  setFormData((prev) => ({
-    ...prev,
-    country: countryName,
-    state: "",
-    city: "",
-  }));
-  clearFieldError("country", setErrors);
-};
+    setFormData((prev) => ({
+      ...prev,
+      country: countryName,
+      state: "",
+      city: "",
+    }));
+    clearFieldError("country", setErrors);
+  };
   // const handleCountryChange = (countryName: string) => {
   //   const libCountry = Country.getAllCountries().find(
   //     (c) => c.name.toLowerCase() === countryName.toLowerCase()
@@ -312,12 +322,20 @@ export function VendorMaster() {
     if (searchTerm) {
       filtered = filtered.filter(
         (v) =>
-          (v.vendor_code||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (v.vendor_name||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (v.business_type||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (v.industry||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (v.vendor_website||"").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (v.country||"")?.toLowerCase().includes(searchTerm.toLowerCase()),
+          (v.vendor_code || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (v.vendor_name || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (v.business_type || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (v.industry || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.vendor_website || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          (v.country || "")?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
     if (businessTypeFilter) {
@@ -536,49 +554,51 @@ export function VendorMaster() {
   //   setCustomCountry(!!vendor.country && !isStandardCountry);
   // };
   const handleEdit = (vendor: Vendor) => {
-  setEditingVendor(vendor);
-  setFormData(vendor);
-  setErrors({});
+    setEditingVendor(vendor);
+    setFormData(vendor);
+    setErrors({});
 
-  // Check if country exists in the library
-  const libCountry = Country.getAllCountries().find(
-    (c) => c.name.toLowerCase() === (vendor.country || "").toLowerCase()
-  );
+    // Check if country exists in the library
+    const libCountry = Country.getAllCountries().find(
+      (c) => c.name.toLowerCase() === (vendor.country || "").toLowerCase(),
+    );
 
-  if (libCountry) {
-    // Country exists in library - enable dropdowns
-    setCustomCountry(false);
-    setSelectedCountryCode(libCountry.isoCode);
-    const states = State.getStatesOfCountry(libCountry.isoCode);
-    setStateOptions(states);
+    if (libCountry) {
+      // Country exists in library - enable dropdowns
+      setCustomCountry(false);
+      setSelectedCountryCode(libCountry.isoCode);
+      const states = State.getStatesOfCountry(libCountry.isoCode);
+      setStateOptions(states);
 
-    const state = states.find((s) => s.name === vendor.state);
-    if (state) {
-      setSelectedStateCode(state.isoCode);
-      setCityOptions(City.getCitiesOfState(libCountry.isoCode, state.isoCode));
+      const state = states.find((s) => s.name === vendor.state);
+      if (state) {
+        setSelectedStateCode(state.isoCode);
+        setCityOptions(
+          City.getCitiesOfState(libCountry.isoCode, state.isoCode),
+        );
+      } else {
+        setSelectedStateCode("");
+        setCityOptions([]);
+      }
     } else {
+      // Country doesn't exist in library - manual mode
+      setCustomCountry(true);
+      setSelectedCountryCode("");
       setSelectedStateCode("");
+      setStateOptions([]);
       setCityOptions([]);
     }
-  } else {
-    // Country doesn't exist in library - manual mode
-    setCustomCountry(true);
-    setSelectedCountryCode("");
-    setSelectedStateCode("");
-    setStateOptions([]);
-    setCityOptions([]);
-  }
 
-  let maxDept = 0;
-  for (let i = 1; i <= 10; i++) {
-    if (vendor[`dept${i}_poc_name` as keyof Vendor]) maxDept = i;
-  }
-  setDeptCount(maxDept);
+    let maxDept = 0;
+    for (let i = 1; i <= 10; i++) {
+      if (vendor[`dept${i}_poc_name` as keyof Vendor]) maxDept = i;
+    }
+    setDeptCount(maxDept);
 
-  const isStandard = industryOptions.includes(vendor.industry || "");
-  setIsCustomIndustry(!!vendor.industry && !isStandard);
-  setIsDrawerOpen(true);
-};
+    const isStandard = industryOptions.includes(vendor.industry || "");
+    setIsCustomIndustry(!!vendor.industry && !isStandard);
+    setIsDrawerOpen(true);
+  };
   const handleDelete = async () => {
     if (!deleteModal.vendor) return;
     setDeleteModal((prev) => ({ ...prev, isDeleting: true }));
@@ -657,14 +677,17 @@ export function VendorMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-     const dataToExport = filteredVendors.map(({ 
-    id,              
-         
-    ...cleanVendor   
-  }) => ({
-    ...cleanVendor,
-    industry: cleanVendor.industry || (industry_obj as any)?.industry_name || "N/A"
-  }));
+    const dataToExport = filteredVendors.map(
+      ({
+        id,
+
+        ...cleanVendor
+      }) => ({
+        ...cleanVendor,
+        industry:
+          cleanVendor.industry || (industry_obj as any)?.industry_name || "N/A",
+      }),
+    );
     exportToCSV(dataToExport, "vendors.csv");
     setToast({ message: "Vendors exported successfully", type: "success" });
   };
@@ -1033,6 +1056,22 @@ export function VendorMaster() {
       ),
     },
   ];
+
+  const businessTypes = [
+    "Dealer",
+    "Distributor",
+    "Manufacturer",
+    "Retailer",
+    "Wholesaler",
+  ];
+
+  // useEffect to change the contact number placeholder
+  useEffect(() => {
+    if (contactPhoneNumberInput.current) {
+      contactPhoneNumberInput.current.placeholder = `Enter phone number ${formData?.country || ""}`;
+    }
+  }, [formData.country]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
@@ -1084,59 +1123,30 @@ export function VendorMaster() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <select
+            <FilterSelect
+              options={businessTypes}
               value={businessTypeFilter}
-              onChange={(e) => setBusinessTypeFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="" hidden>Select Business Type</option>
-              <option value=" Dealer"> Dealer</option>
-              <option value=" Distributor"> Distributor</option>
-              <option value="Manufacturer">Manufacturer</option>
-              <option value="Retailer"> Retailer</option>
-              <option value="Wholesaler">Wholesaler</option>
-            </select>
-            <select
+              onChange={setBusinessTypeFilter}
+              placeholder="Select Business Type"
+            />
+            <FilterSelect
+              options={industryOptions}
               value={industryFilter}
-              onChange={(e) => setIndustryFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="" hidden> Select Industry</option>
-              {industryOptions.map((ind) => (
-                <option key={ind} value={ind}>
-                  {ind}
-                </option>
-              ))}
-            </select>
-            <select
+              onChange={setIndustryFilter}
+              placeholder="Select Industry"
+            />
+            <FilterSelect
+              options={ALLOWED_COUNTRIES}
               value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="" hidden>Select Country</option>
-              {ALLOWED_COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-              {Array.from(new Set(vendors.map((v) => v.country)))
-                .filter((c) => c && !ALLOWED_COUNTRIES.includes(c)).sort()
-                .map((c) => (
-                  <option key={c} value={c!}>
-                    {c}
-                  </option>
-                ))}
-            </select>
-
-            <select
+              onChange={setCountryFilter}
+              placeholder="Select Country"
+            />
+            <FilterSelect
+              options={["Active", "Inactive"]}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value=""hidden>Select Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              onChange={setStatusFilter}
+              placeholder="Select Status"
+            />
           </div>
           <div className="flex items-center gap-2 w-full lg:w-auto border-t lg:border-t-0 lg:border-l pt-4 lg:pt-0 lg:pl-4 border-gray-100">
             <button
@@ -1273,6 +1283,7 @@ export function VendorMaster() {
                   />
                 </div>
               )}
+              {/* Vendor name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Vendor Name <span className="text-red-500">*</span>
@@ -1300,6 +1311,7 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
+              {/* label */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Status
@@ -1322,7 +1334,8 @@ export function VendorMaster() {
                   <option value="Inactive">Inactive</option>
                 </select>
               </div>
-                <div>
+              {/* Country */}
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span className="flex items-center gap-2">
                     Country <span className="text-red-500">*</span>
@@ -1365,7 +1378,7 @@ export function VendorMaster() {
                       }}
                       className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none ${
                         errors.country ? "border-red-500" : "border-gray-300"
-                      }`}
+                      }  placeholder-text-2xl placeholder:font-sm placeholder:text-sm`}
                     />
                     {showCountrySuggestions &&
                       formData.country &&
@@ -1420,6 +1433,7 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
+              {/* State */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   State
@@ -1432,7 +1446,10 @@ export function VendorMaster() {
                     onChange={(e) =>
                       setFormData({ ...formData, state: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                    focus:ring-2 focus:ring-blue-500 transition-all outline-none
+                    placeholder:font-sm placeholder:text-sm
+                    "
                     placeholder="Enter state"
                   />
                 ) : !selectedCountryCode || isCustomCountry ? (
@@ -1451,6 +1468,7 @@ export function VendorMaster() {
                   />
                 )}
               </div>
+              {/* City */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   City
@@ -1464,7 +1482,10 @@ export function VendorMaster() {
                     onChange={(e) =>
                       setFormData({ ...formData, city: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg 
+                    focus:ring-2 focus:ring-blue-500 transition-all outline-none
+                    placeholder:font-sm placeholder:text-sm
+                    "
                     placeholder="Enter city"
                   />
                 ) : !selectedStateCode ? (
@@ -1485,7 +1506,7 @@ export function VendorMaster() {
                   />
                 )}
               </div>
-              
+              {/* Contact Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Email <span className="text-red-500">*</span>
@@ -1505,7 +1526,9 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
-              <div>
+
+              {/* Contact Phone number */}
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Phone
                 </label>
@@ -1523,7 +1546,43 @@ export function VendorMaster() {
                     {errors.contact_phone}
                   </p>
                 )}
+              </div> */}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Contact Phone
+                </label>
+                <div className="flex">
+                  {/* Country code prefix */}
+                  <span
+                    className="inline-flex items-center px-3 rounded-l-lg border border-r-0 justify-center
+                   border-gray-300 bg-gray-100 text-gray-600 w-10"
+                  >
+                    {getCountryByCode(selectedCountryCode)?.callingCode || ""}
+                  </span>
+                  {/* Phone input */}
+                  <input
+                    type="text"
+                    value={formData.contact_phone}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        contact_phone: e.target.value,
+                      });
+                      clearFieldError("contact_phone", setErrors);
+                    }}
+                    ref={contactPhoneNumberInput}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-sm"
+                  />
+                </div>
+                {errors.contact_phone && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.contact_phone}
+                  </p>
+                )}
               </div>
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span className="flex items-center gap-2">
@@ -1625,16 +1684,16 @@ export function VendorMaster() {
                   >
                     <option value="">Select Business Type</option>
                     <option value=" Dealer" className="text-gray-900">
-                       Dealer
+                      Dealer
                     </option>
                     <option value="Distributor" className="text-gray-900">
-                       Distributor
+                      Distributor
                     </option>
                     <option value=" Manufacturer" className="text-gray-900">
                       Manufacturer
                     </option>
                     <option value="Retailer" className="text-gray-900">
-                       Retailer
+                      Retailer
                     </option>
                     <option value=" Wholesaler" className="text-gray-900">
                       Wholesaler
@@ -1692,10 +1751,7 @@ export function VendorMaster() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
-              
 
-              
               <div className="hidden md:block"></div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1986,7 +2042,8 @@ export function VendorMaster() {
                   className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-bold text-sm"
                 >
                   <Plus size={20} />
-                  Add {deptCount === 0 ? "First Contact" : "Additional Contact"}
+                  {/* Add {deptCount === 0 ? "First Contact" : "Additional Contact"} */}
+                  Add Contact
                 </button>
               )}
             </div>

@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "axios": "^1.13.2",
+    "country-kit": "^1.1.0",
     "country-state-city": "^3.2.1",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
