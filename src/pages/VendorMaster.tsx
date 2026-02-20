@@ -124,7 +124,7 @@ export function VendorMaster() {
         ),
       );
       setToast({
-        message: `Successfully updated ${codes.length} vendors`,
+        message: `Successfully updated ${codes.length} ${ codes.length > 1 ? "vendors": "vendor"}`,
         type: "success",
       });
       setSelectedCodes(new Set());
