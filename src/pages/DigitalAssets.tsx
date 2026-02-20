@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { DigitalAssetAPI, MasterAPI } from "../lib/api";
 import DataTable from "../components/DataTable";
+import { FilterSelect } from "../components/Filter";
 
 const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_API_KEY_NAME,
@@ -496,19 +497,12 @@ export default function DigitalAssets() {
                 </div>
 
                 {/* filters */}
-                <select
+                <FilterSelect
+                  options={brands}
                   value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">All Brands</option>
-
-                  {brands.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedBrand}
+                  placeholder="All Brands"
+                />
 
                 {/* category filter */}
                 <select
@@ -570,32 +564,32 @@ export default function DigitalAssets() {
                 </span> 
               </label> */}
             </div>
-            <div className="flex items-center justify-between p-1">
-              <p className="text-sm text-gray-500 italic">
-                {searchTerm || selectedBrand || selectedCategory ? (
-                  <span>
-                    Showing <strong>{filteredAssets.length}</strong> matching
-                    results out of {assets.length} total assets
-                  </span>
-                ) : (
-                  <span>
-                    Showing all <strong>{assets.length}</strong> assets
-                  </span>
-                )}
-              </p>
-              {(searchTerm || selectedBrand || selectedCategory) && (
-                <button
-                  onClick={() => {
-                    setSearchTerm("");
-                    setSelectedBrand("");
-                    setSelectedCategory("");
-                  }}
-                  className="text-sm text-blue-600 hover:underline font-medium"
-                >
-                  Clear all filters
-                </button>
+          </div>
+          <div className="flex items-center justify-between p-4">
+            <p className="text-sm text-gray-500 italic">
+              {searchTerm || selectedBrand || selectedCategory ? (
+                <span>
+                  Showing <strong>{filteredAssets.length}</strong> matching
+                  results out of {assets.length} total assets
+                </span>
+              ) : (
+                <span>
+                  Showing all <strong>{assets.length}</strong> assets
+                </span>
               )}
-            </div>
+            </p>
+            {(searchTerm || selectedBrand || selectedCategory) && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedBrand("");
+                  setSelectedCategory("");
+                }}
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                Clear all filters
+              </button>
+            )}
           </div>
         </div>
 
