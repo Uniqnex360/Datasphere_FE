@@ -38,17 +38,40 @@ export function calculateCompletenessScore(product: Partial<Product>): Completen
   : Math.round((featuresCount / 5) * 100);
   const features_detail = `${featuresCount}/5 features filled`;
 
+  // let imagesCount = 0;
+  // //@ts-ignore
+  // let images = product.images
+  // console.log("images", images)
+  // if (product.image_1_url) imagesCount++;
+  // if (product.image_2_url) imagesCount++;
+  // if (product.image_3_url) imagesCount++;
+  // if (product.image_4_url) imagesCount++;
+  // if (product.image_5_url) imagesCount++;
+
+  // let images_score = 0;
+  // if (imagesCount >= 2) images_score = 100;
+  // else if (imagesCount === 1) images_score = 50;
+  // else images_score = 0;
+
   let imagesCount = 0;
-  if (product.image_1_url) imagesCount++;
-  if (product.image_2_url) imagesCount++;
-  if (product.image_3_url) imagesCount++;
-  if (product.image_4_url) imagesCount++;
-  if (product.image_5_url) imagesCount++;
+  //@ts-ignore
+  const images = product.images || {};
+
+  // Count valid image URLs
+  imagesCount = Object.values(images).filter(
+     //@ts-ignore
+    (img) => img?.url && img.url.trim()
+  ).length;
 
   let images_score = 0;
-  if (imagesCount >= 2) images_score = 100;
-  else if (imagesCount === 1) images_score = 50;
-  else images_score = 0;
+
+  if (imagesCount >= 2) {
+    images_score = 100;
+  } else if (imagesCount === 1) {
+    images_score = 50;
+  } else {
+    images_score = 0;
+  }
 
   const images_detail = `${imagesCount} image${imagesCount !== 1 ? 's' : ''} found`;
 
