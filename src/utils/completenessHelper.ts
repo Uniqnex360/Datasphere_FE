@@ -16,16 +16,26 @@ export interface CompletenessBreakdown {
 
 export function calculateCompletenessScore(product: Partial<Product>): CompletenessBreakdown {
   let featuresCount = 0;
-  if (product.feature_1) featuresCount++;
-  if (product.feature_2) featuresCount++;
-  if (product.feature_3) featuresCount++;
-  if (product.feature_4) featuresCount++;
-  if (product.feature_5) featuresCount++;
-  if (product.feature_6) featuresCount++;
-  if (product.feature_7) featuresCount++;
-  if (product.feature_8) featuresCount++;
-
-  const features_score = featuresCount >= 5 ? 100 : 80;
+  console.log(product.feature_1)
+  // @ts-ignore
+  if (product?.features_1) featuresCount++;
+  // @ts-ignore
+  if (product?.features_2) featuresCount++;
+  // @ts-ignore
+  if (product?.features_3) featuresCount++;
+  // @ts-ignore
+  if (product?.features_4) featuresCount++;
+  // @ts-ignore
+  if (product?.features_5) featuresCount++;
+  // @ts-ignore
+  if (product?.features_6) featuresCount++;
+  // @ts-ignore
+  if (product?.features_7) featuresCount++;
+  // @ts-ignore
+  if (product.features_8) featuresCount++;
+  const features_score = featuresCount >= 5
+  ? 100
+  : Math.round((featuresCount / 5) * 100);
   const features_detail = `${featuresCount}/5 features filled`;
 
   let imagesCount = 0;
@@ -43,10 +53,10 @@ export function calculateCompletenessScore(product: Partial<Product>): Completen
   const images_detail = `${imagesCount} image${imagesCount !== 1 ? 's' : ''} found`;
 
   const titleLength = (product.product_name || '').length;
-  let title_score = 50;
+  let title_score = 0;
   if (titleLength >= 80) title_score = 100;
   else if (titleLength >= 50) title_score = 80;
-  else title_score = 50;
+  else title_score = 0;
 
   const title_detail = `${titleLength} characters`;
 
@@ -66,7 +76,7 @@ export function calculateCompletenessScore(product: Partial<Product>): Completen
     description_detail = 'No descriptions';
   }
 
-  const attributes_score = 80;
+  const attributes_score = 0;
   const attributes_detail = '3/5 attributes filled';
 
   const overall_score = Math.round(

@@ -137,7 +137,7 @@ export default function DataTable({
         {/* vertical scroll */}
         <div ref={divRef} style={{ maxHeight: height, overflowY: "auto" }}>
           <table className="w-full border-collapse table-fixed">
-            <thead className="bg-gray-50 border-b sticky top-0 z-10">
+            <thead className="bg-gray-50 border-b sticky top-0 z-0">
               <tr>
                 {columns.map((column) => (
                   <th

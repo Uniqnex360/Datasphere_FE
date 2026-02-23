@@ -39,6 +39,18 @@ import {
 } from "../utils/completenessHelper";
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { FilterSelect } from "../components/Filter";
+import { SearchableSelect } from "../components/SearchableSelect";
+
+type MetaAttributeValue = {
+  value: any,
+  uom: any
+}
+
+type MetaAttribute = {
+  id: string,
+  attribute_name: string,
+  values: MetaAttributeValue[]
+}
 
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
@@ -53,7 +65,7 @@ export function Products() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets"
+    "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets" | "pricing"
   >("basic");
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -70,7 +82,9 @@ export function Products() {
   const [variantStatusFilter, setVariantStatusFilter] = useState("");
   const [category1Filter, setCategory1Filter] = useState("");
   const [productTypeFilter, setProductTypeFilter] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<Set<Product>>(new Set());
   const [sortKey, setSortKey] = useState("product_code");
+  const [metaAttribute, setMetaAttribute] = useState<MetaAttribute[]>([]);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [formData, setFormData] = useState<Partial<Product>>({
     product_name: "",
@@ -151,6 +165,45 @@ export function Products() {
     return result;
   };
 
+  // load attributes data on selection of the category
+  useEffect(() => {
+  const fetchAndProcessAttributes = async () => {
+    try {
+      const category_code = formData?.category_code || "";
+      if (!category_code) return;
+
+      const attributeResponse: MetaAttribute[] = await MasterAPI.getAttributeMeta(category_code);
+
+      // Transform API response to match UI structure
+      const attributes: Record<string, ProductAttributeDefinition & { options?: ProductAttributeValue[]; value?: string; uom?: string }> = {};
+
+      attributeResponse.forEach((attr, index) => {
+        const key = `ATTR_${index + 1}`; // Unique key for UI
+        attributes[key] = {
+          attribute_code: attr.id,
+          attribute_name: attr.attribute_name,
+          attribute_type: "string", // or determine from attr
+          data_type: "string",      // or determine from attr
+          unit: undefined,
+          options: attr.values?.map((v) => ({ value: v.value, uom: v.uom })) || [],
+          value: "", // default empty
+          uom: attr.values && attr.values.length > 0 ? attr.values[0].uom : "", // default UOM
+        };
+      });
+
+      setMetaAttribute(attributeResponse);
+      setFormData((prev) => ({
+        ...prev,
+        attributes,
+      }));
+    } catch (error) {
+      console.error("Error fetching attributes:", error);
+    }
+  };
+
+  fetchAndProcessAttributes();
+}, [formData?.category_code]);
+
   useEffect(() => {
     filterAndSortProducts();
   }, [
@@ -185,7 +238,6 @@ export function Products() {
         productsData || [],
       );
       setProducts(productsWithStatus);
-      console.log(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
       const prossedCategories = processCategoryData(categoriesData || []);
@@ -226,6 +278,8 @@ export function Products() {
           p.product_code.toLowerCase().includes(term) ||
           p.product_name.toLowerCase().includes(term) ||
           p.brand_name.toLowerCase().includes(term) ||
+          p.vendor_name.toLowerCase().includes(term) ||
+          p.mpn.toLowerCase().includes(term) ||
           generateBreadcrumb(p as any)
             .toLowerCase()
             .includes(term),
@@ -271,6 +325,15 @@ export function Products() {
     if (!formData.product_name?.trim()) {
       newErrors.product_name = "Product name is required";
     }
+    if (!formData.mpn?.trim()) {
+      newErrors.mpn = "MPN is required"
+    }
+    if (!formData.brand_code?.trim() || formData.brand_code === "") {
+      newErrors.brand_code = "Brand name is required";
+    }
+    if (!formData.vendor_code?.trim()) {
+      newErrors.vendor_code = "Vendor name is required"
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -315,25 +378,52 @@ export function Products() {
     }
   };
   const handleSubmit = async () => {
-    if (!validateForm()) return;
-    try {
-      if (editingProduct) {
-        console.log("form data", formData)
-        await ProductAPI.update(editingProduct.product_code, formData);
-        setToast({ message: "Product updated successfully", type: "success" });
-      } else {
-        await ProductAPI.create(formData);
-        setToast({ message: "Product added successfully", type: "success" });
+      if (!validateForm()) return;
+
+      try {
+        if (editingProduct) {
+          await ProductAPI.update(editingProduct.product_code, formData);
+          setToast({ message: "Product updated successfully", type: "success" });
+        } else {
+          await ProductAPI.create(formData);
+          setToast({ message: "Product added successfully", type: "success" });
+        }
+
+        // Move to next tab
+        switch (activeTab) {
+          case "basic":
+            setActiveTab("descriptions");
+            break;
+          case "descriptions":
+            setActiveTab("pricing");
+            break;
+          case "pricing":
+            setActiveTab("attributes");
+            break;
+          case "attributes":
+            setActiveTab("variants");
+            break;
+          case "variants":
+            setActiveTab("related");
+            break;
+          case "related":
+            setActiveTab("assets");
+            break;
+          case "assets":
+            // Only here you close everything
+            setActiveTab("basic");
+            setIsDrawerOpen(false);
+            setEditingProduct(null);
+            resetForm();
+            loadData();
+            break;
+        }
+      } catch (error: any) {
+        setToast({message: error?.response?.data?.detail?.mpn ||  error.message, type:"error"})
       }
-      setIsDrawerOpen(false);
-      setEditingProduct(null);
-      resetForm();
-      loadData();
-    } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
-    }
-  };
+    };
   const handleEdit = (product: ProductWithVariantStatus) => {
+    console.log("update", formData, product)
     setEditingProduct(product);
     setFormData(product);
     setErrors({});
@@ -341,11 +431,16 @@ export function Products() {
     setIsDrawerOpen(true);
   };
   const handleClone = (product: ProductWithVariantStatus) => {
-    const clonedData = { ...product };
-    delete clonedData.product_code;
-    delete clonedData.created_at;
-    delete clonedData.updated_at;
-    clonedData.product_name = `${product.product_name} (Copy)`;
+    console.log("Product", product);
+
+    // Create a new object without product_code, created_at, updated_at, and mpn
+    const { product_code, created_at, updated_at, mpn, ...rest } = product;
+
+    const clonedData: Partial<ProductWithVariantStatus> = {
+      ...rest,
+      product_name: `${product.product_name} (Copy)`, // update name
+    };
+
     setEditingProduct(null);
     setFormData(clonedData);
     setErrors({});
@@ -1136,8 +1231,52 @@ export function Products() {
   interface Row {
     images?: ImagesObj;
   }
+
+  // handling table row selection
+  const toggleSelect = (code: Product) => {
+    const newSet = new Set(selectedProducts);
+    if (newSet.has(code)) newSet.delete(code);
+    else newSet.add(code);
+    setSelectedProducts(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.size === filteredProducts.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(
+        new Set(filteredProducts.map((v) => v)),
+      );
+    }
+  };
+  
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
+    {
+          key: "selection",
+          label: (
+            <input
+              type="checkbox"
+              checked={
+                selectedProducts.size === filteredProducts.length &&
+                filteredProducts.length > 0
+              }
+              onChange={toggleSelectAll}
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+            />
+          ) as any,
+          width: "100px",
+          render: (_: any, row: Product) => (
+            <div onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={selectedProducts.has(row)}
+                onChange={() => toggleSelect(row)}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
+          ),
+        },
     {
       key: "image",
       label: "Image",
@@ -1317,7 +1456,7 @@ export function Products() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col h-full">
-        <div className="sticky top-0 left-0">
+        <div className="sticky top-0 left-0 z-10">
           <div className="flex items-center justify-between ">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -1362,52 +1501,51 @@ export function Products() {
               </button>
             </div>
           </div>
-          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
+          <div className="z-40 bg-white rounded-xl border border-slate-200 p-4 ">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              <FilterSelect
+              <SearchableSelect
                 options={industries.map((value) => value.industry_name)}
-                value={industryFilter}
-                onChange={setIndustryFilter}
-                placeholder="All Industries"
+                value={formData.industry_name || ""}
+                onChange={(val) => setIndustryFilter(val)}
+                placeholder="Industry"
               />
-              <FilterSelect
+              <SearchableSelect
                 options={Array.from(
                   new Set(products.filter((p) => p.brand_name).map((p) => p.brand_name))
                 ).sort()}
-                value={brandFilter}
-                onChange={setBrandFilter}
-                placeholder="All Brands"
+                value={brandFilter|| ""}
+                onChange={(val) => setBrandFilter(val)}
+                placeholder="Brands"
               />
-
               {/* Vendor Filter */}
-              <FilterSelect
+              <SearchableSelect
                 options={Array.from(new Set(products.filter(p => p.vendor_name).map(p => p.vendor_name))).sort()}
-                value={vendorFilter}
-                onChange={setVendorFilter}
-                placeholder="All Vendors"
+                value={vendorFilter|| ""}
+                onChange={(val) => setVendorFilter(val)}
+                placeholder="Vendors"
               />
-
               {/* Variant Status Filter */}
-              <FilterSelect
+              <SearchableSelect
                 options={["Base", "Variant", "Parent"]}
-                value={variantStatusFilter}
-                onChange={setVariantStatusFilter}
-                placeholder="All Status"
+                value={variantStatusFilter|| ""}
+                onChange={(val) => setVariantStatusFilter(val)}
+                placeholder="Status"
               />
 
               {/* Category 1 Filter */}
-              <FilterSelect
+              <SearchableSelect
                 options={Array.from(new Set(categories.filter(c => c.category_1).map(c => c.category_1))).sort()}
-                value={category1Filter}
+                value={category1Filter|| ""}
                 onChange={(value) => {
                   setCategory1Filter(value);
                   setProductTypeFilter(""); // reset dependent filter
                 }}
-                placeholder="All Category"
+                placeholder="Category"
               />
+              </div>
 
               {/* Product Type Filter */}
-              <FilterSelect
+              {/* <FilterSelect
                 options={category1Filter
                   ? Array.from(new Set(products
                       .filter(p => p.category_1 === category1Filter && p.product_type)
@@ -1417,9 +1555,9 @@ export function Products() {
                 value={productTypeFilter}
                 onChange={setProductTypeFilter}
                 placeholder="All Product Types"
-              />
+              /> */}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-4 justify-start">
                 <button
                   onClick={handleExport}
                   className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -1459,7 +1597,7 @@ export function Products() {
                     alt="Template"
                   />
                 </button>
-              </div>
+              
             </div>
           </div>
           <div className="flex items-center justify-between px-1 py-4">
@@ -1504,6 +1642,37 @@ export function Products() {
               </button>
             )}
           </div>
+          {selectedProducts.size > 0 && (
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+              {selectedProducts.size} selected
+            </span>
+            <p className="text-sm font-medium">Bulk Actions:</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* <button
+              onClick={() => handleBulkStatusChange(true)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
+            >
+              <CheckCircle size={14} /> Set Active
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange(false)}
+              className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
+            >
+              <X size={14} /> Set Inactive
+            </button> */}
+            <div className="w-px h-6 bg-white/20 mx-2"></div>
+            <button
+              onClick={() => setSelectedProducts(new Set())}
+              className="px-3 py-1.5 hover:bg-white/10 rounded-lg text-xs font-medium"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
         </div>
 
         <div className="">
@@ -1585,107 +1754,94 @@ export function Products() {
                     </p>
                   )}
                 </div>
+                {/* Brand */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Brand
                   </label>
-                  <select
-                    value={formData.brand_code}
-                    onChange={(e) => handleBrandChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select brand</option>
-                    {[...brands]
-                      .sort((a, b) =>
-                        (a.brand_name || "").localeCompare(b.brand_name || ""),
-                      )
-                      .map((brand) => (
-                        <option key={brand.brand_code} value={brand.brand_code}>
-                          {brand.brand_name}
-                        </option>
-                      ))}
-                  </select>
+                  <SearchableSelect
+                    options={brands
+                      .filter(b => b.brand_name) // remove empty names
+                      .sort((a, b) => (a.brand_name || "").localeCompare(b.brand_name || ""))
+                      .map(b => b.brand_name) // only send names as options
+                    }
+                    value={brands.find(b => b.brand_code === formData.brand_code)?.brand_name || ""}
+                    onChange={(selectedName) => {
+                      const selectedBrand = brands.find(b => b.brand_name === selectedName);
+                      handleBrandChange(selectedBrand?.brand_code || "");
+                    }}
+                    placeholder="Select brand"
+                  
+                  />
+                  {errors.brand_code && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.brand_code}
+                    </p>
+                  )}
                 </div>
+                {/* Vendor */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Vendor
                   </label>
-                  <select
-                    value={formData.vendor_code}
-                    onChange={(e) => handleVendorChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select vendor</option>
-                    {[...vendors]
-                      .sort((a, b) =>
-                        (a.vendor_name || "").localeCompare(
-                          b.vendor_name || "",
-                        ),
-                      )
-                      .map((vendor) => (
-                        <option
-                          key={vendor.vendor_code}
-                          value={vendor.vendor_code}
-                        >
-                          {vendor.vendor_name}
-                        </option>
-                      ))}
-                  </select>
+                  <SearchableSelect
+                    options={vendors
+                      .filter(v => v.vendor_name) // remove empty names
+                      .sort((a, b) => (a.vendor_name || "").localeCompare(b.vendor_name || ""))
+                      .map(v => v.vendor_name) // only pass names as options
+                    }
+                    value={vendors.find(v => v.vendor_code === formData.vendor_code)?.vendor_name || ""}
+                    onChange={(selectedName) => {
+                      const selectedVendor = vendors.find(v => v.vendor_name === selectedName);
+                      handleVendorChange(selectedVendor?.vendor_code || "");
+                    }}
+                    placeholder="Select vendor"
+                  />
+                  {errors.vendor_code && (
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.vendor_code}
+                    </p>
+                  )}
                 </div>
+                {/* Category */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category
                   </label>
-                  <select
-                    value={formData.category_code}
-                    onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select category</option>
-                    {[...categories]
-                      .sort((a, b) =>
-                        (a.breadcrumb || "").localeCompare(b.breadcrumb || ""),
-                      )
-                      .map((category) => (
-                        <option
-                          key={category.category_code}
-                          value={category.category_code}
-                        >
-                          {category.breadcrumb}
-                        </option>
-                      ))}
-                  </select>
+                  <SearchableSelect
+                    options={categories
+                      .filter(c => c.breadcrumb) // remove empty breadcrumbs
+                      .sort((a, b) => (a.breadcrumb || "").localeCompare(b.breadcrumb || ""))
+                      .map(c => c.breadcrumb) // only pass breadcrumb as option
+                    }
+                    value={categories.find(c => c.category_code === formData.category_code)?.breadcrumb || ""}
+                    onChange={(selectedBreadcrumb) => {
+                      const selectedCategory = categories.find(c => c.breadcrumb === selectedBreadcrumb);
+                      handleCategoryChange(selectedCategory?.category_code || "");
+                    }}
+                    placeholder="Select category"
+                  />
                 </div>
+                {/* Industry */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Industry
                   </label>
-                  <select
-                    value={formData.industry_name}
-                    onChange={(e) =>
+                  <SearchableSelect
+                    options={industries
+                      .filter(i => i.industry_name) // remove empty names
+                      .sort((a, b) => (a.industry_name || "").localeCompare(b.industry_name || ""))
+                      .map(i => i.industry_name) // pass names as options
+                    }
+                    value={formData.industry_name || ""}
+                    onChange={(selectedName) =>
                       setFormData({
                         ...formData,
-                        industry_name: e.target.value,
+                        industry_name: selectedName || "",
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select industry</option>
-                    {[...industries]
-                      .sort((a, b) =>
-                        (a.industry_name || "").localeCompare(
-                          b.industry_name || "",
-                        ),
-                      )
-                      .map((industry) => (
-                        <option
-                          key={industry.industry_code}
-                          value={industry.industry_name}
-                        >
-                          {industry.industry_name}
-                        </option>
-                      ))}
-                  </select>
+                    placeholder="Select industry"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1720,7 +1876,7 @@ export function Products() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Model Number
+                    Model
                   </label>
                   <input
                     type="text"
@@ -1826,6 +1982,7 @@ export function Products() {
                   <div className="text-right">
                     {(() => {
                       const breakdown = calculateCompletenessScore(formData);
+                      console.log(breakdown, "breadkdown")
                       const colors = getScoreColorClasses(
                         breakdown.overall_score,
                       );
@@ -1959,7 +2116,7 @@ export function Products() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     MPN
                   </label>
@@ -1971,7 +2128,7 @@ export function Products() {
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     GTIN
@@ -2512,7 +2669,7 @@ export function Products() {
             onClick={handleSubmit}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            {editingProduct ? "Update" : "Add"} Product
+            {/* {editingProduct ? "Update" : "Add"} Product */} Save
           </button>
         </div>
       </Drawer>
