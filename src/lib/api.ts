@@ -257,6 +257,10 @@ export const MasterAPI = {
     const response = await api.patch(`/master/${type}/${code}`);
     return response.data;
   },
+  getAttributeMeta : async (category_code : string) => {
+    const response = await api.get(`/master/categories/meta/${category_code}/attributes`);
+    return response.data;
+  },
 };
 export const AuthAPI = {
   login: async (params: URLSearchParams) => {
