@@ -160,6 +160,7 @@ export function Products() {
       console.error("Failed to load variant attributes:", error);
     }
   };
+  console.log('VARIANTATTRIBUTES',variantAttributes)
   useEffect(() => {
     if (editingProduct && editingProduct.product_code) {
       loadVariants(editingProduct.product_code);
@@ -2331,7 +2332,7 @@ export function Products() {
                 )}
               </div>
 
-              {variantAttributes.length >= 2 ? (
+              {variantAttributes.length >= 1 ? (
                 editingProduct ? (
                   <div className="space-y-4">
                     {/* Variant Attributes Info */}

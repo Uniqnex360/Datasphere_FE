@@ -223,7 +223,7 @@ export const MasterAPI = {
     return response.data;
   },
   getAttributes: async () => {
-    const response = await api.get("/master/attributes");
+    const response = await api.get("/master/attributes/");
     return response.data;
   },
   update: async (
