@@ -36,26 +36,65 @@ export const ProductAPI = {
     const response = await api.post("/products/upsert", data);
     return response.data;
   },
-getAll: async (skip = 0, limit = 100,  search = "", filters = {}) => {
+  
+  getAll: async (skip = 0, limit = 100, search = "", filters = {}) => {
     const response = await api.get("/products/", {
       params: { skip, limit, search, ...filters },
     });
     return response.data;
   },
+  
   getOne: async (code: string) => {
     const response = await api.get(`/products/${code}`);
     return response.data;
   },
+  
   create: async (data: any) => {
     const response = await api.post("/products/", data);
     return response.data;
   },
+  
   update: async (code: string, data: any) => {
     const response = await api.put(`/products/${code}`, data);
     return response.data;
   },
+  
   delete: async (code: string) => {
     const response = await api.delete(`/products/${code}`);
+    return response.data;
+  },
+
+  // === VARIANT METHODS ===
+  
+  createVariant: async (parentProductCode: string, variantData: any) => {
+    const response = await api.post(
+      `/products/${parentProductCode}/variants`,
+      variantData
+    );
+    return response.data;
+  },
+
+  getVariants: async (parentProductCode: string) => {
+    const response = await api.get(`/products/${parentProductCode}/variants`);
+    return response.data;
+  },
+
+  updateVariant: async (
+    parentProductCode: string,
+    variantCode: string,
+    variantData: any
+  ) => {
+    const response = await api.put(
+      `/products/${parentProductCode}/variants/${variantCode}`,
+      variantData
+    );
+    return response.data;
+  },
+
+  deleteVariant: async (parentProductCode: string, variantCode: string) => {
+    const response = await api.delete(
+      `/products/${parentProductCode}/variants/${variantCode}`
+    );
     return response.data;
   },
 };

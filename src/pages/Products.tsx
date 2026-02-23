@@ -53,10 +53,15 @@ export function Products() {
   const [loading, setLoading] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<any>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [activeTab, setActiveTab] = useState<
     "basic" | "descriptions" | "attributes" | "variants" | "related" | "assets"
   >("basic");
+  const [deleteVariantModal, setDeleteVariantModal] = useState<{
+    isOpen: boolean;
+    variant: any | null;
+  }>({ isOpen: false, variant: null });
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
     product: ProductWithVariantStatus | null;
@@ -81,11 +86,13 @@ export function Products() {
   const [variantFormData, setVariantFormData] = useState<{
     selectedValues: Record<string, string>;
     sku: string;
+    mpn: string;
     price: number;
     qty: number;
   }>({
     selectedValues: {},
     sku: "",
+    mpn: "",
     price: 0,
     qty: 0,
   });
@@ -160,7 +167,7 @@ export function Products() {
       console.error("Failed to load variant attributes:", error);
     }
   };
-  console.log('VARIANTATTRIBUTES',variantAttributes)
+  console.log("VARIANTATTRIBUTES", variantAttributes);
   useEffect(() => {
     if (editingProduct && editingProduct.product_code) {
       loadVariants(editingProduct.product_code);
@@ -169,26 +176,23 @@ export function Products() {
 
   const loadVariants = async (parentProductCode: string) => {
     try {
-      const allProducts = await ProductAPI.getAll();
-      const childVariants = allProducts.filter(
-        (p: Product) => p.parent_sku === parentProductCode,
+      const response = await ProductAPI.getVariants(parentProductCode);
+
+      const variantsObj = response.variants || {};
+      const variantsArray = Object.entries(variantsObj).map(
+        ([id, data]: [string, any]) => ({
+          variant_id: id,
+          ...data,
+        }),
       );
-      setVariants(childVariants);
+
+      setVariants(variantsArray);
     } catch (error) {
       console.error("Failed to load variants:", error);
+      setToast({ message: "Failed to load variants", type: "error" });
     }
   };
   const processCategoryData = (categories: Category[]): Category[] => {
-    /**
-     * if available brudcrumb's is
-     * X > Y > Z
-     * X > Y
-     *
-     * returns
-     * X > Y > Z
-     */
-
-    // Sort categories by breadcrumb length descending (deepest first)
     const sorted = [...categories].sort(
       (a, b) => b.breadcrumb.split(">").length - a.breadcrumb.split(">").length,
     );
@@ -198,13 +202,11 @@ export function Products() {
     sorted.forEach((cat) => {
       const catParts = cat.breadcrumb.split(">").map((s) => s.trim());
 
-      // Check if this breadcrumb is a prefix of any already added breadcrumb
       const isPrefix = result.some((existing) => {
         const existingParts = existing.breadcrumb
           .split(">")
           .map((s) => s.trim());
         if (catParts.length >= existingParts.length) return false;
-        // Check if all parts match up to the length of catParts
         return catParts.every((part, idx) => part === existingParts[idx]);
       });
 
@@ -260,6 +262,88 @@ export function Products() {
       setToast({ message: "Failed to load data", type: "error" });
     } finally {
       setLoading(false);
+    }
+  };
+  const handleUpdateVariant = async () => {
+    if (!editingProduct || !editingVariant) return;
+
+    try {
+      if (
+        Object.keys(variantFormData.selectedValues).length !==
+        variantAttributes.length
+      ) {
+        setToast({
+          message: "Please select all variant attributes",
+          type: "error",
+        });
+        return;
+      }
+
+      if (!variantFormData.sku.trim()) {
+        setToast({ message: "SKU is required", type: "error" });
+        return;
+      }
+
+      if (!variantFormData.price || variantFormData.price <= 0) {
+        setToast({ message: "Valid price is required", type: "error" });
+        return;
+      }
+
+      const variantAttrsPayload = Object.entries(
+        variantFormData.selectedValues,
+      ).reduce(
+        (acc, [code, value]) => {
+          const attr = variantAttributes.find((a) => a.attribute_code === code);
+          if (attr) {
+            acc[code] = {
+              name: attr.attribute_name,
+              value: value,
+              uom: attr.unit || "",
+              type: attr.attribute_type,
+            };
+          }
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
+
+      const variantName = `${editingProduct.product_name} - ${Object.entries(
+        variantFormData.selectedValues,
+      )
+        .map(([, value]) => value)
+        .join(" ")}`;
+
+      const updateData = {
+        product_name: variantName,
+        sku: variantFormData.sku,
+        mpn: variantFormData.mpn || editingVariant.mpn,
+        price: variantFormData.price,
+        qty: variantFormData.qty || 0,
+        attributes: variantAttrsPayload,
+      };
+
+      await ProductAPI.updateVariant(
+        editingProduct.product_code,
+        editingVariant.variant_id,
+        updateData,
+      );
+      setToast({ message: "Variant updated successfully", type: "success" });
+      setShowVariantModal(false);
+      setEditingVariant(null);
+      setVariantFormData({
+        selectedValues: {},
+        sku: "",
+        mpn: "",
+        price: 0,
+        qty: 0,
+      });
+
+      await loadVariants(editingProduct.product_code);
+    } catch (error: any) {
+      setToast({
+        message: error.message || "Failed to update variant",
+        type: "error",
+      });
     }
   };
   const calculateVariantStatus = async (
@@ -903,29 +987,6 @@ export function Products() {
         }
       }
 
-      // if (vendorsToCreate.size > 0) {
-      //   try {
-      //     const existingVendors = await MasterAPI.getVendors();
-      //     const existingCodes = new Set(
-      //       existingVendors.map((v: any) => v.vendor_code),
-      //     );
-      //     const newVendors = Array.from(vendorsToCreate.values()).filter(
-      //       (v) => !existingCodes.has(v.vendor_code),
-      //     );
-
-      //     for (const vendor of newVendors) {
-      //       try {
-      //         await MasterAPI.create("vendors", vendor);
-      //         createdVendors++;
-      //       } catch (err) {
-      //         console.warn("Vendor create failed", err);
-      //       }
-      //     }
-      //   } catch (e) {
-      //     console.error("Vendor sync error", e);
-      //   }
-      // }
-      // Create Vendors
       const latestIndustries = await MasterAPI.getIndustries();
 
       const industryNameToIdMap = new Map(
@@ -1189,6 +1250,45 @@ export function Products() {
   const getCategoryBreadcrumb = (product: Product): string => {
     return generateBreadcrumb(product as any);
   };
+  const handleDeleteVariant = async () => {
+    if (!editingProduct || !deleteVariantModal.variant) return;
+
+    try {
+      await ProductAPI.deleteVariant(
+        editingProduct.product_code,
+        deleteVariantModal.variant.variant_id,
+      );
+      setToast({ message: "Variant deleted successfully", type: "success" });
+      setDeleteVariantModal({ isOpen: false, variant: null });
+      await loadVariants(editingProduct.product_code);
+    } catch (error: any) {
+      setToast({
+        message: error.message || "Failed to delete variant",
+        type: "error",
+      });
+    }
+  };
+  const handleEditVariant = (variant: any) => {
+    const selectedValues: Record<string, string> = {};
+
+    variantAttributes.forEach((attr) => {
+      const variantAttrData = variant.attributes?.[attr.attribute_code];
+      if (variantAttrData) {
+        selectedValues[attr.attribute_code] = variantAttrData.value || "";
+      }
+    });
+
+    setVariantFormData({
+      selectedValues,
+      sku: variant.sku || "",
+      mpn: variant.mpn || "",
+      price: variant.price || 0,
+      qty: variant.qty || 0,
+    });
+
+    setEditingVariant(variant);
+    setShowVariantModal(true);
+  };
   interface ImageItem {
     url?: string;
     name?: string;
@@ -1202,7 +1302,6 @@ export function Products() {
     images?: ImagesObj;
   }
   const columns = [
-    // { key: "product_code", label: "Code", sortable: true },
     {
       key: "image",
       label: "Image",
@@ -1224,7 +1323,6 @@ export function Products() {
           );
         }
 
-        // Convert object to array
         const imagesArray = Object.values(imagesObj).filter(
           (img): img is ImageItem => !!img?.url,
         );
@@ -1244,7 +1342,6 @@ export function Products() {
           );
         }
 
-        // Pick a random image
         const randomIndex = Math.floor(Math.random() * imagesArray.length);
         const randomImage = imagesArray[randomIndex];
 
@@ -1263,7 +1360,6 @@ export function Products() {
       },
     },
     { key: "mpn", label: "MPN", customTruncate: true, truncateLength: 15 },
-    // { key: "product_name", label: "Name", sortable: true, customTruncate: true, truncateLength: 50},
     {
       key: "product_name",
       label: "Name",
@@ -1277,7 +1373,7 @@ export function Products() {
             WebkitBoxOrient: "vertical",
             textOverflow: "ellipsis",
           }}
-          title={row.product_name} // optional: show full text on hover
+          title={row.product_name}
         >
           {row.product_name}
         </div>
@@ -1299,14 +1395,7 @@ export function Products() {
       truncateLength: 15,
       render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
-    // { key: "product_type", label: "Type", sortable: true },
-    // {
-    //   key: "variant_status",
-    //   label: "Status",
-    //   sortable: false,
-    //   render: (_: any, row: ProductWithVariantStatus) =>
-    //     getVariantStatusBadge(row.variant_status),
-    // },
+
     {
       key: "completeness_score",
       label: "Quality Score",
@@ -1339,7 +1428,7 @@ export function Products() {
             WebkitBoxOrient: "vertical",
             textOverflow: "ellipsis",
           }}
-          title={row.category_breadcrumb} // optional: show full text on hover
+          title={row.category_breadcrumb}
         >
           {row.category_breadcrumb}
         </div>
@@ -1385,54 +1474,85 @@ export function Products() {
     { id: "related", label: "Related" },
     { id: "assets", label: "Assets" },
   ];
+
   const handleCreateVariant = async () => {
     if (!editingProduct) return;
 
     try {
-      const variantProduct: Partial<Product> = {
-        ...editingProduct,
-        product_name: `${editingProduct.product_name} - ${Object.entries(
-          variantFormData.selectedValues,
-        )
-          .map(([code, value]) => value)
-          .join(" ")}`,
-        sku: variantFormData.sku,
-        price: variantFormData.price,
-        qty: variantFormData.qty,
-        parent_sku: editingProduct.product_code,
-        attributes: {
-          ...editingProduct.attributes,
-          ...Object.entries(variantFormData.selectedValues).reduce(
-            (acc, [code, value]) => {
-              const attr = variantAttributes.find(
-                (a) => a.attribute_code === code,
-              );
-              if (attr) {
-                acc[code] = {
-                  name: attr.attribute_name,
-                  value: value,
-                  uom: attr.unit || "",
-                  type: attr.attribute_type,
-                };
-              }
-              return acc;
-            },
-            {} as Record<string, any>,
-          ),
+      if (
+        Object.keys(variantFormData.selectedValues).length !==
+        variantAttributes.length
+      ) {
+        setToast({
+          message: "Please select all variant attributes",
+          type: "error",
+        });
+        return;
+      }
+
+      if (!variantFormData.sku.trim()) {
+        setToast({ message: "SKU is required", type: "error" });
+        return;
+      }
+
+      if (!variantFormData.price || variantFormData.price <= 0) {
+        setToast({ message: "Valid price is required", type: "error" });
+        return;
+      }
+
+      const variantSuffix = Object.entries(variantFormData.selectedValues)
+        .map(([code, value]) => value.substring(0, 3).toUpperCase())
+        .join("-");
+
+      const variantMPN =
+        variantFormData.mpn || `${editingProduct.mpn}-${variantSuffix}`;
+
+      const variantName = `${editingProduct.product_name} - ${Object.entries(
+        variantFormData.selectedValues,
+      )
+        .map(([code, value]) => value)
+        .join(" ")}`;
+
+      const variantAttrsPayload = Object.entries(
+        variantFormData.selectedValues,
+      ).reduce(
+        (acc, [code, value]) => {
+          const attr = variantAttributes.find((a) => a.attribute_code === code);
+          if (attr) {
+            acc[code] = {
+              name: attr.attribute_name,
+              value: value,
+              uom: attr.unit || "",
+              type: attr.attribute_type,
+            };
+          }
+          return acc;
         },
+        {} as Record<string, any>,
+      );
+
+      const variantData = {
+        product_name: variantName,
+        sku: variantFormData.sku,
+        mpn: variantMPN,
+        price: variantFormData.price,
+        qty: variantFormData.qty || 0,
+        attributes: variantAttrsPayload,
       };
 
-      delete variantProduct.product_code;
-      delete variantProduct.id;
-      delete variantProduct.created_at;
-      delete variantProduct.updated_at;
-
-      await ProductAPI.create(variantProduct);
+      await ProductAPI.createVariant(editingProduct.product_code, variantData);
 
       setToast({ message: "Variant created successfully", type: "success" });
       setShowVariantModal(false);
-      setVariantFormData({ selectedValues: {}, sku: "", price: 0, qty: 0 });
-      loadVariants(editingProduct.product_code);
+      setVariantFormData({
+        selectedValues: {},
+        sku: "",
+        mpn: "",
+        price: 0,
+        qty: 0,
+      });
+
+      await loadVariants(editingProduct.product_code);
     } catch (error: any) {
       setToast({
         message: error.message || "Failed to create variant",
@@ -1509,7 +1629,6 @@ export function Products() {
                 placeholder="All Brands"
               />
 
-              {/* Vendor Filter */}
               <FilterSelect
                 options={Array.from(
                   new Set(
@@ -1523,7 +1642,6 @@ export function Products() {
                 placeholder="All Vendors"
               />
 
-              {/* Variant Status Filter */}
               <FilterSelect
                 options={["Base", "Variant", "Parent"]}
                 value={variantStatusFilter}
@@ -1531,7 +1649,6 @@ export function Products() {
                 placeholder="All Status"
               />
 
-              {/* Category 1 Filter */}
               <FilterSelect
                 options={Array.from(
                   new Set(
@@ -1543,12 +1660,11 @@ export function Products() {
                 value={category1Filter}
                 onChange={(value) => {
                   setCategory1Filter(value);
-                  setProductTypeFilter(""); // reset dependent filter
+                  setProductTypeFilter("");
                 }}
                 placeholder="All Category"
               />
 
-              {/* Product Type Filter */}
               <FilterSelect
                 options={
                   category1Filter
@@ -1703,7 +1819,6 @@ export function Products() {
         <div className="p-6 pb-22 space-y-6">
           {activeTab === "basic" && (
             <div className="space-y-4">
-              {/* <h3 className="font-semibold text-gray-900">Basic Information</h3> */}
               <div className="grid grid-cols-2 gap-4">
                 {editingProduct && (
                   <div>
@@ -2196,7 +2311,6 @@ export function Products() {
                 <div className="grid grid-cols-1 gap-4">
                   {Object.entries(formData.attributes)
                     .filter(([key, attr]: any) => {
-                      // Include regular attributes AND single variant attribute
                       const isSingleVariant = regularAttributes.some(
                         (ra) => ra.attribute_code === key,
                       );
@@ -2332,128 +2446,180 @@ export function Products() {
                 )}
               </div>
 
-              {variantAttributes.length >= 1 ? (
+              {variantAttributes.length >= 2 ? (
                 editingProduct ? (
                   <div className="space-y-4">
-                    {/* Variant Attributes Info */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm font-medium text-blue-900 mb-2">
-                        Variant Attributes:
-                      </p>
-                      <div className="flex gap-2 flex-wrap">
-                        {variantAttributes.map((attr) => (
-                          <span
-                            key={attr.attribute_code}
-                            className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
-                          >
-                            {attr.attribute_name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Variants Table */}
-                    {variants.length > 0 ? (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        Variant Attributes
+                      </h4>
                       <div className="border border-gray-200 rounded-lg overflow-hidden">
                         <table className="w-full">
                           <thead className="bg-gray-50">
                             <tr>
-                              {variantAttributes.map((attr) => (
-                                <th
-                                  key={attr.attribute_code}
-                                  className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase"
-                                >
-                                  {attr.attribute_name}
-                                </th>
-                              ))}
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                                SKU
+                                Attribute Name
                               </th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                                Price
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                                Qty
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
-                                Actions
+                                Values
                               </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200">
-                            {variants.map((variant) => (
-                              <tr
-                                key={variant.product_code}
-                                className="hover:bg-gray-50"
-                              >
-                                {/* Show attribute values */}
-                                {variantAttributes.map((attr) => {
-                                  const attrValue =
-                                    variant.attributes?.[attr.attribute_code]
-                                      ?.value || "-";
-                                  return (
-                                    <td
-                                      key={attr.attribute_code}
-                                      className="px-4 py-3 text-sm text-gray-900"
-                                    >
-                                      {attrValue}
-                                    </td>
-                                  );
-                                })}
-                                <td className="px-4 py-3 text-sm font-mono text-gray-700">
-                                  {variant.sku || variant.product_code}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-900">
-                                  ${variant.price?.toFixed(2) || "0.00"}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-900">
-                                  {variant.qty || 0}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => handleEdit(variant as any)}
-                                      className="p-1 hover:bg-blue-100 text-blue-600 rounded"
-                                      title="Edit"
-                                    >
-                                      <Edit size={14} />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        setDeleteModal({
-                                          isOpen: true,
-                                          product: variant as any,
-                                        })
-                                      }
-                                      className="p-1 hover:bg-red-100 text-red-600 rounded"
-                                      title="Delete"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                            {variantAttributes.map((attr) => {
+                              const values = [];
+                              for (let i = 1; i <= 50; i++) {
+                                const value =
+                                  attr[
+                                    `attribute_value_${i}` as keyof Attribute
+                                  ];
+                                if (value && String(value).trim()) {
+                                  values.push(String(value).trim());
+                                }
+                              }
+
+                              return (
+                                <tr
+                                  key={attr.attribute_code}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <p className="font-medium text-gray-900">
+                                        {attr.attribute_name}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {attr.attribute_code}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex flex-wrap gap-1">
+                                      {values.length > 0 ? (
+                                        values.map((val, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                                          >
+                                            {val}
+                                          </span>
+                                        ))
+                                      ) : (
+                                        <span className="text-sm text-gray-400">
+                                          No values
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
-                    ) : (
-                      <div className="border border-gray-200 rounded-lg p-8 text-center">
-                        <Package
-                          size={48}
-                          className="mx-auto text-gray-400 mb-3"
-                        />
-                        <p className="text-gray-600 mb-2">
-                          No variants created yet
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Click "Add Variant" to create variations using:{" "}
-                          {variantAttributes
-                            .map((a) => a.attribute_name)
-                            .join(", ")}
-                        </p>
-                      </div>
-                    )}
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        Created Variants
+                      </h4>
+                      {variants.length > 0 ? (
+                        <div className="border border-gray-200 rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                {variantAttributes.map((attr) => (
+                                  <th
+                                    key={attr.attribute_code}
+                                    className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase"
+                                  >
+                                    {attr.attribute_name}
+                                  </th>
+                                ))}
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                  SKU
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                  Price
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                  Qty
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {variants.map((variant: any) => (
+                                <tr
+                                  key={variant.variant_id}
+                                  className="hover:bg-gray-50"
+                                >
+                                  {variantAttributes.map((attr) => {
+                                    const attrValue =
+                                      variant.attributes?.[attr.attribute_code]
+                                        ?.value || "-";
+                                    return (
+                                      <td
+                                        key={attr.attribute_code}
+                                        className="px-4 py-3 text-sm text-gray-900"
+                                      >
+                                        {attrValue}
+                                      </td>
+                                    );
+                                  })}
+                                  <td className="px-4 py-3 text-sm font-mono text-gray-700">
+                                    {variant.sku}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-900">
+                                    ${variant.price?.toFixed(2)}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-900">
+                                    {variant.qty || 0}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() =>
+                                          handleEditVariant(variant)
+                                        }
+                                        className="p-1 hover:bg-blue-100 text-blue-600 rounded"
+                                        title="Edit"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          setDeleteVariantModal({
+                                            isOpen: true,
+                                            variant: variant,
+                                          })
+                                        }
+                                        className="p-1 hover:bg-red-100 text-red-600 rounded"
+                                        title="Delete"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="border border-gray-200 rounded-lg p-8 text-center">
+                          <Package
+                            size={48}
+                            className="mx-auto text-gray-400 mb-3"
+                          />
+                          <p className="text-gray-600 mb-2">
+                            No variants created yet
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="border border-gray-200 rounded-lg p-6 text-center">
@@ -2462,13 +2628,31 @@ export function Products() {
                     </p>
                   </div>
                 )
+              ) : variantAttributes.length === 1 ? (
+                <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-yellow-700 font-bold text-sm">
+                        !
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-yellow-800">
+                        Only 1 variant attribute found
+                      </p>
+                      <p className="text-xs text-yellow-700 mt-1">
+                        "{variantAttributes[0].attribute_name}" is shown in the
+                        Attributes tab. Add at least one more variant attribute
+                        to enable variant product creation.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <div className="border border-gray-200 rounded-lg p-6 text-center">
                   <Package size={48} className="mx-auto text-gray-400 mb-3" />
                   <p className="text-gray-600">
-                    {variantAttributes.length === 1
-                      ? "Only 1 variant attribute found (shown in Attributes tab)"
-                      : "No variant attributes configured"}
+                    No variant attributes configured
                   </p>
                   <p className="text-sm text-gray-500 mt-2">
                     Configure 2+ variant attributes in Attributes Master for
@@ -2478,6 +2662,40 @@ export function Products() {
               )}
             </div>
           )}
+          <Modal
+            isOpen={deleteVariantModal.isOpen}
+            onClose={() =>
+              setDeleteVariantModal({ isOpen: false, variant: null })
+            }
+            title="Delete Variant"
+            actions={
+              <>
+                <button
+                  onClick={() =>
+                    setDeleteVariantModal({ isOpen: false, variant: null })
+                  }
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteVariant}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Delete
+                </button>
+              </>
+            }
+          >
+            <p className="text-gray-600">
+              Are you sure you want to delete variant{" "}
+              <span className="font-semibold">
+                {deleteVariantModal.variant?.sku ||
+                  deleteVariantModal.variant?.variant_id}
+              </span>
+              ? This action cannot be undone.
+            </p>
+          </Modal>
           {activeTab === "related" && (
             <div className="space-y-6">
               <div className="space-y-4">
@@ -2790,17 +3008,24 @@ export function Products() {
           </button>
         </div>
       </Drawer>
-      {/* Add this modal after your main Drawer */}
       <Modal
         isOpen={showVariantModal}
         onClose={() => {
           setShowVariantModal(false);
-          setVariantFormData({ selectedValues: {}, sku: "", price: 0, qty: 0 });
+          setVariantFormData({
+            selectedValues: {},
+            sku: "",
+            mpn: "",
+            price: 0,
+            qty: 0,
+          });
+          setEditingVariant(null);
         }}
-        title="Create Product Variant"
+        title={
+          editingVariant ? "Edit Product Variant" : "Create Product Variant"
+        }
       >
         <div className="space-y-4 p-4">
-          {/* Attribute Selectors */}
           {variantAttributes.map((attr) => {
             const values = [];
             for (let i = 1; i <= 50; i++) {
@@ -2841,7 +3066,6 @@ export function Products() {
             );
           })}
 
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Variant SKU <span className="text-red-500">*</span>
@@ -2857,7 +3081,6 @@ export function Products() {
             />
           </div>
 
-          {/* Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Price <span className="text-red-500">*</span>
@@ -2882,7 +3105,6 @@ export function Products() {
             </div>
           </div>
 
-          {/* Quantity */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Quantity
@@ -2902,14 +3124,15 @@ export function Products() {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 p-4 border-t">
           <button
             onClick={() => {
               setShowVariantModal(false);
+              setEditingVariant(null);
               setVariantFormData({
                 selectedValues: {},
                 sku: "",
+                mpn: "",
                 price: 0,
                 qty: 0,
               });
@@ -2919,7 +3142,7 @@ export function Products() {
             Cancel
           </button>
           <button
-            onClick={handleCreateVariant}
+            onClick={editingVariant ? handleUpdateVariant : handleCreateVariant}
             disabled={
               Object.keys(variantFormData.selectedValues).length !==
                 variantAttributes.length ||
@@ -2928,7 +3151,7 @@ export function Products() {
             }
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Create Variant
+            {editingVariant ? "Update Variant" : "Create Variant"}
           </button>
         </div>
       </Modal>
