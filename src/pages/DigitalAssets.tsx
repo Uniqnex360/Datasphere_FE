@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useLayoutEffect } from "react";
 import {
   Upload,
   Search,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   LayoutGrid,
   List,
+  Video
 } from "lucide-react";
 import { DigitalAssetAPI, MasterAPI } from "../lib/api";
 import DataTable from "../components/DataTable";
@@ -135,7 +136,7 @@ export default function DigitalAssets() {
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     // delay to let DOM paint
 
     updateHeight(); // calculate after DOM has rendered
@@ -274,16 +275,16 @@ export default function DigitalAssets() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: string, size: number=20) => {
     switch (type) {
       case "image":
-        return <ImageIcon size={20} className="text-blue-600" />;
+        return <ImageIcon size={size} className="text-blue-600" />;
       case "video":
-        return <Film size={20} className="text-green-600" />;
+        return <Film size={size} className="text-green-600" />;
       case "document":
-        return <FileText size={20} className="text-orange-600" />;
+        return <FileText size={size} className="text-orange-600" />;
       default:
-        return <File size={20} className="text-gray-600" />;
+        return <File size={size} className="text-gray-600" />;
     }
   };
 
@@ -309,22 +310,32 @@ export default function DigitalAssets() {
       key: "image",
       label: "Image",
       render: (_: any, row: DigitalAsset) => {
-        if (!row?.file_url) {
-          return "N/A";
+        if (!row?.file_url) return "N/A";
+
+        if (row.file_type === "image") {
+          return (
+            <img
+              src={row.file_url}
+              alt={row.file_name || "Asset Image"}
+              style={{
+                width: 50,
+                height: 50,
+                objectFit: "cover",
+                borderRadius: 4,
+              }}
+            />
+          );
         }
 
-        return (
-          <img
-            src={row?.file_url}
-            alt={row?.file_name || "Asset Image"}
-            style={{
-              width: 50,
-              height: 50,
-              objectFit: "cover",
-              borderRadius: 4,
-            }}
-          />
-        );
+        if (row.file_type === "video") {
+          return <Film size={24} className="text-green-600 w-12 h-12" />;
+        }
+
+        if (row.file_type === "document") {
+          return <FileText size={24} className="text-orange-600 w-12 h-12" />;
+        }
+
+        return "N/A";
       },
     },
     {
@@ -522,10 +533,22 @@ export default function DigitalAssets() {
 
               {/* list grid view toggle */}
               <div className="flex items-center justify-center mx-4 space-x-2">
+
                 <button
-                  onClick={() => setIsGridView(true)}
+                  onClick={() => setIsGridView(!isGridView)}
                   className={`p-2 rounded flex items-center justify-center transition-colors ${
                     isGridView
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
+                  }`}
+                >
+                  <List size={20} />
+                </button>
+                
+                <button
+                  onClick={() => setIsGridView(!isGridView)}
+                  className={`p-2 rounded flex items-center justify-center transition-colors ${
+                    !isGridView
                       ? "bg-blue-500 text-white"
                       : "bg-gray-100 hover:bg-gray-200"
                   }`}
@@ -533,16 +556,7 @@ export default function DigitalAssets() {
                   <LayoutGrid size={20} />
                 </button>
 
-                <button
-                  onClick={() => setIsGridView(false)}
-                  className={`p-2 rounded flex items-center justify-center transition-colors ${
-                    !isGridView
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  <List size={20} />
-                </button>
+                
               </div>
 
               {/* <label className="inline-flex items-center cursor-pointer">
@@ -615,7 +629,18 @@ export default function DigitalAssets() {
             </button>
           </div>
         ) : isGridView ? (
-          <div ref={heighDiv} style={{ maxHeight: height, overflowY: "auto" }}>
+          <DataTable
+            columns={columns}
+            data={filteredAssets}
+            isLoading={loading}
+          />
+          
+        ) : (
+          
+          <div
+            ref={heighDiv}
+            style={{ maxHeight: height || "auto", overflowY: "auto" }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mt-4">
               {filteredAssets.map((asset) => (
                 <div
@@ -630,7 +655,7 @@ export default function DigitalAssets() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="p-8">{getIcon(asset.file_type)}</div>
+                      <div className="p-3">{getIcon(asset.file_type, 68)}</div>
                     )}
                   </div>
                   <div className="p-4">
@@ -672,12 +697,6 @@ export default function DigitalAssets() {
               ))}
             </div>
           </div>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={filteredAssets}
-            isLoading={loading}
-          />
         )}
       </div>
 
