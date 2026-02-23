@@ -4,6 +4,7 @@ export interface Attribute {
   category_path: string;
   usage_count?: number;
   description: string;
+  variants?:boolean;
   applicable_categories: string;
   attribute_type: 'Multi-select' | 'Single-select' | '';
   data_type: 'text' | 'number' | 'decimal' | 'boolean' | 'list' | '';
