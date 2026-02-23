@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -6,24 +6,21 @@ import {
   Upload,
   Edit,
   Trash2,
-  Sliders,
   X,
-  AlertCircle,
   CheckCircle,
+  ChevronDown,
+  Filter,
 } from "lucide-react";
 
 import { Attribute, AttributeValue } from "../types/attribute";
 import CustomDownloadIcon from "../assets/download-custom.png";
 import { Category } from "../types/category";
-import { Industry } from "../types/industry";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
 import Toast from "../components/Toast";
 import DataTable from "../components/DataTable";
-import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { MasterAPI } from "../lib/api";
 import { validateImportFormat } from "../utils/importValidator";
-import { SearchableSelect } from "../components/SearchableSelect";
 import { exportToExcel } from "../utils/ExcelHelper";
 import { FilterSelect } from "../components/Filter";
 
@@ -42,24 +39,24 @@ const findDuplicateAttribute = (
   );
 };
 
-const generateAttributeCode = (allAttributes: Attribute[]): string => {
-  if (!allAttributes || allAttributes.length === 0) return "ATTR-000001";
+// const generateAttributeCode = (allAttributes: Attribute[]): string => {
+//   if (!allAttributes || allAttributes.length === 0) return "ATTR-000001";
 
-  const sorted = [...allAttributes]
-    .filter((a) => a.attribute_code && a.attribute_code.startsWith("ATTR-"))
-    .sort((a, b) => b.attribute_code.localeCompare(a.attribute_code));
+//   const sorted = [...allAttributes]
+//     .filter((a) => a.attribute_code && a.attribute_code.startsWith("ATTR-"))
+//     .sort((a, b) => b.attribute_code.localeCompare(a.attribute_code));
 
-  if (sorted.length === 0) return "ATTR-000001";
+//   if (sorted.length === 0) return "ATTR-000001";
 
-  const lastCode = sorted[0].attribute_code;
-  const match = lastCode.match(/ATTR-(\d+)/);
+//   const lastCode = sorted[0].attribute_code;
+//   const match = lastCode.match(/ATTR-(\d+)/);
 
-  if (!match) return "ATTR-000001";
+//   if (!match) return "ATTR-000001";
 
-  const lastNumber = parseInt(match[1], 10);
-  const nextNumber = lastNumber + 1;
-  return `ATTR-${String(nextNumber).padStart(6, "0")}`;
-};
+//   const lastNumber = parseInt(match[1], 10);
+//   const nextNumber = lastNumber + 1;
+//   return `ATTR-${String(nextNumber).padStart(6, "0")}`;
+// };
 
 const mergeAttributeValues = (
   existing: Attribute,
@@ -67,7 +64,6 @@ const mergeAttributeValues = (
 ): { values: AttributeValue[]; usageCount: number } => {
   const existingValues: AttributeValue[] = [];
 
-  // Extract existing values
   for (let i = 1; i <= 50; i++) {
     const value = existing[`attribute_value_${i}` as keyof Attribute];
     const uom = existing[`attribute_uom_${i}` as keyof Attribute];
@@ -79,7 +75,6 @@ const mergeAttributeValues = (
     }
   }
 
-  // Merge unique values
   const merged = [...existingValues];
   let addedCount = 0;
 
@@ -98,12 +93,10 @@ const mergeAttributeValues = (
     }
   });
 
-  // Pad to 50 values
   while (merged.length < 50) {
     merged.push({ value: "", uom: "" });
   }
 
-  // Increment usage count
   const currentCount = existing.usage_count || 0;
   const newUsageCount = currentCount + 1;
 
@@ -138,6 +131,7 @@ export function Attributes() {
   const [industryFilter, setIndustryFilter] = useState("");
   const [attributeTypeFilter, setAttributeTypeFilter] = useState("");
   const [dataTypeFilter, setDataTypeFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortKey, setSortKey] = useState("attribute_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -151,16 +145,41 @@ export function Attributes() {
     unit: "",
     filter: "No",
     filter_display_name: "",
+    variants:false,
   });
 
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>(
     Array.from({ length: 50 }, () => ({ value: "", uom: "" })),
   );
+  const [showBulkCategoryDropdown, setShowBulkCategoryDropdown] =
+    useState(false);
+  const [bulkSelectedCategories, setBulkSelectedCategories] = useState<
+    string[]
+  >([]);
+  const bulkCategoryRef = useRef<HTMLDivElement>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // Check if attribute already exists (by name + industry)
+  const getAppliedAttributesForCategory = (categoryCode: string): string[] => {
+    const appliedNames: string[] = [];
+    selectedCodes.forEach((code) => {
+      const attr = attributes.find((a) => a.attribute_code === code);
+      if (attr && attr.applicable_categories) {
+        const cats = attr.applicable_categories.split(",").map((c) => c.trim());
+        if (cats.includes(categoryCode)) {
+          appliedNames.push(attr.attribute_name);
+        }
+      }
+    });
+    return appliedNames;
+  };
+  const availableCategories = categories.filter((cat) => {
+    if (selectedCodes.size === 0) return true;
+    const appliedAttributes = getAppliedAttributesForCategory(
+      cat.category_code,
+    );
 
-  // Merge values and increment usage count
+    return appliedAttributes.length < selectedCodes.size;
+  });
 
   useEffect(() => {
     loadAttributes();
@@ -175,6 +194,7 @@ export function Attributes() {
     industryFilter,
     attributeTypeFilter,
     dataTypeFilter,
+    categoryFilter,
     sortKey,
     sortDirection,
   ]);
@@ -189,13 +209,90 @@ export function Attributes() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        bulkCategoryRef.current &&
+        !bulkCategoryRef.current.contains(event.target as Node)
+      ) {
+        setShowBulkCategoryDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  const handleBulkCategoryApply = async () => {
+    const codes = Array.from(selectedCodes);
+    const updates: Promise<any>[] = [];
+    let alreadyUpdatedCount = 0;
 
+    if (bulkSelectedCategories.length === 0) {
+      setToast({
+        message: "Please select at least one category to apply",
+        type: "error",
+      });
+      return;
+    }
+
+    codes.forEach((code) => {
+      const attr = attributes.find((a) => a.attribute_code === code);
+      if (attr) {
+        const currentCats = attr.applicable_categories
+          ? attr.applicable_categories.split(",").filter((c) => c.trim())
+          : [];
+
+        const mergedSet = new Set([...currentCats, ...bulkSelectedCategories]);
+        const finalCatsArray = Array.from(mergedSet);
+
+        const currentCatsStr = currentCats.sort().join(",");
+        const finalCatsStr = finalCatsArray.sort().join(",");
+
+        if (currentCatsStr !== finalCatsStr) {
+          updates.push(
+            MasterAPI.update("attributes", code, {
+              applicable_categories: finalCatsArray.join(","),
+            }),
+          );
+        } else {
+          alreadyUpdatedCount++;
+        }
+      }
+    });
+
+    if (updates.length === 0) {
+      setToast({
+        message: "No changes needed. Categories are already applied.",
+        type: "success",
+      });
+      setShowBulkCategoryDropdown(false);
+      setSelectedCodes(new Set());
+      setBulkSelectedCategories([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await Promise.all(updates);
+      let msg = `Successfully updated ${updates.length} attribute${updates.length > 1 ? "s" : ""}.`;
+      if (alreadyUpdatedCount > 0) {
+        msg += ` (${alreadyUpdatedCount} ignored as they already had the category).`;
+      }
+      setToast({ message: msg, type: "success" });
+      setSelectedCodes(new Set());
+      setShowBulkCategoryDropdown(false);
+      setBulkSelectedCategories([]);
+      loadAttributes();
+    } catch (error) {
+      setToast({ message: "Bulk category update failed", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
   const loadCategories = async () => {
     try {
       const data = await MasterAPI.getCategories();
       setCategories(data || []);
       const breadcrumbs = (data || []).map((item: any) => {
-        // Customize the breadcrumb format as needed
         return `${item.breadcrumb}`;
       });
       setCategoryOptions(breadcrumbs || []);
@@ -224,6 +321,17 @@ export function Attributes() {
 
     if (dataTypeFilter) {
       filtered = filtered.filter((a) => a.data_type === dataTypeFilter);
+    }
+     if (categoryFilter) {
+      const targetCategory = categories.find((c) => c.breadcrumb === categoryFilter);
+      
+      if (targetCategory) {
+        filtered = filtered.filter((a) => {
+          if (!a.applicable_categories) return false;
+          const appliedCats = a.applicable_categories.split(",").map((c) => c.trim());
+          return appliedCats.includes(targetCategory.category_code);
+        });
+      }
     }
 
     filtered.sort((a, b) => {
@@ -254,12 +362,10 @@ export function Attributes() {
   const getEndCategory = (attribute: Attribute): string => {
     if (!attribute?.category_path) return "";
 
-    // split by '>', take the last part, trim extra spaces
     const parts = attribute.category_path.split(">");
     return parts[parts.length - 1].trim();
   };
 
-  // handling table row selection
   const toggleSelect = (code: string) => {
     const newSet = new Set(selectedCodes);
     if (newSet.has(code)) newSet.delete(code);
@@ -381,14 +487,14 @@ export function Attributes() {
             type: "success",
           });
         } else {
-          const attributeCode = generateAttributeCode(attributes);
-          dataToSubmit.attribute_code = attributeCode;
+          // const attributeCode = generateAttributeCode(attributes);
+          // dataToSubmit.attribute_code = attributeCode;
           dataToSubmit.usage_count = 1;
 
           await MasterAPI.create("attributes", dataToSubmit);
 
           setToast({
-            message: `Attribute ${attributeCode} added successfully`,
+            message: `Attribute added successfully`,
             type: "success",
           });
         }
@@ -411,7 +517,6 @@ export function Attributes() {
       ? attribute.applicable_categories.split(",").filter((c) => c.trim())
       : [];
     setSelectedCategories(categories);
-
     const values: AttributeValue[] = [];
     for (let i = 1; i <= 50; i++) {
       const value = attribute[`attribute_value_${i}` as keyof Attribute] || "";
@@ -452,6 +557,7 @@ export function Attributes() {
       unit: "",
       filter: "No",
       filter_display_name: "",
+      variants: false, 
     });
     setAttributeValues(
       Array.from({ length: 50 }, () => ({ value: "", uom: "" })),
@@ -513,7 +619,6 @@ export function Attributes() {
       setLoading(true);
       const data = await parseCSV(file);
 
-      // Debug logging
       if (data.length > 0) {
         console.log("CSV Column Names:", Object.keys(data[0]));
         console.log("First Row Sample:", data[0]);
@@ -537,16 +642,16 @@ export function Attributes() {
       let totalIgnoredValues = 0;
       const importDetails: string[] = [];
 
-      let nextCodeNumber = 1;
-      const codes = attributes
-        .map((a) => a.attribute_code)
-        .filter((c) => c && c.startsWith("ATTR-"))
-        .sort((a, b) => b.localeCompare(a));
+      // let nextCodeNumber = 1;
+      // const codes = attributes
+      //   .map((a) => a.attribute_code)
+      //   .filter((c) => c && c.startsWith("ATTR-"))
+      //   .sort((a, b) => b.localeCompare(a));
 
-      if (codes.length > 0) {
-        const match = codes[0].match(/ATTR-(\d+)/);
-        if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
-      }
+      // if (codes.length > 0) {
+      //   const match = codes[0].match(/ATTR-(\d+)/);
+      //   if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
+      // }
 
       const currentAttributes = [...attributes];
 
@@ -567,7 +672,6 @@ export function Attributes() {
           attributeData.filter = row.filter || "No";
           attributeData.filter_display_name = row.filter_display_name || "";
 
-          // Extract all 50 attribute values and UOMs from CSV
           const newValues: AttributeValue[] = [];
           for (let i = 1; i <= 50; i++) {
             const val = row[`attribute_value_${i}`] || "";
@@ -592,12 +696,10 @@ export function Attributes() {
           );
 
           if (duplicate) {
-            // **MERGE LOGIC - Enhanced**
             console.log(
               `Merging values for existing attribute: ${duplicate.attribute_name}`,
             );
 
-            // Get existing values from the duplicate attribute
             const existingValues: AttributeValue[] = [];
             for (let i = 1; i <= 50; i++) {
               const value =
@@ -611,14 +713,12 @@ export function Attributes() {
               }
             }
 
-            // Merge logic: Add only new values that don't exist
             const mergedValues = [...existingValues];
             let newValuesAdded = 0;
             let ignoredValuesCount = 0;
 
             newValues.forEach((newVal) => {
               if (newVal.value.trim()) {
-                // Check if this exact value+uom combination already exists
                 const isDuplicate = existingValues.some(
                   (existing) =>
                     existing.value.toLowerCase().trim() ===
@@ -636,12 +736,10 @@ export function Attributes() {
               }
             });
 
-            // Pad to 50 values
             while (mergedValues.length < 50) {
               mergedValues.push({ value: "", uom: "" });
             }
 
-            // Prepare update data
             const updateData: any = {
               ...duplicate,
               ...attributeData,
@@ -649,7 +747,6 @@ export function Attributes() {
             };
             delete updateData.attribute_code;
 
-            // Set merged values
             mergedValues.forEach((item, idx) => {
               updateData[`attribute_value_${idx + 1}`] = item.value;
               updateData[`attribute_uom_${idx + 1}`] = item.uom;
@@ -671,7 +768,6 @@ export function Attributes() {
               );
             }
 
-            // Update local array for subsequent checks
             const index = currentAttributes.findIndex(
               (attr) => attr.attribute_code === duplicate.attribute_code,
             );
@@ -682,19 +778,21 @@ export function Attributes() {
               };
             }
           } else {
-            // **CREATE NEW ATTRIBUTE**
             console.log(
               `Creating new attribute: ${attributeData.attribute_name}`,
             );
 
-            const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
-            attributeData.attribute_code = attributeCode;
+            // const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
+            // attributeData.attribute_code = attributeCode;
             attributeData.usage_count = 1;
 
-            await MasterAPI.create("attributes", attributeData);
+            const createdAttr = await MasterAPI.create(
+              "attributes",
+              attributeData,
+            );
 
-            nextCodeNumber++;
-            currentAttributes.push(attributeData);
+            currentAttributes.push(createdAttr);
+
             added++;
 
             const valueCount = newValues.filter((v) => v.value.trim()).length;
@@ -756,7 +854,7 @@ export function Attributes() {
     function getBreadcrumbEndValues(categories: Category[]): string[] {
       return categories.map((cat) => {
         const parts = cat.breadcrumb.split(">").map((p) => p.trim());
-        return parts[parts.length - 1]; // return the last element
+        return parts[parts.length - 1];
       });
     }
 
@@ -874,7 +972,6 @@ export function Attributes() {
     {
       key: "category_list_string",
       label: "Category",
-      // render: (_: any, row: Attribute) => getEndCategory(row),
     },
     {
       key: "value_count",
@@ -884,13 +981,22 @@ export function Attributes() {
     },
     {
       key: "usage_count",
-      label: "Used",
-      sortable: true,
-      render: (value: number) => (
-        <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-          {value || 1}×
-        </span>
-      ),
+      label: "# of Categories",
+      sortable: false,
+      render: (_: any, row: Attribute) => {
+        const categoryCount = row.applicable_categories
+          ? row.applicable_categories.split(",").filter((c) => c.trim()).length
+          : 0;
+
+        return (
+          <span
+            className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800"
+            title={categoryCount > 0 ? "Applied to Categories" : "Unused"}
+          >
+            {categoryCount} {categoryCount === 1 ? "Category" : "Categories"}
+          </span>
+        );
+      },
     },
     {
       key: "filter",
@@ -936,7 +1042,6 @@ export function Attributes() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-[-24px]">
-        {/* headings */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Attributes Master
@@ -983,9 +1088,15 @@ export function Attributes() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
-        {/* <div className="grid grid-cols-1 md:grid-cols-5 gap-4"> */}
         <div className="flex items-center gap-4 justify-between">
-          <div className="">
+          <div className="flex flex-wrap items-center gap-4">
+            <FilterSelect
+            options={categories.map((c)=>c.breadcrumb)}
+            value={categoryFilter}
+            onChange={setCategoryFilter}
+            placeholder="Category"
+            className="w-48 lg:w-64 truncate" 
+            />
             <FilterSelect
               options={["Multi-select", "Single-select"]}
               value={attributeTypeFilter}
@@ -1038,6 +1149,7 @@ export function Attributes() {
           {searchTerm ||
           industryFilter ||
           attributeTypeFilter ||
+          categoryFilter||
           dataTypeFilter ? (
             <span>
               Showing <strong>{filteredAttributes.length}</strong> matching
@@ -1053,6 +1165,7 @@ export function Attributes() {
         {(searchTerm ||
           industryFilter ||
           attributeTypeFilter ||
+           categoryFilter||
           dataTypeFilter) && (
           <button
             onClick={() => {
@@ -1060,6 +1173,7 @@ export function Attributes() {
               setIndustryFilter("");
               setAttributeTypeFilter("");
               setDataTypeFilter("");
+              setCategoryFilter("")
             }}
             className="text-sm text-blue-600 hover:underline font-medium"
           >
@@ -1068,33 +1182,200 @@ export function Attributes() {
         )}
       </div>
       {selectedCodes.size > 0 && (
-        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
-              {selectedCodes.size} selected
-            </span>
-            <p className="text-sm font-medium">Bulk Actions:</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* <button
-              onClick={() => handleBulkStatusChange(true)}
-              className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
-            >
-              <CheckCircle size={14} /> Set Active
-            </button>
-            <button
-              onClick={() => handleBulkStatusChange(false)}
-              className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
-            >
-              <X size={14} /> Set Inactive
-            </button> */}
-            <div className="w-px h-6 bg-white/20 mx-2"></div>
-            <button
-              onClick={() => setSelectedCodes(new Set())}
-              className="px-3 py-1.5 hover:bg-white/10 rounded-lg text-xs font-medium"
-            >
-              Cancel
-            </button>
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+                {selectedCodes.size} selected
+              </span>
+              <p className="text-sm font-medium">Bulk Actions:</p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div ref={bulkCategoryRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showBulkCategoryDropdown) {
+                      setBulkSelectedCategories([]);
+                    }
+                    setShowBulkCategoryDropdown(!showBulkCategoryDropdown);
+                  }}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+                >
+                  <span>
+                    {bulkSelectedCategories.length === 0
+                      ? "Add Categories"
+                      : `${bulkSelectedCategories.length} Selected to Add`}
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform ${
+                      showBulkCategoryDropdown ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showBulkCategoryDropdown && (
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden">
+                    <div className="sticky top-0 bg-gray-50 border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            bulkSelectedCategories.length === categories.length
+                          ) {
+                            setBulkSelectedCategories([]);
+                          } else {
+                            setBulkSelectedCategories(
+                              categories.map((c) => c.category_code),
+                            );
+                          }
+                        }}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                      >
+                        {bulkSelectedCategories.length === categories.length
+                          ? "Clear All"
+                          : "Select All"}
+                      </button>
+                      <span className="text-xs text-gray-500">
+                        {bulkSelectedCategories.length} of {categories.length}
+                      </span>
+                    </div>
+
+                    <div className="px-3 py-2 border-b border-gray-100">
+                      <input
+                        type="text"
+                        placeholder="Search categories..."
+                        className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="overflow-y-auto max-h-64">
+                      {categories.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-sm text-gray-500">
+                          No categories available
+                        </div>
+                      ) : (
+                        availableCategories.map((cat) => {
+                          const isSelected = bulkSelectedCategories.includes(
+                            cat.category_code,
+                          );
+                          const appliedAttributes =
+                            getAppliedAttributesForCategory(cat.category_code);
+
+                          const isPartiallyApplied =
+                            appliedAttributes.length > 0 &&
+                            selectedCodes.size > 1;
+
+                          const displayNames =
+                            appliedAttributes.length > 2
+                              ? `${appliedAttributes.slice(0, 2).join(", ")} +${appliedAttributes.length - 2}`
+                              : appliedAttributes.join(", ");
+
+                          return (
+                            <label
+                              key={cat.category_code}
+                              className={`flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-blue-50 transition-colors ${
+                                isSelected ? "bg-blue-50" : ""
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {
+                                  if (isSelected) {
+                                    setBulkSelectedCategories(
+                                      bulkSelectedCategories.filter(
+                                        (c) => c !== cat.category_code,
+                                      ),
+                                    );
+                                  } else {
+                                    setBulkSelectedCategories([
+                                      ...bulkSelectedCategories,
+                                      cat.category_code,
+                                    ]);
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                              />
+                              <span className="text-sm text-gray-700 flex-1 truncate">
+                                {cat.breadcrumb}
+                              </span>
+
+                              {isPartiallyApplied && (
+                                <span
+                                  className="text-[10px] font-medium bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full flex-shrink-0 cursor-help"
+                                  title={`Already applied to: ${appliedAttributes.join(", ")}`}
+                                >
+                                  Already in: {displayNames}
+                                </span>
+                              )}
+
+                              {isSelected && (
+                                <CheckCircle
+                                  size={14}
+                                  className="text-blue-600 flex-shrink-0 ml-2"
+                                />
+                              )}
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBulkSelectedCategories([]);
+                        }}
+                        className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                      >
+                        Clear Selection
+                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowBulkCategoryDropdown(false);
+                            setBulkSelectedCategories([]);
+                          }}
+                          className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkCategoryApply}
+                          disabled={bulkSelectedCategories.length === 0}
+                          className={`px-4 py-1.5 text-sm font-semibold rounded transition-colors ${
+                            bulkSelectedCategories.length === 0
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-blue-600 text-white hover:bg-blue-700"
+                          }`}
+                        >
+                          Apply to {selectedCodes.size} Attributes
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="w-px h-6 bg-white/20"></div>
+
+              <button
+                onClick={() => {
+                  setSelectedCodes(new Set());
+                  setBulkSelectedCategories([]);
+                  setShowBulkCategoryDropdown(false);
+                }}
+                className="px-3 py-1.5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1164,7 +1445,7 @@ export function Attributes() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Applicable Categories
+                Applicable Categories ({categories.length})
               </label>
               <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
                 {categories.length === 0 ? (
@@ -1214,21 +1495,6 @@ export function Attributes() {
                 </div>
               )}
             </div>
-
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category <span className="text-red-500">*</span>
-              </label>
-              <SearchableSelect
-                options={categoryOptions}
-                placeholder="Select or Search category..."
-                onChange={(selectedValue) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                  }));
-                }}
-              />
-            </div> */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1412,6 +1678,26 @@ export function Attributes() {
                 )}
               </div>
             )}
+          </div>
+          <div className="space-y-4">
+            <h3 className="font-semibold text-gray-900">Variant</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Variants
+              </label>
+              <select
+                value={formData.variants?"Yes":"No"}
+                onChange={(e) =>
+                  setFormData({ ...formData, variants: e.target.value === "Yes" }) 
+                }
+
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+              </select>
+            </div>
+            
           </div>
         </div>
 

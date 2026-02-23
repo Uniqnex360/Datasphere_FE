@@ -10,7 +10,7 @@ import {
   Edit,
 } from "lucide-react";
 import { Category } from "../types/category";
-import TreeView, { TreeNode } from "../components/TreeView";
+import { TreeNode } from "../components/TreeView";
 import Drawer from "../components/Drawer";
 import Modal from "../components/Modal";
 import Toast from "../components/Toast";
@@ -70,10 +70,15 @@ export function Categories() {
   });
 
   const [parentCategoryCode, setParentCategoryCode] = useState<string>("");
-  const [selectedLevels, setSelectedLevels] = useState<Record<number, string>>({});
-const [openDropdown, setOpenDropdown] = useState<number | null>(null);
-const [levelSearchQueries, setLevelSearchQueries] = useState<Record<number, string>>({});
-const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [selectedLevels, setSelectedLevels] = useState<Record<number, string>>(
+    {},
+  );
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [levelSearchQueries, setLevelSearchQueries] = useState<
+    Record<number, string>
+  >({});
+  const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [isSubmitting,setIsSubmitting]=useState(false)
   const [isEditing, setIsEditing] = useState(false);
   const {
     isCustom: isCustomIndustry,
@@ -104,17 +109,17 @@ const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
     }
   }, [formData.industry_code, industries]);
   useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    if (openDropdown !== null) {
-      const ref = dropdownRefs.current[openDropdown];
-      if (ref && !ref.contains(event.target as Node)) {
-        setOpenDropdown(null);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdown !== null) {
+        const ref = dropdownRefs.current[openDropdown];
+        if (ref && !ref.contains(event.target as Node)) {
+          setOpenDropdown(null);
+        }
       }
-    }
-  };
-  document.addEventListener("mousedown", handleClickOutside);
-  return () => document.removeEventListener("mousedown", handleClickOutside);
-}, [openDropdown]);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openDropdown]);
   useEffect(() => {
     if (parentCategoryCode && !isEditing) {
       const parent = categories.find(
@@ -265,10 +270,17 @@ const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?:React.MouseEvent) => {
+    if(e)
+    {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    if (isSubmitting) return; 
     if (!validateForm()) return;
 
     try {
+      setIsSubmitting(true);
       let industryCode = formData.industry_code;
       let industryName = formData.industry_name?.trim();
 
@@ -430,6 +442,9 @@ const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
     } catch (error: any) {
       console.error("Submit error:", error);
       setToast({ message: error.message, type: "error" });
+    }
+    finally{
+      setIsSubmitting(false)
     }
   };
 
@@ -718,221 +733,230 @@ const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
   const treeNodes = convertToTreeNodes(buildCategoryTree(filteredCategories));
   // ===== PLMP-style Dropdown Helpers =====
 
-const hasPreviousLevelSelected = (level: number): boolean => {
-  if (level === 1) return true;
-  return !!selectedLevels[level - 1];
-};
-
-const getLevelOptionsSimple = (level: number): string[] => {
-  let filtered = [...filteredCategories];
-  for (let i = 1; i < level; i++) {
-    if (selectedLevels[i]) {
-      filtered = filtered.filter((c) => {
-        const val = String(c[`category_${i}` as keyof Category] || "").trim();
-        return val === selectedLevels[i];
-      });
-    }
-  }
-  const values = filtered
-    .map((c) => String(c[`category_${level}` as keyof Category] || "").trim())
-    .filter((v) => v !== "");
-  return [...new Set(values)].sort();
-};
-
-const getLevelOptionsWithPath = (
-  level: number
-): Array<{ value: string; path: string; category: Category }> => {
-  const seen = new Set<string>();
-  const items: Array<{ value: string; path: string; category: Category }> = [];
-
-  let filtered = [...filteredCategories];
-  for (let i = 1; i < level; i++) {
-    if (selectedLevels[i]) {
-      filtered = filtered.filter(
-        (c) =>
-          String(c[`category_${i}` as keyof Category] || "").trim() ===
-          selectedLevels[i]
-      );
-    }
-  }
-
-  filtered.forEach((cat) => {
-    const val = String(
-      cat[`category_${level}` as keyof Category] || ""
-    ).trim();
-    if (!val) return;
-
-    const pathParts: string[] = [];
-    for (let i = 1; i < level; i++) {
-      const pVal = String(
-        cat[`category_${i}` as keyof Category] || ""
-      ).trim();
-      if (pVal) pathParts.push(pVal);
-    }
-
-    const key = pathParts.join(" → ") + " → " + val;
-    if (!seen.has(key)) {
-      seen.add(key);
-      items.push({
-        value: val,
-        path: pathParts.join(" → "),
-        category: cat,
-      });
-    }
-  });
-
-  return items.sort((a, b) => a.value.localeCompare(b.value));
-};
-
-const findAndSetCategory = (levels: Record<number, string>) => {
-  const levelKeys = Object.keys(levels).map(Number).filter((n) => levels[n]);
-  const maxLevel = levelKeys.length > 0 ? Math.max(...levelKeys) : 0;
-
-  if (maxLevel === 0) {
-    setSelectedCategory(null);
-    return;
-  }
-
-  // Try to find exact leaf match first
-  const exactMatch = categories.find((c) => {
-    for (let i = 1; i <= maxLevel; i++) {
-      const catVal = String(c[`category_${i}` as keyof Category] || "").trim();
-      if (levels[i] && catVal !== levels[i]) return false;
-    }
-    for (let i = maxLevel + 1; i <= 8; i++) {
-      const catVal = String(c[`category_${i}` as keyof Category] || "").trim();
-      if (catVal) return false;
-    }
-    return true;
-  });
-
-  if (exactMatch) {
-    setSelectedCategory(exactMatch);
-    return;
-  }
-
-  // Fallback: find any category that matches all selected levels
-  const partialMatch = categories.find((c) => {
-    for (let i = 1; i <= maxLevel; i++) {
-      const catVal = String(c[`category_${i}` as keyof Category] || "").trim();
-      if (levels[i] && catVal !== levels[i]) return false;
-    }
-    return true;
-  });
-
-  setSelectedCategory(partialMatch || null);
-};
-
-const handleLevelSelect = (level: number, value: string) => {
-  const newLevels = { ...selectedLevels };
-
-  if (value === "") {
-    delete newLevels[level];
-    for (let i = level + 1; i <= 8; i++) {
-      delete newLevels[i];
-    }
-  } else {
-    newLevels[level] = value;
-    for (let i = level + 1; i <= 8; i++) {
-      delete newLevels[i];
-    }
-  }
-
-  setSelectedLevels(newLevels);
-  setOpenDropdown(null);
-  setLevelSearchQueries((prev) => ({ ...prev, [level]: "" }));
-  findAndSetCategory(newLevels);
-};
-
-const handleLevelSelectWithParent = (
-  level: number,
-  value: string,
-  category: Category
-) => {
-  const newLevels: Record<number, string> = {};
-
-  for (let i = 1; i < level; i++) {
-    const val = String(
-      category[`category_${i}` as keyof Category] || ""
-    ).trim();
-    if (val) newLevels[i] = val;
-  }
-  newLevels[level] = value;
-
-  setSelectedLevels(newLevels);
-  setOpenDropdown(null);
-  setLevelSearchQueries({});
-  findAndSetCategory(newLevels);
-};
-
-const clearAllLevels = () => {
-  setSelectedLevels({});
-  setSelectedCategory(null);
-  setOpenDropdown(null);
-  setLevelSearchQueries({});
-};
-  const getSelectedBreadcrumb = (): string => {
-  const parts: string[] = [];
-  for (let i = 1; i <= 8; i++) {
-    if (selectedLevels[i]) parts.push(selectedLevels[i]);
-    else break;
-  }
-  return parts.join(" > ");
-};
-const handleAddAtLevel = (level: number) => {
-  setIsEditing(false);
-  resetForm();
-
-  const newFormData: Partial<Category> = {
-    industry_code: "",
-    industry_name: "",
-    category_1: "",
-    category_2: "",
-    category_3: "",
-    category_4: "",
-    category_5: "",
-    category_6: "",
-    category_7: "",
-    category_8: "",
-    product_type: "",
-    breadcrumb: "",
+  const hasPreviousLevelSelected = (level: number): boolean => {
+    if (level === 1) return true;
+    return !!selectedLevels[level - 1];
   };
 
-  // Pre-fill parent levels from current selections
-  for (let i = 1; i < level; i++) {
-    if (selectedLevels[i]) {
-      (newFormData as any)[`category_${i}`] = selectedLevels[i];
+  const getLevelOptionsSimple = (level: number): string[] => {
+    let filtered = [...filteredCategories];
+    for (let i = 1; i < level; i++) {
+      if (selectedLevels[i]) {
+        filtered = filtered.filter((c) => {
+          const val = String(c[`category_${i}` as keyof Category] || "").trim();
+          return val === selectedLevels[i];
+        });
+      }
     }
-  }
+    const values = filtered
+      .map((c) => String(c[`category_${level}` as keyof Category] || "").trim())
+      .filter((v) => v !== "");
+    return [...new Set(values)].sort();
+  };
 
-  // Copy industry from a matching category
-  if (Object.keys(selectedLevels).length > 0) {
-    const matchingCat = categories.find((c) => {
-      for (const [lvl, val] of Object.entries(selectedLevels)) {
-        const catVal = String(
-          c[`category_${lvl}` as keyof Category] || ""
+  const getLevelOptionsWithPath = (
+    level: number,
+  ): Array<{ value: string; path: string; category: Category }> => {
+    const seen = new Set<string>();
+    const items: Array<{ value: string; path: string; category: Category }> =
+      [];
+
+    let filtered = [...filteredCategories];
+    for (let i = 1; i < level; i++) {
+      if (selectedLevels[i]) {
+        filtered = filtered.filter(
+          (c) =>
+            String(c[`category_${i}` as keyof Category] || "").trim() ===
+            selectedLevels[i],
+        );
+      }
+    }
+
+    filtered.forEach((cat) => {
+      const val = String(
+        cat[`category_${level}` as keyof Category] || "",
+      ).trim();
+      if (!val) return;
+
+      const pathParts: string[] = [];
+      for (let i = 1; i < level; i++) {
+        const pVal = String(
+          cat[`category_${i}` as keyof Category] || "",
         ).trim();
-        if (catVal !== val) return false;
+        if (pVal) pathParts.push(pVal);
+      }
+
+      const key = pathParts.join(" → ") + " → " + val;
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push({
+          value: val,
+          path: pathParts.join(" → "),
+          category: cat,
+        });
+      }
+    });
+
+    return items.sort((a, b) => a.value.localeCompare(b.value));
+  };
+
+  const findAndSetCategory = (levels: Record<number, string>) => {
+    const levelKeys = Object.keys(levels)
+      .map(Number)
+      .filter((n) => levels[n]);
+    const maxLevel = levelKeys.length > 0 ? Math.max(...levelKeys) : 0;
+
+    if (maxLevel === 0) {
+      setSelectedCategory(null);
+      return;
+    }
+
+    // Try to find exact leaf match first
+    const exactMatch = categories.find((c) => {
+      for (let i = 1; i <= maxLevel; i++) {
+        const catVal = String(
+          c[`category_${i}` as keyof Category] || "",
+        ).trim();
+        if (levels[i] && catVal !== levels[i]) return false;
+      }
+      for (let i = maxLevel + 1; i <= 8; i++) {
+        const catVal = String(
+          c[`category_${i}` as keyof Category] || "",
+        ).trim();
+        if (catVal) return false;
       }
       return true;
     });
-    if (matchingCat) {
-      newFormData.industry_code = matchingCat.industry_code;
-      newFormData.industry_name = matchingCat.industry_name;
-    }
-  }
 
-  setFormData(newFormData);
-  setIsDrawerOpen(true);
-};
-   return (
+    if (exactMatch) {
+      setSelectedCategory(exactMatch);
+      return;
+    }
+
+    // Fallback: find any category that matches all selected levels
+    const partialMatch = categories.find((c) => {
+      for (let i = 1; i <= maxLevel; i++) {
+        const catVal = String(
+          c[`category_${i}` as keyof Category] || "",
+        ).trim();
+        if (levels[i] && catVal !== levels[i]) return false;
+      }
+      return true;
+    });
+
+    setSelectedCategory(partialMatch || null);
+  };
+
+  const handleLevelSelect = (level: number, value: string) => {
+    const newLevels = { ...selectedLevels };
+
+    if (value === "") {
+      delete newLevels[level];
+      for (let i = level + 1; i <= 8; i++) {
+        delete newLevels[i];
+      }
+    } else {
+      newLevels[level] = value;
+      for (let i = level + 1; i <= 8; i++) {
+        delete newLevels[i];
+      }
+    }
+
+    setSelectedLevels(newLevels);
+    setOpenDropdown(null);
+    setLevelSearchQueries((prev) => ({ ...prev, [level]: "" }));
+    findAndSetCategory(newLevels);
+  };
+
+  const handleLevelSelectWithParent = (
+    level: number,
+    value: string,
+    category: Category,
+  ) => {
+    const newLevels: Record<number, string> = {};
+
+    for (let i = 1; i < level; i++) {
+      const val = String(
+        category[`category_${i}` as keyof Category] || "",
+      ).trim();
+      if (val) newLevels[i] = val;
+    }
+    newLevels[level] = value;
+
+    setSelectedLevels(newLevels);
+    setOpenDropdown(null);
+    setLevelSearchQueries({});
+    findAndSetCategory(newLevels);
+  };
+
+  const clearAllLevels = () => {
+    setSelectedLevels({});
+    setSelectedCategory(null);
+    setOpenDropdown(null);
+    setLevelSearchQueries({});
+  };
+  const getSelectedBreadcrumb = (): string => {
+    const parts: string[] = [];
+    for (let i = 1; i <= 8; i++) {
+      if (selectedLevels[i]) parts.push(selectedLevels[i]);
+      else break;
+    }
+    return parts.join(" > ");
+  };
+  const handleAddAtLevel = (level: number) => {
+    setIsEditing(false);
+    resetForm();
+
+    const newFormData: Partial<Category> = {
+      industry_code: "",
+      industry_name: "",
+      category_1: "",
+      category_2: "",
+      category_3: "",
+      category_4: "",
+      category_5: "",
+      category_6: "",
+      category_7: "",
+      category_8: "",
+      product_type: "",
+      breadcrumb: "",
+    };
+
+    // Pre-fill parent levels from current selections
+    for (let i = 1; i < level; i++) {
+      if (selectedLevels[i]) {
+        (newFormData as any)[`category_${i}`] = selectedLevels[i];
+      }
+    }
+
+    // Copy industry from a matching category
+    if (Object.keys(selectedLevels).length > 0) {
+      const matchingCat = categories.find((c) => {
+        for (const [lvl, val] of Object.entries(selectedLevels)) {
+          const catVal = String(
+            c[`category_${lvl}` as keyof Category] || "",
+          ).trim();
+          if (catVal !== val) return false;
+        }
+        return true;
+      });
+      if (matchingCat) {
+        newFormData.industry_code = matchingCat.industry_code;
+        newFormData.industry_name = matchingCat.industry_name;
+      }
+    }
+
+    setFormData(newFormData);
+    setIsDrawerOpen(true);
+  };
+  return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
         <div className="flex-shrink-0">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Category Management
           </h1>
-         <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1">
             Build and manage hierarchical product categories
           </p>
         </div>
@@ -976,8 +1000,7 @@ const handleAddAtLevel = (level: number) => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 mb-6">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 w-full lg:w-auto">
-              
-              {/* <select
+            {/* <select
                 value={industryFilter}
                 onChange={(e) => setIndustryFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1015,10 +1038,10 @@ const handleAddAtLevel = (level: number) => {
               title="Download template"
             >
               <img
-                    src={CustomDownloadIcon}
-                    className="w-5 h-5 object-contain opacity-70 hover:opacity-100"
-                    alt="Template"
-                  />
+                src={CustomDownloadIcon}
+                className="w-5 h-5 object-contain opacity-70 hover:opacity-100"
+                alt="Template"
+              />
             </button>
           </div>
         </div>
@@ -1115,247 +1138,247 @@ const handleAddAtLevel = (level: number) => {
           </div>
         </div>
       </div> */}
-<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-  <div className="flex items-center justify-between mb-4">
-    <h2 className="text-lg font-bold text-gray-900">Category Schema</h2>
-    {Object.keys(selectedLevels).length > 0 && (
-      <button
-        onClick={clearAllLevels}
-        className="text-sm text-red-500 hover:text-red-700 font-medium"
-      >
-        Clear all
-      </button>
-    )}
-  </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900">Category Schema</h2>
+          {Object.keys(selectedLevels).length > 0 && (
+            <button
+              onClick={clearAllLevels}
+              className="text-sm text-red-500 hover:text-red-700 font-medium"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
 
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
-      const isPrevSelected = hasPreviousLevelSelected(level);
-      const simpleOptions = getLevelOptionsSimple(level);
-      const pathOptions = !isPrevSelected
-        ? getLevelOptionsWithPath(level)
-        : [];
-      const searchQuery = levelSearchQueries[level] || "";
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => {
+            const isPrevSelected = hasPreviousLevelSelected(level);
+            const simpleOptions = getLevelOptionsSimple(level);
+            const pathOptions = !isPrevSelected
+              ? getLevelOptionsWithPath(level)
+              : [];
+            const searchQuery = levelSearchQueries[level] || "";
 
-      const filteredSimple = simpleOptions.filter((o) =>
-        o.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      const filteredPath = pathOptions.filter((o) =>
-        o.value.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+            const filteredSimple = simpleOptions.filter((o) =>
+              o.toLowerCase().includes(searchQuery.toLowerCase()),
+            );
+            const filteredPath = pathOptions.filter((o) =>
+              o.value.toLowerCase().includes(searchQuery.toLowerCase()),
+            );
 
-      const hasAnyOptions =
-        simpleOptions.length > 0 || pathOptions.length > 0;
+            const hasAnyOptions =
+              simpleOptions.length > 0 || pathOptions.length > 0;
 
-      return (
-        <div
-          key={level}
-          className="relative"
-          ref={(el) => {
-            dropdownRefs.current[level] = el;
-          }}
-        >
-          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-            Level {level}
-          </label>
-          <div
-            className={`relative border rounded-lg cursor-pointer transition-all ${
-              selectedLevels[level]
-                ? "border-blue-400 bg-blue-50"
-                : "border-gray-300 hover:border-gray-400"
-            }`}
-            onClick={() =>
-              setOpenDropdown(openDropdown === level ? null : level)
-            }
-          >
-            <div className="flex items-center justify-between px-3 py-2.5">
-              <span
-                className={`text-sm truncate ${
-                  selectedLevels[level]
-                    ? "text-gray-900 font-medium"
-                    : "text-gray-400"
-                }`}
+            return (
+              <div
+                key={level}
+                className="relative"
+                ref={(el) => {
+                  dropdownRefs.current[level] = el;
+                }}
               >
-                {selectedLevels[level] || "Select category"}
-              </span>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddAtLevel(level);
-                  }}
-                  className="p-0.5 hover:bg-blue-100 rounded transition-colors"
-                  title={`Add Level ${level} Category`}
-                >
-                  <Plus size={16} className="text-blue-600" />
-                </button>
-                <ChevronDown
-                  size={16}
-                  className={`text-gray-400 transition-transform ${
-                    openDropdown === level ? "rotate-180" : ""
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                  Level {level}
+                </label>
+                <div
+                  className={`relative border rounded-lg cursor-pointer transition-all ${
+                    selectedLevels[level]
+                      ? "border-blue-400 bg-blue-50"
+                      : "border-gray-300 hover:border-gray-400"
                   }`}
-                />
-              </div>
-            </div>
-
-            {openDropdown === level && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-hidden">
-                <div className="p-2 border-b">
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) =>
-                      setLevelSearchQueries((prev) => ({
-                        ...prev,
-                        [level]: e.target.value,
-                      }))
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    autoFocus
-                  />
-                </div>
-                <div className="overflow-y-auto max-h-48">
-                  <div
-                    className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleLevelSelect(level, "");
-                    }}
-                  >
-                    Select category
+                  onClick={() =>
+                    setOpenDropdown(openDropdown === level ? null : level)
+                  }
+                >
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span
+                      className={`text-sm truncate ${
+                        selectedLevels[level]
+                          ? "text-gray-900 font-medium"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {selectedLevels[level] || "Select category"}
+                    </span>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddAtLevel(level);
+                        }}
+                        className="p-0.5 hover:bg-blue-100 rounded transition-colors"
+                        title={`Add Level ${level} Category`}
+                      >
+                        <Plus size={16} className="text-blue-600" />
+                      </button>
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 transition-transform ${
+                          openDropdown === level ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
                   </div>
 
-                  {isPrevSelected
-                    ? filteredSimple.map((option) => (
+                  {openDropdown === level && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-hidden">
+                      <div className="p-2 border-b">
+                        <input
+                          type="text"
+                          placeholder="Search..."
+                          value={searchQuery}
+                          onChange={(e) =>
+                            setLevelSearchQueries((prev) => ({
+                              ...prev,
+                              [level]: e.target.value,
+                            }))
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="overflow-y-auto max-h-48">
                         <div
-                          key={option}
-                          className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
-                            selectedLevels[level] === option
-                              ? "bg-blue-100 text-blue-700 font-medium"
-                              : "text-gray-700"
-                          }`}
+                          className="px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleLevelSelect(level, option);
+                            handleLevelSelect(level, "");
                           }}
                         >
-                          {option}
+                          Select category
                         </div>
-                      ))
-                    : filteredPath.map((item, idx) => (
-                        <div
-                          key={`${item.path}-${item.value}-${idx}`}
-                          className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 text-gray-700 transition-colors"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLevelSelectWithParent(
-                              level,
-                              item.value,
-                              item.category
-                            );
-                          }}
-                        >
-                          <span>{item.value}</span>
-                          {item.path && (
-                            <small className="text-gray-400 ml-2">
-                              ({item.path})
-                            </small>
-                          )}
-                        </div>
-                      ))}
 
-                  {((isPrevSelected && filteredSimple.length === 0) ||
-                    (!isPrevSelected && filteredPath.length === 0)) && (
-                    <div className="px-3 py-4 text-sm text-gray-400 text-center italic">
-                      No categories found
+                        {isPrevSelected
+                          ? filteredSimple.map((option) => (
+                              <div
+                                key={option}
+                                className={`px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 transition-colors ${
+                                  selectedLevels[level] === option
+                                    ? "bg-blue-100 text-blue-700 font-medium"
+                                    : "text-gray-700"
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLevelSelect(level, option);
+                                }}
+                              >
+                                {option}
+                              </div>
+                            ))
+                          : filteredPath.map((item, idx) => (
+                              <div
+                                key={`${item.path}-${item.value}-${idx}`}
+                                className="px-3 py-2 text-sm cursor-pointer hover:bg-blue-50 text-gray-700 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLevelSelectWithParent(
+                                    level,
+                                    item.value,
+                                    item.category,
+                                  );
+                                }}
+                              >
+                                <span>{item.value}</span>
+                                {item.path && (
+                                  <small className="text-gray-400 ml-2">
+                                    ({item.path})
+                                  </small>
+                                )}
+                              </div>
+                            ))}
+
+                        {((isPrevSelected && filteredSimple.length === 0) ||
+                          (!isPrevSelected && filteredPath.length === 0)) && (
+                          <div className="px-3 py-4 text-sm text-gray-400 text-center italic">
+                            No categories found
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        <div className="p-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">Category Details</h2>
+          <div className="flex gap-2">
+            {selectedCategory && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold flex items-center gap-1"
+                >
+                  <Edit size={16} /> Edit
+                </button>
+                <button
+                  onClick={() =>
+                    setDeleteModal({
+                      isOpen: true,
+                      category: selectedCategory,
+                    })
+                  }
+                  className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold flex items-center gap-1"
+                >
+                  <Trash2 size={16} /> Delete
+                </button>
+              </>
             )}
           </div>
         </div>
-      );
-    })}
-  </div>
-</div>
-
-<div className="bg-white rounded-xl shadow-sm border border-gray-200">
-  <div className="p-4 border-b flex items-center justify-between">
-    <h2 className="text-lg font-bold text-gray-900">Category Details</h2>
-    <div className="flex gap-2">
-      {selectedCategory && (
-        <>
-          <button
-            onClick={handleEdit}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold flex items-center gap-1"
-          >
-            <Edit size={16} /> Edit
-          </button>
-          <button
-            onClick={() =>
-              setDeleteModal({
-                isOpen: true,
-                category: selectedCategory,
-              })
-            }
-            className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold flex items-center gap-1"
-          >
-            <Trash2 size={16} /> Delete
-          </button>
-        </>
-      )}
-    </div>
-  </div>
-  <div className="p-6">
-    {selectedCategory ? (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-            Code
-          </label>
-          <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm font-mono">
-            {selectedCategory.category_code}
-          </p>
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-            Hierarchy Path
-          </label>
-          <p className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700 font-medium">
-            {getSelectedBreadcrumb() || selectedCategory.breadcrumb}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-              Industry
-            </label>
-            <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">
-              {selectedCategory.industry_name || "-"}
-            </p>
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
-              Product Type
-            </label>
-            <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">
-              {selectedCategory.product_type || "-"}
-            </p>
-          </div>
+        <div className="p-6">
+          {selectedCategory ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Code
+                </label>
+                <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm font-mono">
+                  {selectedCategory.category_code}
+                </p>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                  Hierarchy Path
+                </label>
+                <p className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700 font-medium">
+                  {getSelectedBreadcrumb() || selectedCategory.breadcrumb}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Industry
+                  </label>
+                  <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">
+                    {selectedCategory.industry_name || "-"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                    Product Type
+                  </label>
+                  <p className="px-3 py-2 bg-gray-50 border rounded-lg text-sm">
+                    {selectedCategory.product_type || "-"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-20 text-gray-400 italic">
+              {Object.keys(selectedLevels).length > 0
+                ? "No exact category record found at this level"
+                : "Select a category from the dropdowns above"}
+            </div>
+          )}
         </div>
       </div>
-    ) : (
-      <div className="text-center py-20 text-gray-400 italic">
-        {Object.keys(selectedLevels).length > 0
-          ? "No exact category record found at this level"
-          : "Select a category from the dropdowns above"}
-      </div>
-    )}
-  </div>
-</div>
 
       <Drawer
         isOpen={isDrawerOpen || isEditing}
@@ -1371,15 +1394,28 @@ const handleAddAtLevel = (level: number) => {
             <div className="space-y-4">
               {isEditing && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Code</label>
-                  <input type="text" value={formData.category_code || ""} disabled className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category Code
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.category_code || ""}
+                    disabled
+                    className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
+                  />
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
-                  <span>Industry <span className="text-red-500">*</span></span>
-                  <button type="button" onClick={() => setIsCustomIndustry(!isCustomIndustry)} className="text-xs text-blue-600 font-bold">
+                  <span>
+                    Industry <span className="text-red-500">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomIndustry(!isCustomIndustry)}
+                    className="text-xs text-blue-600 font-bold"
+                  >
                     {isCustomIndustry ? "Select Existing" : "+ Add New"}
                   </button>
                 </label>
@@ -1408,16 +1444,25 @@ const handleAddAtLevel = (level: number) => {
 
               {!isEditing && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Parent Category (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Parent Category (Optional)
+                  </label>
                   <select
                     value={parentCategoryCode}
                     onChange={(e) => setParentCategoryCode(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Root Level</option>
-                    {categories.filter(c => c && c.category_code).map((cat) => (
-                      <option key={cat.category_code} value={cat.category_code}>{cat.breadcrumb}</option>
-                    ))}
+                    {categories
+                      .filter((c) => c && c.category_code)
+                      .map((cat) => (
+                        <option
+                          key={cat.category_code}
+                          value={cat.category_code}
+                        >
+                          {cat.breadcrumb}
+                        </option>
+                      ))}
                   </select>
                 </div>
               )}
@@ -1425,11 +1470,20 @@ const handleAddAtLevel = (level: number) => {
               <div className="grid grid-cols-1 gap-4">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((level) => (
                   <div key={level}>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Category Level {level}</label>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">
+                      Category Level {level}
+                    </label>
                     <input
                       type="text"
-                      value={formData[`category_${level}` as keyof Category] || ""}
-                      onChange={(e) => setFormData({ ...formData, [`category_${level}`]: e.target.value })}
+                      value={
+                        formData[`category_${level}` as keyof Category] || ""
+                      }
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          [`category_${level}`]: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
                       placeholder={`Enter name for level ${level}...`}
                     />
@@ -1438,56 +1492,90 @@ const handleAddAtLevel = (level: number) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Type
+                </label>
                 <input
                   type="text"
                   value={formData.product_type}
-                  onChange={(e) => setFormData({ ...formData, product_type: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, product_type: e.target.value })
+                  }
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                 <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">Breadcrumb Preview</label>
-                 <p className="text-xs font-medium text-gray-600">{generateBreadcrumb(formData as Category) || "No levels defined yet"}</p>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2">
+                  Breadcrumb Preview
+                </label>
+                <p className="text-xs font-medium text-gray-600">
+                  {generateBreadcrumb(formData as Category) ||
+                    "No levels defined yet"}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="flex-shrink-0 border-t bg-white p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] flex gap-3">
             <button
-              onClick={() => { setIsDrawerOpen(false); setIsEditing(false); resetForm(); }}
+              onClick={() => {
+                setIsDrawerOpen(false);
+                setIsEditing(false);
+                resetForm();
+              }}
               className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold transition-colors"
+              disabled={isSubmitting}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-bold transition-colors text-white ${
+                isSubmitting
+                  ? "bg-blue-400 cursor-not-allowed pointer-events-none"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              {isEditing ? "Update" : "Add"} Category
+              {isSubmitting ? "Saving..." : (isEditing ? "Update" : "Add") + " Category"}
             </button>
           </div>
         </div>
       </Drawer>
 
-     
       <Modal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, category: null })}
         title="Delete Category"
         actions={
           <>
-            <button onClick={() => setDeleteModal({ isOpen: false, category: null })} className="px-4 py-2 border border-gray-300 rounded-lg">Cancel</button>
-            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-lg">Delete</button>
+            <button
+              onClick={() => setDeleteModal({ isOpen: false, category: null })}
+              className="px-4 py-2 border border-gray-300 rounded-lg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg"
+            >
+              Delete
+            </button>
           </>
         }
       >
-        <p className="text-gray-600">Are you sure you want to delete category <span className="font-bold">{deleteModal.category?.breadcrumb}</span>?</p>
+        <p className="text-gray-600">
+          Are you sure you want to delete category{" "}
+          <span className="font-bold">{deleteModal.category?.breadcrumb}</span>?
+        </p>
       </Modal>
 
       {toast && (
-        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
     </div>
   );
