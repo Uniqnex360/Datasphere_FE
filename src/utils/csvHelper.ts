@@ -209,3 +209,59 @@ export function parseCSV(file: File): Promise<any[]> {
     }
   });
 }
+
+export function parseCSVHeader(file: File): Promise<string[]> {
+  return new Promise((resolve, reject) => {
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+    if (fileExtension === "xlsx" || fileExtension === "xls") {
+      // Excel file
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+
+          // Extract headers using XLSX utils
+          const headers: string[] = XLSX.utils.sheet_to_json(worksheet, {
+            header: 1, // get rows as arrays
+            range: 0,  // first row only
+          })[0] as string[];
+
+          // Normalize headers
+          const normalizedHeaders = headers.map((h) => normalizeColumnName(h));
+          resolve(normalizedHeaders);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    } else {
+      // CSV file
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const lines = text.split("\n").filter((line) => line.trim());
+          if (lines.length === 0) {
+            resolve([]);
+            return;
+          }
+
+          const headers = lines[0]
+            .split(",")
+            .map((h) => normalizeColumnName(h.trim().replace(/^"|"$/g, "")));
+
+          resolve(headers);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    }
+  });
+}

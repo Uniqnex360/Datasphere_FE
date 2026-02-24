@@ -7,6 +7,7 @@ export interface Channel {
   products_mapped_count: number;
   created_at: string;
   updated_at: string;
+  logo_url?: string;
 }
 
 export interface ChannelFieldMapping {
