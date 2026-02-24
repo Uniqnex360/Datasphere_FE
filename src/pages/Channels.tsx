@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Plus,
   Settings,
@@ -11,70 +11,86 @@ import {
   Save,
   FileText,
   Filter,
+  X,
   ArrowRight,
   Link as LinkIcon,
-} from 'lucide-react';
-import Modal from '../components/Modal';
-import Toast from '../components/Toast';
-import { Channel, ChannelFieldMapping, ExportFilters } from '../types/channel';
-import { ChannelAPI, MasterAPI } from '../lib/api';
+} from "lucide-react";
+import Modal from "../components/Modal";
+import Toast from "../components/Toast";
+import { Channel, ChannelFieldMapping, ExportFilters } from "../types/channel";
+import { ChannelAPI, MasterAPI } from "../lib/api";
+import { parseCSVHeader } from "../utils/csvHelper";
 
-type ViewMode = 'list' | 'mapping' | 'export';
+type ViewMode = "list" | "mapping" | "export";
 
 const PIM_FIELDS = [
-  'product_code',
-  'product_name',
-  'brand_code',
-  'brand_name',
-  'vendor_code',
-  'vendor_name',
-  'category_code',
-  'category_1',
-  'category_2',
-  'category_3',
-  'product_type',
-  'description',
-  'prod_short_desc',
-  'prod_long_desc',
-  'model_series',
-  'mpn',
-  'gtin',
-  'upc',
-  'unspc',
-  'image_url_1',
-  'image_url_2',
-  'image_url_3',
-  'image_url_4',
-  'image_url_5',
-  'meta_title',
-  'meta_desc',
-  'meta_keywords',
+  "product_code",
+  "product_name",
+  "brand_code",
+  "brand_name",
+  "vendor_code",
+  "vendor_name",
+  "category_code",
+  "category_1",
+  "category_2",
+  "category_3",
+  "product_type",
+  "description",
+  "prod_short_desc",
+  "prod_long_desc",
+  "model_series",
+  "mpn",
+  "gtin",
+  "upc",
+  "unspc",
+  "image_url_1",
+  "image_url_2",
+  "image_url_3",
+  "image_url_4",
+  "image_url_5",
+  "meta_title",
+  "meta_desc",
+  "meta_keywords",
 ];
 
 export function Channels() {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [logoURLFile, setLogoURLFile] = useState<File | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const [addChannelModal, setAddChannelModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; channel: Channel | null }>({
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    channel: Channel | null;
+  }>({
     isOpen: false,
     channel: null,
   });
 
   const [newChannel, setNewChannel] = useState({
-    channel_name: '',
+    channel_name: "",
+    logo_url: null as File | null,
     template_file: null as File | null,
   });
 
   const [mappings, setMappings] = useState<ChannelFieldMapping[]>([]);
   const [exportFilters, setExportFilters] = useState<ExportFilters>({
-    scope: 'all',
+    scope: "all",
   });
-  const [categories, setCategories] = useState<Array<{ category_code: string; category_name: string }>>([]);
-  const [brands, setBrands] = useState<Array<{ brand_code: string; brand_name: string }>>([]);
-  const [industries, setIndustries] = useState<Array<{ industry_code: string; industry_name: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ category_code: string; category_name: string }>
+  >([]);
+  const [brands, setBrands] = useState<
+    Array<{ brand_code: string; brand_name: string }>
+  >([]);
+  const [industries, setIndustries] = useState<
+    Array<{ industry_code: string; industry_name: string }>
+  >([]);
 
   useEffect(() => {
     loadChannels();
@@ -84,17 +100,16 @@ export function Channels() {
   const loadChannels = async () => {
     setLoading(true);
     try {
-      
-      const data=await ChannelAPI.getAll()
+      const data = await ChannelAPI.getAll();
       setChannels(data || []);
     } catch (error: any) {
-      setToast({ message: error.message, type: 'error' });
+      setToast({ message: error.message, type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
- const loadMetadata = async () => {
+  const loadMetadata = async () => {
     try {
       const [cats, brs, inds] = await Promise.all([
         MasterAPI.getCategories(),
@@ -105,57 +120,66 @@ export function Channels() {
       setBrands(brs || []);
       setIndustries(inds || []);
     } catch (error: any) {
-      console.error('Error loading metadata:', error);
+      console.error("Error loading metadata:", error);
     }
   };
 
   const parseCSV = (text: string): string[] => {
-    const lines = text.split('\n');
+    const lines = text.split("\n");
     if (lines.length === 0) return [];
-    const headers = lines[0].split(',').map((h) => h.trim().replace(/['"]/g, ''));
+    const headers = lines[0]
+      .split(",")
+      .map((h) => h.trim().replace(/['"]/g, ""));
     return headers.filter((h) => h.length > 0);
   };
 
-   const handleAddChannel = async () => {
+  const handleAddChannel = async () => {
     if (!newChannel.channel_name || !newChannel.template_file) {
-      setToast({ message: 'Please provide name and template', type: 'error' });
+      setToast({ message: "Please provide name and template", type: "error" });
       return;
     }
 
     try {
-      const headers = await parseCSVHeaders(newChannel.template_file);
-      
-      if (headers.length === 0) {
-        setToast({ message: 'Invalid template file', type: 'error' });
-        return;
+      const headers = await parseCSVHeader(newChannel.template_file);
+
+      const formData = new FormData();
+      formData.append("channel_name", newChannel.channel_name);
+      formData.append("template_headers", JSON.stringify(headers));
+      formData.append("channel_status", "active");
+
+      if (newChannel.logo_url) {
+        formData.append("logo_url", newChannel.logo_url); // ✅ file appended properly
       }
 
-      await ChannelAPI.create({
-          channel_name: newChannel.channel_name,
-          template_headers: headers,
-          channel_status: 'active'
-      });
+      await ChannelAPI.create(formData); // make sure API supports multipart
 
-      setToast({ message: 'Channel added successfully', type: 'success' });
+      setToast({ message: "Channel added successfully", type: "success" });
       setAddChannelModal(false);
-      setNewChannel({ channel_name: '', template_file: null });
+
+      setNewChannel({
+        channel_name: "",
+        logo_url: null,
+        template_file: null,
+      });
+      setLogoURLFile(null);
+
       loadChannels();
-    } catch (error: any) {
-      setToast({ message: "Failed to create channel", type: 'error' });
+    } catch (error) {
+      setToast({ message: "Failed to create channel", type: "error" });
     }
   };
 
- const handleDeleteChannel = async () => {
+  const handleDeleteChannel = async () => {
     if (!deleteModal.channel) return;
 
     try {
       await ChannelAPI.delete(deleteModal.channel.id);
 
-      setToast({ message: 'Channel deleted successfully', type: 'success' });
+      setToast({ message: "Channel deleted successfully", type: "success" });
       setDeleteModal({ isOpen: false, channel: null });
       loadChannels();
     } catch (error: any) {
-      setToast({ message: "Delete failed", type: 'error' });
+      setToast({ message: "Delete failed", type: "error" });
     }
   };
 
@@ -165,34 +189,32 @@ export function Channels() {
       const data = await ChannelAPI.getMappings(channelId);
       setMappings(data || []);
     } catch (error: any) {
-      setToast({ message: "Failed to load mappings", type: 'error' });
+      setToast({ message: "Failed to load mappings", type: "error" });
     }
   };
-
-  
 
   const handleOpenMapping = (channel: Channel) => {
     setSelectedChannel(channel);
     loadMappings(channel.id);
-    setViewMode('mapping');
+    setViewMode("mapping");
   };
 
   const handleOpenExport = (channel: Channel) => {
     setSelectedChannel(channel);
     loadMappings(channel.id);
-    setViewMode('export');
+    setViewMode("export");
   };
 
-   const handleSaveMappings = async () => {
+  const handleSaveMappings = async () => {
     if (!selectedChannel) return;
 
     try {
       await ChannelAPI.saveMappings(selectedChannel.id, mappings);
 
-      setToast({ message: 'Mappings saved successfully', type: 'success' });
-      setViewMode('list');
+      setToast({ message: "Mappings saved successfully", type: "success" });
+      setViewMode("list");
     } catch (error: any) {
-      setToast({ message: "Save failed", type: 'error' });
+      setToast({ message: "Save failed", type: "error" });
     }
   };
 
@@ -201,10 +223,10 @@ export function Channels() {
       ...mappings,
       {
         id: `temp-${Date.now()}`,
-        channel_id: selectedChannel?.id || '',
-        pim_field: '',
-        channel_field: '',
-        mapping_type: 'direct',
+        channel_id: selectedChannel?.id || "",
+        pim_field: "",
+        channel_field: "",
+        mapping_type: "direct",
         is_required: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -212,7 +234,10 @@ export function Channels() {
     ]);
   };
 
-  const handleUpdateMapping = (index: number, updates: Partial<ChannelFieldMapping>) => {
+  const handleUpdateMapping = (
+    index: number,
+    updates: Partial<ChannelFieldMapping>,
+  ) => {
     const updated = [...mappings];
     updated[index] = { ...updated[index], ...updates };
     setMappings(updated);
@@ -222,41 +247,87 @@ export function Channels() {
     setMappings(mappings.filter((_, i) => i !== index));
   };
 
-   const handleExport = async () => {
+  const handleExport = async () => {
     if (!selectedChannel) return;
 
     try {
-      const blob = await ChannelAPI.exportFeed(selectedChannel.id, exportFilters);
-      
+      const blob = await ChannelAPI.exportFeed(
+        selectedChannel.id,
+        exportFilters,
+      );
+
       const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `${selectedChannel.channel_name}_feed.csv`);
+      link.setAttribute("download", `${selectedChannel.channel_name}_feed.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      setToast({ message: `Export generated successfully`, type: 'success' });
+      setToast({ message: `Export generated successfully`, type: "success" });
       loadChannels(); // Refresh last export date
     } catch (error: any) {
-      setToast({ message: "Export failed", type: 'error' });
+      setToast({ message: "Export failed", type: "error" });
     }
   };
 
-  if (viewMode === 'mapping' && selectedChannel) {
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+  const handleChannelLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setToast({ message: "Only JPG, PNG, and WEBP allowed", type: "error" });
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setToast({ message: "File size must be under 5MB", type: "error" });
+      return;
+    }
+
+    setLogoURLFile(file);
+
+    setNewChannel((prev) => {
+      const updated = {
+        ...prev,
+        logo_url: file,
+      };
+
+      return updated;
+    });
+
+    e.target.value = "";
+  };
+
+  const handleRemoveBrandLogo = (e: React.MouseEvent<HTMLInputElement>) => {
+    if (newChannel.logo_url) {
+      URL.revokeObjectURL("");
+    }
+    setNewChannel((prev) => ({ ...prev, logo_url: null }));
+    setLogoURLFile(null);
+  };
+
+  if (viewMode === "mapping" && selectedChannel) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Field Mapping</h1>
-              <p className="text-gray-600 mt-1">{selectedChannel.channel_name}</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Field Mapping
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {selectedChannel.channel_name}
+              </p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -280,9 +351,16 @@ export function Channels() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h3 className="font-semibold text-blue-900 mb-2">Mapping Types</h3>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li><strong>Direct:</strong> Map PIM field directly to channel field</li>
-            <li><strong>Static:</strong> Use a fixed value for all products</li>
-            <li><strong>Concatenation:</strong> Combine multiple fields (e.g., {'{brand_name}'} - {'{product_name}'})</li>
+            <li>
+              <strong>Direct:</strong> Map PIM field directly to channel field
+            </li>
+            <li>
+              <strong>Static:</strong> Use a fixed value for all products
+            </li>
+            <li>
+              <strong>Concatenation:</strong> Combine multiple fields (e.g.,{" "}
+              {"{brand_name}"} - {"{product_name}"})
+            </li>
           </ul>
         </div>
 
@@ -314,7 +392,10 @@ export function Channels() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {mappings.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td
+                      colSpan={6}
+                      className="px-6 py-8 text-center text-gray-500"
+                    >
                       No mappings configured. Click "Add Mapping" to start.
                     </td>
                   </tr>
@@ -324,7 +405,11 @@ export function Channels() {
                       <td className="px-6 py-4">
                         <select
                           value={mapping.pim_field}
-                          onChange={(e) => handleUpdateMapping(index, { pim_field: e.target.value })}
+                          onChange={(e) =>
+                            handleUpdateMapping(index, {
+                              pim_field: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select PIM Field</option>
@@ -340,7 +425,10 @@ export function Channels() {
                           value={mapping.mapping_type}
                           onChange={(e) =>
                             handleUpdateMapping(index, {
-                              mapping_type: e.target.value as 'direct' | 'static' | 'concatenation',
+                              mapping_type: e.target.value as
+                                | "direct"
+                                | "static"
+                                | "concatenation",
                             })
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -353,7 +441,11 @@ export function Channels() {
                       <td className="px-6 py-4">
                         <select
                           value={mapping.channel_field}
-                          onChange={(e) => handleUpdateMapping(index, { channel_field: e.target.value })}
+                          onChange={(e) =>
+                            handleUpdateMapping(index, {
+                              channel_field: e.target.value,
+                            })
+                          }
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select Channel Field</option>
@@ -365,33 +457,45 @@ export function Channels() {
                         </select>
                       </td>
                       <td className="px-6 py-4">
-                        {mapping.mapping_type === 'static' ? (
+                        {mapping.mapping_type === "static" ? (
                           <input
                             type="text"
-                            value={mapping.static_value || ''}
-                            onChange={(e) => handleUpdateMapping(index, { static_value: e.target.value })}
+                            value={mapping.static_value || ""}
+                            onChange={(e) =>
+                              handleUpdateMapping(index, {
+                                static_value: e.target.value,
+                              })
+                            }
                             placeholder="Enter static value"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
-                        ) : mapping.mapping_type === 'concatenation' ? (
+                        ) : mapping.mapping_type === "concatenation" ? (
                           <input
                             type="text"
-                            value={mapping.concatenation_pattern || ''}
+                            value={mapping.concatenation_pattern || ""}
                             onChange={(e) =>
-                              handleUpdateMapping(index, { concatenation_pattern: e.target.value })
+                              handleUpdateMapping(index, {
+                                concatenation_pattern: e.target.value,
+                              })
                             }
                             placeholder="{field1} - {field2}"
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                         ) : (
-                          <span className="text-gray-400 text-sm">Auto-mapped</span>
+                          <span className="text-gray-400 text-sm">
+                            Auto-mapped
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <input
                           type="checkbox"
                           checked={mapping.is_required}
-                          onChange={(e) => handleUpdateMapping(index, { is_required: e.target.checked })}
+                          onChange={(e) =>
+                            handleUpdateMapping(index, {
+                              is_required: e.target.checked,
+                            })
+                          }
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
                       </td>
@@ -411,25 +515,35 @@ export function Channels() {
           </div>
         </div>
 
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
     );
   }
 
-  if (viewMode === 'export' && selectedChannel) {
+  if (viewMode === "export" && selectedChannel) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Export Products</h1>
-              <p className="text-gray-600 mt-1">{selectedChannel.channel_name}</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Export Products
+              </h1>
+              <p className="text-gray-600 mt-1">
+                {selectedChannel.channel_name}
+              </p>
             </div>
           </div>
           <button
@@ -442,14 +556,21 @@ export function Channels() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Export Configuration</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Export Configuration
+          </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Product Scope</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Product Scope
+              </label>
               <select
                 value={exportFilters.scope}
                 onChange={(e) =>
-                  setExportFilters({ ...exportFilters, scope: e.target.value as ExportFilters['scope'] })
+                  setExportFilters({
+                    ...exportFilters,
+                    scope: e.target.value as ExportFilters["scope"],
+                  })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -460,12 +581,19 @@ export function Channels() {
               </select>
             </div>
 
-            {exportFilters.scope === 'category' && (
+            {exportFilters.scope === "category" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Category
+                </label>
                 <select
-                  value={exportFilters.category_code || ''}
-                  onChange={(e) => setExportFilters({ ...exportFilters, category_code: e.target.value })}
+                  value={exportFilters.category_code || ""}
+                  onChange={(e) =>
+                    setExportFilters({
+                      ...exportFilters,
+                      category_code: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Choose a category</option>
@@ -478,12 +606,19 @@ export function Channels() {
               </div>
             )}
 
-            {exportFilters.scope === 'brand' && (
+            {exportFilters.scope === "brand" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Brand</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Brand
+                </label>
                 <select
-                  value={exportFilters.brand_code || ''}
-                  onChange={(e) => setExportFilters({ ...exportFilters, brand_code: e.target.value })}
+                  value={exportFilters.brand_code || ""}
+                  onChange={(e) =>
+                    setExportFilters({
+                      ...exportFilters,
+                      brand_code: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Choose a brand</option>
@@ -496,17 +631,27 @@ export function Channels() {
               </div>
             )}
 
-            {exportFilters.scope === 'industry' && (
+            {exportFilters.scope === "industry" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Industry</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Industry
+                </label>
                 <select
-                  value={exportFilters.industry_code || ''}
-                  onChange={(e) => setExportFilters({ ...exportFilters, industry_code: e.target.value })}
+                  value={exportFilters.industry_code || ""}
+                  onChange={(e) =>
+                    setExportFilters({
+                      ...exportFilters,
+                      industry_code: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Choose an industry</option>
                   {industries.map((industry) => (
-                    <option key={industry.industry_code} value={industry.industry_code}>
+                    <option
+                      key={industry.industry_code}
+                      value={industry.industry_code}
+                    >
                       {industry.industry_name}
                     </option>
                   ))}
@@ -517,15 +662,21 @@ export function Channels() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Export Preview</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Export Preview
+          </h2>
           <div className="space-y-3">
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-gray-600">Channel</span>
-              <span className="font-medium">{selectedChannel.channel_name}</span>
+              <span className="font-medium">
+                {selectedChannel.channel_name}
+              </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-gray-600">Template Fields</span>
-              <span className="font-medium">{selectedChannel.template_headers?.length || 0}</span>
+              <span className="font-medium">
+                {selectedChannel.template_headers?.length || 0}
+              </span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
               <span className="text-sm text-gray-600">Mapped Fields</span>
@@ -533,12 +684,20 @@ export function Channels() {
             </div>
             <div className="flex items-center justify-between py-2">
               <span className="text-sm text-gray-600">Scope</span>
-              <span className="font-medium capitalize">{exportFilters.scope}</span>
+              <span className="font-medium capitalize">
+                {exportFilters.scope}
+              </span>
             </div>
           </div>
         </div>
 
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )}
       </div>
     );
   }
@@ -548,7 +707,9 @@ export function Channels() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Channels</h1>
-          <p className="text-gray-600 mt-1">Manage marketplace integrations and export mappings</p>
+          <p className="text-gray-600 mt-1">
+            Manage marketplace integrations and export mappings
+          </p>
         </div>
         <button
           onClick={() => setAddChannelModal(true)}
@@ -566,8 +727,12 @@ export function Channels() {
       ) : channels.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No channels configured</h3>
-          <p className="text-gray-600 mb-4">Add your first channel to start exporting product feeds</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No channels configured
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Add your first channel to start exporting product feeds
+          </p>
           <button
             onClick={() => setAddChannelModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -582,29 +747,49 @@ export function Channels() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Logo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Channel Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Status
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Products Mapped
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Last Export
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {channels.map((channel) => (
                 <tr key={channel.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-1 whitespace-nowrap">
+                    {channel.logo_url ? (
+                      <img
+                        src={channel.logo_url}
+                        alt="Channel Logo"
+                        className="h-12 w-12 object-contain rounded"
+                      />
+                    ) : (
+                      <span className="text-gray-400">No Logo</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{channel.channel_name}</div>
+                    <div className="font-medium text-gray-900">
+                      {channel.channel_name}
+                    </div>
                     <div className="text-sm text-gray-500">
                       {channel.template_headers?.length || 0} template fields
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {channel.channel_status === 'active' ? (
+                    {channel.channel_status === "active" ? (
                       <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
                         <CheckCircle size={14} />
                         Active
@@ -622,7 +807,7 @@ export function Channels() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {channel.last_export_date
                       ? new Date(channel.last_export_date).toLocaleDateString()
-                      : 'Never'}
+                      : "Never"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
@@ -641,7 +826,9 @@ export function Channels() {
                         <Download size={16} />
                       </button>
                       <button
-                        onClick={() => setDeleteModal({ isOpen: true, channel })}
+                        onClick={() =>
+                          setDeleteModal({ isOpen: true, channel })
+                        }
                         className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
                         title="Delete"
                       >
@@ -679,14 +866,62 @@ export function Channels() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Channel Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Channel Name
+            </label>
             <input
               type="text"
               value={newChannel.channel_name}
-              onChange={(e) => setNewChannel({ ...newChannel, channel_name: e.target.value })}
+              onChange={(e) =>
+                setNewChannel({ ...newChannel, channel_name: e.target.value })
+              }
               placeholder="e.g., Amazon, eBay, Shopify"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            {/* Label */}
+            <p className="text-sm font-medium text-gray-700">Logo URL</p>
+
+            {/* Upload + Preview Row */}
+            <div className="flex items-center gap-4">
+              {/* Upload Button */}
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors bg-white h-[42px]">
+                <Upload size={18} className="text-gray-600" />
+                <span className="text-sm font-medium text-gray-700">
+                  Upload
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleChannelLogoUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Preview + Remove */}
+              {(newChannel.logo_url || logoURLFile) && (
+                <div className="relative w-12 h-12">
+                  <img
+                    src={
+                      logoURLFile
+                        ? URL.createObjectURL(logoURLFile)
+                        : newChannel.logo_url
+                    }
+                    alt="Channel Logo"
+                    className="w-12 h-12 object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveBrandLogo}
+                    className="absolute right-0 top-0 text-gray-400 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-gray-100"
+                    title="Remove Logo"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -700,15 +935,22 @@ export function Channels() {
                   type="file"
                   accept=".csv,.xlsx,.xls"
                   onChange={(e) =>
-                    setNewChannel({ ...newChannel, template_file: e.target.files?.[0] || null })
+                    setNewChannel({
+                      ...newChannel,
+                      template_file: e.target.files?.[0] || null,
+                    })
                   }
                   className="hidden"
                 />
               </label>
               {newChannel.template_file && (
-                <p className="text-sm text-gray-600 mt-2">{newChannel.template_file.name}</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {newChannel.template_file.name}
+                </p>
               )}
-              <p className="text-xs text-gray-500 mt-2">Upload a CSV file with column headers</p>
+              <p className="text-xs text-gray-500 mt-2">
+                Upload a CSV file with column headers
+              </p>
             </div>
           </div>
         </div>
@@ -736,13 +978,21 @@ export function Channels() {
         }
       >
         <p className="text-gray-600">
-          Are you sure you want to delete{' '}
-          <span className="font-semibold">{deleteModal.channel?.channel_name}</span>? This will also delete
-          all field mappings and export history.
+          Are you sure you want to delete{" "}
+          <span className="font-semibold">
+            {deleteModal.channel?.channel_name}
+          </span>
+          ? This will also delete all field mappings and export history.
         </p>
       </Modal>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
