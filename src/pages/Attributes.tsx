@@ -993,7 +993,7 @@ export function Attributes() {
             className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800"
             title={categoryCount > 0 ? "Applied to Categories" : "Unused"}
           >
-            {categoryCount} {categoryCount === 1 ? "Category" : "Categories"}
+            {categoryCount}
           </span>
         );
       },

@@ -1046,7 +1046,7 @@ export function VendorMaster() {
                 ? "hover:bg-red-100 text-red-600"
                 : "hover:bg-green-100 text-green-600"
             }`}
-            title={row.is_active ? "Deactivate Vendor" : "Activate Vendor"}
+            title={row.is_active ? "Deactivate" : "Activate"}
           >
             {row.is_active ? <XCircle size={16} /> : <CheckCircle size={16} />}
           </button>

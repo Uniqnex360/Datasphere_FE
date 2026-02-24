@@ -357,11 +357,11 @@ export function IndustryMaster() {
             type="checkbox"
             checked={selectedCodes.has(row.industry_code)}
             onChange={() => toggleSelect(row.industry_code)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="w-4 h-4 rounded cursor-pointer border-gray-300 text-blue-600 focus:ring-blue-500"
           />
         </div>
       ),
-      width: "50px",
+      width: "100px",
     },
     // Industry Name Column - Clickable to View
     {

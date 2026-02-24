@@ -58,7 +58,7 @@ export function BrandMaster() {
     mfg_name: "",
     mfg_logo: "",
   });
-
+  const [selectedBrands, setSelectedBrands] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -98,8 +98,7 @@ export function BrandMaster() {
         (b) =>
           b.brand_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
           b.brand_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.mfg_name.toLowerCase().includes(searchTerm.toLowerCase())
-
+          b.mfg_name.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -202,13 +201,19 @@ export function BrandMaster() {
       const sanitized = Object.fromEntries(
         Object.entries(formData).map(([key, value]) => [
           key,
-          typeof value === "string" ? value.trim() : value ?? ""
-        ])
+          typeof value === "string" ? value.trim() : (value ?? ""),
+        ]),
       );
-      if (typeof sanitized.brand_logo === 'string' && sanitized.brand_logo?.startsWith("blob:")) {
+      if (
+        typeof sanitized.brand_logo === "string" &&
+        sanitized.brand_logo?.startsWith("blob:")
+      ) {
         sanitized.brand_logo = "";
       }
-      if (typeof sanitized.mfg_logo === 'string' && sanitized.mfg_logo?.startsWith("blob:")) {
+      if (
+        typeof sanitized.mfg_logo === "string" &&
+        sanitized.mfg_logo?.startsWith("blob:")
+      ) {
         sanitized.mfg_logo = "";
       }
       // if (!sanitized.brand_code && !editingBrand) {
@@ -217,10 +222,10 @@ export function BrandMaster() {
       //     typeof sanitized.brand_name === 'string' ? sanitized.brand_name : "",
       //   );
       // }
-       if (!editingBrand) {
-      delete sanitized.brand_code;
-      delete sanitized.mfg_code;
-    }
+      if (!editingBrand) {
+        delete sanitized.brand_code;
+        delete sanitized.mfg_code;
+      }
       let payload: any = sanitized;
       if (brandLogoFile || mfgLogoFile) {
         const data = new FormData();
@@ -354,7 +359,7 @@ export function BrandMaster() {
   const handleToggleStatus = async (brand: Brand) => {
     try {
       setLoading(true);
-      await MasterAPI.changeStatus("brands", brand.brand_code, {
+      await MasterAPI.update("brands", brand.brand_code, {
         is_active: !brand.is_active,
       });
       setToast({
@@ -432,7 +437,6 @@ export function BrandMaster() {
             if (row[col] !== undefined && row[col] !== "") {
               brandData[col] = row[col];
             }
-
           });
 
           // if (
@@ -533,12 +537,86 @@ export function BrandMaster() {
     exportToCSV(template, "brand_import_template.csv");
   };
 
+  const toggleSelect = (code: string) => {
+    const newSet = new Set(selectedBrands);
+    if (newSet.has(code)) newSet.delete(code);
+    else newSet.add(code);
+    setSelectedBrands(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedBrands.size === filteredBrands.length) {
+      setSelectedBrands(new Set());
+    } else {
+      setSelectedBrands(new Set(filteredBrands.map((b) => b.brand_code)));
+    }
+  };
+
+  const handleBulkStatusChange = async (status: boolean) => {
+    if (selectedBrands.size === 0) {
+      setToast({ message: "No brands selected", type: "error" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Loop through each selected brand code
+      for (const brandCode of selectedBrands) {
+        await MasterAPI.update("brands", brandCode, {
+          is_active: status,
+        });
+      }
+
+      setToast({
+        message: `Selected brands are now ${status ? "Active" : "Inactive"}`,
+        type: "success",
+      });
+
+      // Refresh the brand list
+      loadBrands();
+
+      // Optionally, clear the selection after bulk update
+      setSelectedBrands(new Set());
+    } catch (error) {
+      console.error(error);
+      setToast({ message: "Failed to update selected brands", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
+    {
+      key: "selection",
+      label: (
+        <input
+          type="checkbox"
+          checked={
+            selectedBrands.size === filteredBrands.length &&
+            filteredBrands.length > 0
+          }
+          onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+      ) as any,
+      render: (_: any, row: Brand) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedBrands.has(row.brand_code)}
+            onChange={() => toggleSelect(row.brand_code)}
+            className="w-4 h-4 rounded cursor-pointer border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      // width: "100px",
+    },
     {
       key: "brand_logo",
       label: "Brand Logo",
       sortable: false,
-      width: "150px",
+      // width: "120px",
       render: (value: string) =>
         value ? (
           <img
@@ -552,10 +630,10 @@ export function BrandMaster() {
           </div>
         ),
     },
-    { key: "brand_name", label: "Brand Name", sortable: true, width: "100px", },
+    { key: "brand_name", label: "Brand Name", sortable: true },
     {
       key: "mfg_logo",
-      width: "100px",
+      // width: "100px",
       label: "Mfg Logo",
       sortable: false,
       render: (value: string) =>
@@ -567,18 +645,18 @@ export function BrandMaster() {
           </div>
         ),
     },
-    { key: "mfg_name", label: "Manufacturer", sortable: true, width: "100px", },
+    { key: "mfg_name", label: "Manufacturer", sortable: true },
     {
       key: "is_active",
       label: "Status",
       sortable: true,
-      width: "120px",
       render: (val: boolean) => (
         <span
-          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${val
-            ? "bg-green-50 text-green-700 border border-green-100"
-            : "bg-red-50 text-red-700 border border-red-100"
-            }`}
+          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+            val
+              ? "bg-green-50 text-green-700 border border-green-100"
+              : "bg-red-50 text-red-700 border border-red-100"
+          }`}
         >
           {val ? "Active" : "Inactive"}
         </span>
@@ -588,7 +666,6 @@ export function BrandMaster() {
       key: "actions",
       label: "Actions",
       sortable: false,
-      width: "20px",
       render: (_: any, row: Brand) => (
         <div className="flex items-center gap-2">
           <button
@@ -600,16 +677,18 @@ export function BrandMaster() {
           </button>
           <button
             onClick={() => handleToggleStatus(row)}
-            className={`p-1.5 rounded-lg transition-colors ${row.is_active
-              ? "hover:bg-red-100 text-green-600"
-              : "hover:bg-green-100 text-red-600"
-              }`}
-            title={row.is_active ? "Deactivate Brand" : "Activate Brand"}
+            className={`p-1.5 rounded-lg transition-colors ${
+              row.is_active
+                ? "hover:bg-red-100 text-green-600"
+                : "hover:bg-green-100 text-red-600"
+            }`}
+            title={row.is_active ? "Deactivate" : "Activate"}
           >
             {row.is_active ? <CheckCircle size={16} /> : <XCircle size={16} />}
           </button>
         </div>
       ),
+      // width: "100px"
     },
   ];
 
@@ -671,7 +750,9 @@ export function BrandMaster() {
               <Download size={16} /> Export
             </button>
 
-            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">                  <Upload size={16} /> Import
+            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+              {" "}
+              <Upload size={16} /> Import
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -717,6 +798,37 @@ export function BrandMaster() {
           </button>
         )}
       </div>
+
+      {selectedBrands.size > 0 && (
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+              {selectedBrands.size} selected
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkStatusChange(true)}
+                className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-xs font-bold"
+              >
+                Activate
+              </button>
+              <button
+                onClick={() => handleBulkStatusChange(false)}
+                className="px-3 py-1 bg-red-500 hover:bg-red-400 rounded text-xs font-bold"
+              >
+                Deactivate
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={() => setSelectedBrands(new Set())}
+            className="text-white/80 hover:text-white"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         data={filteredBrands}
@@ -743,7 +855,6 @@ export function BrandMaster() {
         title={editingBrand ? "Edit Brand" : "Add Brand"}
       >
         <div className="h-full flex flex-col">
-
           <div className="flex-1 p-6 pb-15 space-y-6 overflow-y-auto">
             <div className="space-y-4">
               {editingBrand && (
@@ -757,7 +868,6 @@ export function BrandMaster() {
                     disabled
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
-
                 </div>
               )}
               <div>
@@ -805,10 +915,11 @@ export function BrandMaster() {
                         setFormData({ ...formData, brand_logo: e.target.value })
                       }
                       disabled={!!brandLogoFile}
-                      className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${brandLogoFile
-                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                        : "border-gray-300"
-                        }`}
+                      className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        brandLogoFile
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                          : "border-gray-300"
+                      }`}
                     />
                     {(formData.brand_logo || brandLogoFile) && (
                       <button
@@ -916,7 +1027,9 @@ export function BrandMaster() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   {errors.mfg_name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.mfg_name}</p>
+                    <p className="text-red-500 text-sm mt-1">
+                      {errors.mfg_name}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -944,10 +1057,11 @@ export function BrandMaster() {
                             ? "Image File Selected"
                             : "https://example.com/logo.png"
                         }
-                        className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${mfgLogoFile
+                        className={`w-full pl-9 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          mfgLogoFile
                             ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                             : "border-gray-300"
-                          }`}
+                        }`}
                       />
                       {(formData.mfg_logo || mfgLogoFile) && (
                         <button
@@ -984,7 +1098,8 @@ export function BrandMaster() {
                           alt="Mfg logo preview"
                           className="max-w-full max-h-full object-contain"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).style.display =
+                              "none";
                             e.currentTarget.parentElement!.innerHTML =
                               '<span class="text-xs text-red-400 text-center">Invalid Image</span>';
                           }}
@@ -1041,10 +1156,11 @@ export function BrandMaster() {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${submitting
-                ? "opacity-70 cursor-not-allowed"
-                : "hover:bg-blue-700"
-                }`}
+              className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                submitting
+                  ? "opacity-70 cursor-not-allowed"
+                  : "hover:bg-blue-700"
+              }`}
             >
               {submitting ? (
                 <>
