@@ -78,7 +78,7 @@ export function Categories() {
     Record<number, string>
   >({});
   const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [isSubmitting,setIsSubmitting]=useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const {
     isCustom: isCustomIndustry,
@@ -270,13 +270,12 @@ export function Categories() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleSubmit = async (e?:React.MouseEvent) => {
-    if(e)
-    {
-      e.preventDefault()
-      e.stopPropagation()
+  const handleSubmit = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
-    if (isSubmitting) return; 
+    if (isSubmitting) return;
     if (!validateForm()) return;
 
     try {
@@ -442,9 +441,8 @@ export function Categories() {
     } catch (error: any) {
       console.error("Submit error:", error);
       setToast({ message: error.message, type: "error" });
-    }
-    finally{
-      setIsSubmitting(false)
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -680,13 +678,20 @@ export function Categories() {
         categories.map((cat) => cat.breadcrumb),
       );
       const allCategories = Array.from(parentCategories.values());
+      console.log("all  categories", allCategories);
       let createdCount = 0;
       let skippedCount = 0;
+
+      const categoryExitingCode: string[] = allCategories
+        .map((c) => c.category_code)
+        .filter((c): c is string => typeof c === "string" && c.trim() !== "");
+
       for (const cat of allCategories) {
         if (!cat.category_code) {
           cat.category_code = generateEntityCode(
             "category",
             cat.category_1 || cat.industry_name || "",
+            categoryExitingCode,
           );
         }
         if (existingCategories.has(cat.breadcrumb)) {
@@ -695,6 +700,7 @@ export function Categories() {
           continue;
         }
         await MasterAPI.create("categories", cat);
+         categoryExitingCode.push(cat.category_code);
         createdCount++;
       }
 
@@ -1537,7 +1543,9 @@ export function Categories() {
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              {isSubmitting ? "Saving..." : (isEditing ? "Update" : "Add") + " Category"}
+              {isSubmitting
+                ? "Saving..."
+                : (isEditing ? "Update" : "Add") + " Category"}
             </button>
           </div>
         </div>

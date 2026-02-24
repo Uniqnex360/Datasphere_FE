@@ -659,6 +659,9 @@ export function Products() {
       const categoriesToCreate = new Map<string, any>();
       const industriesToCreate = new Map<string, any>();
 
+      // @ts-ignore
+      const safeTrim = (value) => (value != null ? String(value).trim() : "");
+
       const data = rawData
         .map((row: any, index: number) => {
           const mapped: any = {};
@@ -685,24 +688,24 @@ export function Products() {
             mapped.retail_price = parseFloat(row.retail_price) || 0;
             mapped.msrp = parseFloat(row.msrp) || 0;
             mapped.map_price = parseFloat(row.map_price || row.map) || 0;
-            mapped.sku = row.sku?.trim() || "";
-            mapped.variant_sku = row.variant_sku?.trim() || "";
-            mapped.mpn = row.mpn?.trim() || "";
-            mapped.model_series = row.model_series?.trim() || "";
-            mapped.ean = row.ean?.trim() || "";
-            mapped.upc = row.upc?.trim() || "";
-            mapped.unspsc = row.unspc?.trim() || row.unspsc?.trim() || "";
-            mapped.gtin = row.gtin?.trim() || "";
-            mapped.product_type = row.product_type?.trim() || "";
-            mapped.prod_short_desc = row.prod_short_desc?.trim() || "";
-            mapped.prod_long_desc = row.prod_long_desc?.trim() || "";
-            mapped.meta_title = row.meta_title?.trim() || "";
-            mapped.meta_desc = row.meta_desc?.trim() || "";
-            mapped.meta_keywords = row.meta_keywords?.trim() || "";
+            mapped.sku = safeTrim(row.sku);
+            mapped.variant_sku = safeTrim(row.variant_sku);
+            mapped.mpn = safeTrim(row.mpn);
+            mapped.model_series = safeTrim(row.model_series) ;
+            mapped.ean = safeTrim(row.ean);
+            mapped.upc = safeTrim(row.upc);
+            mapped.unspsc = safeTrim(row.unspc);
+            mapped.gtin = safeTrim(row.gtin);
+            mapped.product_type = safeTrim(row.product_type);
+            mapped.prod_short_desc = safeTrim(row.prod_short_desc);
+            mapped.prod_long_desc = safeTrim(row.prod_long_desc);
+            mapped.meta_title =safeTrim(row.meta_title);
+            mapped.meta_desc =safeTrim(row.meta_desc);
+            mapped.meta_keywords = safeTrim(row.meta_keywords);
 
-            const brandName = row.brand_name?.trim();
-            const mfgName = row.mfg_name?.trim();
-            const industryName = row.industry_name?.trim();
+            const brandName = safeTrim(row.brand_name);
+            const mfgName = safeTrim(row.mfg_name);
+            const industryName = safeTrim(row.industry_name);
             mapped.industry_name = industryName || "";
             if (industryName) {
               const industryKey = industryName.toLowerCase().trim();

@@ -85,11 +85,12 @@ export function Layout({
       </div>
 
       <div
-        className={`fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-10 transition-transform duration-300 ${
+        className={`fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-gray-200 z-10 
+          flex felx-col transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-1 flex-1 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = currentPage === item.page;
