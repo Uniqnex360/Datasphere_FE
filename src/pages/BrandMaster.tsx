@@ -353,7 +353,11 @@ export function BrandMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredBrands, "brands.csv");
+    exportToCSV(filteredBrands, "brands.csv", [
+      "id",
+      "updated_at",
+      "created_at",
+    ]);
     setToast({ message: "Brands exported successfully", type: "success" });
   };
   const handleToggleStatus = async (brand: Brand) => {
@@ -527,10 +531,13 @@ export function BrandMaster() {
   const downloadTemplate = () => {
     const template = [
       {
+        brand_code: "",
         brand_name: "Example Brand",
+        brand_website: "",
         brand_logo: "https://example.com/brand-logo.png",
         mfg_code: "MFG001",
         mfg_name: "Example Manufacturer",
+        manufacturer_website: "",
         mfg_logo: "https://example.com/mfg-logo.png",
       },
     ];

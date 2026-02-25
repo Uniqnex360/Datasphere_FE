@@ -521,7 +521,12 @@ export function Categories() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredCategories, "categories.csv");
+    exportToCSV(filteredCategories, "categories.csv", [
+      "id",
+      "created_at",
+      "updated_at",
+      "enrichment_status",
+    ]);
     setToast({ message: "Categories exported successfully", type: "success" });
   };
 
@@ -678,13 +683,15 @@ export function Categories() {
         categories.map((cat) => cat.breadcrumb),
       );
       const allCategories = Array.from(parentCategories.values());
-      console.log("all  categories", allCategories);
       let createdCount = 0;
       let skippedCount = 0;
 
-      const categoryExitingCode: string[] = allCategories
-        .map((c) => c.category_code)
-        .filter((c): c is string => typeof c === "string" && c.trim() !== "");
+      const categoryExitingCode: string[] = Array.from(
+        new Set([
+          ...allCategories.map((c) => c.category_code),
+          ...categories.map((c) => c.category_code),
+        ]),
+      ).filter((c): c is string => typeof c === "string" && c.trim() !== "");
 
       for (const cat of allCategories) {
         if (!cat.category_code) {
@@ -694,13 +701,20 @@ export function Categories() {
             categoryExitingCode,
           );
         }
+        //@ts-ignore
         if (existingCategories.has(cat.breadcrumb)) {
           console.log(`Skipping breadcrumbs :${cat.breadcrumb}`);
           skippedCount++;
           continue;
         }
+        const matchedIndustry = industries.find(
+          (ind) => ind.industry_name === cat.industry_name,
+        );
+
+        cat.industry_code = matchedIndustry?.industry_code;
+
         await MasterAPI.create("categories", cat);
-         categoryExitingCode.push(cat.category_code);
+        categoryExitingCode.push(cat.category_code);
         createdCount++;
       }
 
