@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import Papa from "papaparse";
 
 function normalizeColumnName(name: string): string {
   const normalized = name
@@ -37,113 +38,226 @@ function normalizeColumnName(name: string): string {
   return mappedName;
 }
 
+// export function exportToCSV(
+//   data: any[],
+//   filename: string,
+//   excludeFields: string[] = [], // fields to remove
+// ) {
+//   if (data.length === 0) return;
+
+//   const allKeys = Object.keys(data[0]).filter(
+//     (key) => !excludeFields.includes(key),
+//   );
+
+//   const orderedKeys: string[] = [];
+//   const featureKeys: string[] = [];
+//   const attributeKeys: string[] = [];
+//   const documentKeys: string[] = [];
+//   const imageKeys: string[] = [];
+//   const otherKeys: string[] = [];
+
+//   allKeys.forEach((key) => {
+//     if (key.match(/^feature_\d+$/)) {
+//       featureKeys.push(key);
+//     } else if (key.match(/^attribute_(name|value|uom)_\d+$/)) {
+//       attributeKeys.push(key);
+//     } else if (key.match(/^document_\d+_(name|url)$/)) {
+//       documentKeys.push(key);
+//     } else if (key.match(/^image_url_\d+$/)) {
+//       imageKeys.push(key);
+//     } else {
+//       otherKeys.push(key);
+//     }
+//   });
+
+//   // Sorting logic remains the same
+//   featureKeys.sort(
+//     (a, b) =>
+//       parseInt(a.match(/\d+/)?.[0] || "0") -
+//       parseInt(b.match(/\d+/)?.[0] || "0"),
+//   );
+//   attributeKeys.sort((a, b) => {
+//     const numA = parseInt(a.match(/\d+/)?.[0] || "0");
+//     const numB = parseInt(b.match(/\d+/)?.[0] || "0");
+//     if (numA !== numB) return numA - numB;
+//     if (a.includes("_name_")) return -1;
+//     if (b.includes("_name_")) return 1;
+//     if (a.includes("_value_")) return -1;
+//     if (b.includes("_value_")) return 1;
+//     return 0;
+//   });
+//   documentKeys.sort((a, b) => {
+//     const numA = parseInt(a.match(/\d+/)?.[0] || "0");
+//     const numB = parseInt(b.match(/\d+/)?.[0] || "0");
+//     if (numA !== numB) return numA - numB;
+//     if (a.includes("_name")) return -1;
+//     if (b.includes("_name")) return 1;
+//     return 0;
+//   });
+//   imageKeys.sort(
+//     (a, b) =>
+//       parseInt(a.match(/\d+/)?.[0] || "0") -
+//       parseInt(b.match(/\d+/)?.[0] || "0"),
+//   );
+
+//   orderedKeys.push(
+//     ...otherKeys,
+//     ...featureKeys,
+//     ...attributeKeys,
+//     ...documentKeys,
+//     ...imageKeys,
+//   );
+
+//   const csvContent = [
+//     orderedKeys.join(","), // headers
+//     ...data.map((row) =>
+//       orderedKeys
+//         .map((header) => {
+//           let value = row[header];
+
+//           // Handle object values by JSON stringifying them
+//           if (value && typeof value === "object") {
+//             value = JSON.stringify(value);
+//           }
+
+//           const stringValue = String(value ?? "");
+//           // Escape quotes, commas, newlines
+//           if (
+//             stringValue.includes(",") ||
+//             stringValue.includes('"') ||
+//             stringValue.includes("\n")
+//           ) {
+//             return `"${stringValue.replace(/"/g, '""')}"`;
+//           }
+//           return stringValue;
+//         })
+//         .join(","),
+//     ),
+//   ].join("\n");
+
+//   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+//   const link = document.createElement("a");
+//   const url = URL.createObjectURL(blob);
+//   link.setAttribute("href", url);
+//   link.setAttribute("download", filename);
+//   link.style.visibility = "hidden";
+//   document.body.appendChild(link);
+//   link.click();
+//   document.body.removeChild(link);
+// }
+
 export function exportToCSV(
   data: any[],
   filename: string,
   excludeFields: string[] = [], // fields to remove
 ) {
-  if (data.length === 0) return;
+  if (!data.length) return;
 
-  const allKeys = Object.keys(data[0]).filter(
+  // Use keys from the first object as-is, filtering excluded fields
+  const keys = Object.keys(data[0]).filter(
     (key) => !excludeFields.includes(key),
   );
 
-  const orderedKeys: string[] = [];
-  const featureKeys: string[] = [];
-  const attributeKeys: string[] = [];
-  const documentKeys: string[] = [];
-  const imageKeys: string[] = [];
-  const otherKeys: string[] = [];
-
-  allKeys.forEach((key) => {
-    if (key.match(/^feature_\d+$/)) {
-      featureKeys.push(key);
-    } else if (key.match(/^attribute_(name|value|uom)_\d+$/)) {
-      attributeKeys.push(key);
-    } else if (key.match(/^document_\d+_(name|url)$/)) {
-      documentKeys.push(key);
-    } else if (key.match(/^image_url_\d+$/)) {
-      imageKeys.push(key);
-    } else {
-      otherKeys.push(key);
-    }
-  });
-
-  // Sorting logic remains the same
-  featureKeys.sort(
-    (a, b) =>
-      parseInt(a.match(/\d+/)?.[0] || "0") -
-      parseInt(b.match(/\d+/)?.[0] || "0"),
-  );
-  attributeKeys.sort((a, b) => {
-    const numA = parseInt(a.match(/\d+/)?.[0] || "0");
-    const numB = parseInt(b.match(/\d+/)?.[0] || "0");
-    if (numA !== numB) return numA - numB;
-    if (a.includes("_name_")) return -1;
-    if (b.includes("_name_")) return 1;
-    if (a.includes("_value_")) return -1;
-    if (b.includes("_value_")) return 1;
-    return 0;
-  });
-  documentKeys.sort((a, b) => {
-    const numA = parseInt(a.match(/\d+/)?.[0] || "0");
-    const numB = parseInt(b.match(/\d+/)?.[0] || "0");
-    if (numA !== numB) return numA - numB;
-    if (a.includes("_name")) return -1;
-    if (b.includes("_name")) return 1;
-    return 0;
-  });
-  imageKeys.sort(
-    (a, b) =>
-      parseInt(a.match(/\d+/)?.[0] || "0") -
-      parseInt(b.match(/\d+/)?.[0] || "0"),
-  );
-
-  orderedKeys.push(
-    ...otherKeys,
-    ...featureKeys,
-    ...attributeKeys,
-    ...documentKeys,
-    ...imageKeys,
-  );
-
+  // Build CSV content
   const csvContent = [
-    orderedKeys.join(","), // headers
+    keys.join(","), // headers
     ...data.map((row) =>
-      orderedKeys
-        .map((header) => {
-          let value = row[header];
+      keys
+        .map((key) => {
+          let value = row[key];
 
-          // Handle object values by JSON stringifying them
+          // Handle objects by JSON stringifying
           if (value && typeof value === "object") {
             value = JSON.stringify(value);
           }
 
-          const stringValue = String(value ?? "");
+          const str = String(value ?? "");
+
           // Escape quotes, commas, newlines
-          if (
-            stringValue.includes(",") ||
-            stringValue.includes('"') ||
-            stringValue.includes("\n")
-          ) {
-            return `"${stringValue.replace(/"/g, '""')}"`;
+          if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+            return `"${str.replace(/"/g, '""')}"`;
           }
-          return stringValue;
+          return str;
         })
         .join(","),
     ),
   ].join("\n");
 
+  // Create download link
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  const url = URL.createObjectURL(blob);
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
+
+// export function parseCSV(file: File): Promise<any[]> {
+//   return new Promise((resolve, reject) => {
+//     const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+//     if (fileExtension === "xlsx" || fileExtension === "xls") {
+//       const reader = new FileReader();
+//       reader.onload = (e) => {
+//         try {
+//           const data = new Uint8Array(e.target?.result as ArrayBuffer);
+//           const workbook = XLSX.read(data, { type: "array" });
+//           const firstSheetName = workbook.SheetNames[0];
+//           const worksheet = workbook.Sheets[firstSheetName];
+//           const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+//           const normalizedData = jsonData.map((row: any) => {
+//             const normalizedRow: any = {};
+//             Object.keys(row).forEach((key) => {
+//               const normalizedKey = normalizeColumnName(key);
+//               normalizedRow[normalizedKey] = row[key];
+//             });
+//             return normalizedRow;
+//           });
+
+//           resolve(normalizedData);
+//         } catch (error) {
+//           reject(error);
+//         }
+//       };
+//       reader.onerror = () => reject(reader.error);
+//       reader.readAsArrayBuffer(file);
+//     } else {
+//       const reader = new FileReader();
+//       reader.onload = (e) => {
+//         try {
+//           const text = e.target?.result as string;
+//           const lines = text.split("\n").filter((line) => line.trim());
+//           if (lines.length === 0) {
+//             resolve([]);
+//             return;
+//           }
+
+//           const headers = lines[0]
+//             .split(",")
+//             .map((h) => normalizeColumnName(h.trim().replace(/^"|"$/g, "")));
+//           const data = lines.slice(1).map((line) => {
+//             const values = line
+//               .split(",")
+//               .map((v) => v.trim().replace(/^"|"$/g, ""));
+//             const row: any = {};
+//             headers.forEach((header, index) => {
+//               row[header] = values[index] || "";
+//             });
+//             return row;
+//           });
+//           resolve(data);
+//         } catch (error) {
+//           reject(error);
+//         }
+//       };
+//       reader.onerror = () => reject(reader.error);
+//       reader.readAsText(file);
+//     }
+//   });
+// }
 
 export function parseCSV(file: File): Promise<any[]> {
   return new Promise((resolve, reject) => {
@@ -162,8 +276,7 @@ export function parseCSV(file: File): Promise<any[]> {
           const normalizedData = jsonData.map((row: any) => {
             const normalizedRow: any = {};
             Object.keys(row).forEach((key) => {
-              const normalizedKey = normalizeColumnName(key);
-              normalizedRow[normalizedKey] = row[key];
+              normalizedRow[normalizeColumnName(key)] = row[key];
             });
             return normalizedRow;
           });
@@ -173,39 +286,28 @@ export function parseCSV(file: File): Promise<any[]> {
           reject(error);
         }
       };
-      reader.onerror = () => reject(reader.error);
       reader.readAsArrayBuffer(file);
     } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const text = e.target?.result as string;
-          const lines = text.split("\n").filter((line) => line.trim());
-          if (lines.length === 0) {
-            resolve([]);
-            return;
-          }
-
-          const headers = lines[0]
-            .split(",")
-            .map((h) => normalizeColumnName(h.trim().replace(/^"|"$/g, "")));
-          const data = lines.slice(1).map((line) => {
-            const values = line
-              .split(",")
-              .map((v) => v.trim().replace(/^"|"$/g, ""));
-            const row: any = {};
-            headers.forEach((header, index) => {
-              row[header] = values[index] || "";
+      // ✅ FIXED CSV HANDLING
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        complete: (results) => {
+          const normalizedData = results.data.map((row: any) => {
+            const normalizedRow: any = {};
+            Object.keys(row).forEach((key) => {
+              normalizedRow[key] = row[key] ?? ""; // <-- keep original header
             });
-            return row;
+            return normalizedRow;
           });
-          resolve(data);
-        } catch (error) {
+
+          resolve(normalizedData);
+        },
+        error: (error) => {
           reject(error);
-        }
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsText(file);
+        },
+      });
     }
   });
 }
@@ -227,7 +329,7 @@ export function parseCSVHeader(file: File): Promise<string[]> {
           // Extract headers using XLSX utils
           const headers: string[] = XLSX.utils.sheet_to_json(worksheet, {
             header: 1, // get rows as arrays
-            range: 0,  // first row only
+            range: 0, // first row only
           })[0] as string[];
 
           // Normalize headers

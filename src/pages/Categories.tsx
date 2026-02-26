@@ -201,17 +201,22 @@ export function Categories() {
     setFilteredCategories(filtered);
   };
 
-  const convertToTreeNodes = (
-    tree: ReturnType<typeof buildCategoryTree>,
-  ): TreeNode[] => {
-    return tree.map((node) => ({
-      id: node.category.category_code,
-      label: getCategoryName(node.category),
-      tag: node.category.product_type || undefined,
-      children: convertToTreeNodes(node.children),
-      data: node.category,
-    }));
-  };
+const convertToTreeNodes = (
+  categories: Category[], 
+  seen = new Set<string>()
+): any[] => {
+  return categories.map(cat => {
+    if (seen.has(cat.id)) return null; // already processed
+    seen.add(cat.id);
+    return {
+      title: cat.name,
+      key: cat.id,
+      children: cat.children && cat.children.length > 0 
+        ? convertToTreeNodes(cat.children, seen) 
+        : undefined
+    };
+  }).filter(Boolean);
+};
 
   const handleCategorySelect = (id: string, data?: any) => {
     const category = data as Category;
@@ -374,9 +379,6 @@ export function Categories() {
         industry_code: industryCode,
         industry_name: industryName,
         breadcrumb: generateBreadcrumb(formData as Category),
-        category_code:
-          formData.category_code ||
-          generateEntityCode("category", formData.category_1 || ""),
       };
 
       console.log("Submitting category with industry_code:", industryCode);
@@ -531,204 +533,153 @@ export function Categories() {
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    try {
-      const data = await parseCSV(file);
-      const expectedColumns = [
-        "industry_code",
-        "industry_name",
-        "category_1",
-        "category_2",
-        "category_3",
-        "category_4",
-        "category_5",
-        "category_6",
-        "category_7",
-        "category_8",
-        "product_type",
-        "breadcrumb",
-      ];
-      const validation = validateImportFormat(data, expectedColumns);
-      if (!validation.isValid) {
-        setToast({
-          message: validation.errorMessage || "Import failed!",
-          type: "error",
-        });
-        e.target.value = "";
-        return;
-      }
-      const validData: Partial<Category>[] = [];
-      const importErrors: string[] = [];
-      const parentCategories = new Map<string, Partial<Category>>();
-      const industriesToCreate = new Map<
-        string,
-        { industry_code: string; industry_name: string }
-      >();
+  try {
+    const data = await parseCSV(file);
+    const expectedColumns = [
+      "industry_name",
+      "category_1",
+      "category_2",
+      "category_3",
+      "category_4",
+      "category_5",
+      "category_6",
+      "category_7",
+      "category_8",
+      "product_type",
+    ];
 
-      data.forEach((row, index) => {
-        const rowErrors: string[] = [];
-
-        const categoryData: Partial<Category> = {
-          ...row,
-          breadcrumb: generateBreadcrumb(row as Category),
-        };
-
-        if (
-          categoryData.category_code === "" ||
-          categoryData.category_code === undefined
-        ) {
-          categoryData.category_code = generateEntityCode(
-            "category",
-            categoryData.category_code || "",
-          );
-        }
-
-        const hierarchyErrors = validateCategoryHierarchy(categoryData);
-        if (hierarchyErrors.length > 0) {
-          rowErrors.push(...hierarchyErrors);
-        }
-
-        if (rowErrors.length > 0) {
-          importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
-        } else {
-          if (categoryData.industry_name && categoryData.industry_name.trim()) {
-            const industryName = categoryData.industry_name.trim();
-            const industryCode =
-              categoryData.industry_code?.trim() ||
-              industryName
-                .substring(0, 4)
-                .toUpperCase()
-                .replace(/[^A-Z]/g, "");
-
-            categoryData.industry_code = industryCode;
-
-            if (!industriesToCreate.has(industryCode)) {
-              industriesToCreate.set(industryCode, {
-                industry_code: industryCode,
-                industry_name: industryName,
-              });
-            }
-          }
-          const nonEmptyLevels = [];
-          for (let level = 1; level <= 8; level++) {
-            const catValue =
-              categoryData[`category_${level}` as keyof Category];
-            if (catValue && String(catValue).trim()) {
-              nonEmptyLevels.push(level);
-            }
-          }
-
-          for (const level of nonEmptyLevels) {
-            const parentData: Partial<Category> = {
-              industry_code: categoryData.industry_code,
-              industry_name: categoryData.industry_name,
-            };
-
-            for (let i = 1; i <= 8; i++) {
-              if (i <= level && nonEmptyLevels.includes(i)) {
-                parentData[`category_${i}` as keyof Category] = categoryData[
-                  `category_${i}` as keyof Category
-                ] as any;
-              } else {
-                parentData[`category_${i}` as keyof Category] = "" as any;
-              }
-            }
-
-            parentData.product_type =
-              level === Math.max(...nonEmptyLevels)
-                ? categoryData.product_type
-                : "";
-            parentData.breadcrumb = generateBreadcrumb(parentData as Category);
-
-            const key = parentData.breadcrumb;
-            if (!parentCategories.has(key!)) {
-              parentCategories.set(key!, parentData);
-            }
-          }
-
-          validData.push(categoryData);
-        }
-      });
-
-      if (importErrors.length > 0) {
-        setToast({
-          message: `Import failed: ${importErrors.join("; ")}`,
-          type: "error",
-        });
-        return;
-      }
-      const existingIndustries = await MasterAPI.getIndustries();
-      const existingCodes = new Set(
-        existingIndustries.map((ind: any) => ind.industry_code),
-      );
-      if (industriesToCreate.size > 0) {
-        const newIndustries = Array.from(industriesToCreate.values()).filter(
-          (ind) => !existingCodes.has(ind.industry_code),
-        );
-
-        for (const ind of newIndustries) {
-          try {
-            await MasterAPI.create("industries", ind);
-          } catch (error) {
-            console.warn(
-              `Industry ${ind.industry_code} likely exists, skipping.`,
-            );
-          }
-        }
-        loadIndustries();
-      }
-      const existingCategories = new Set(
-        categories.map((cat) => cat.breadcrumb),
-      );
-      const allCategories = Array.from(parentCategories.values());
-      let createdCount = 0;
-      let skippedCount = 0;
-
-      const categoryExitingCode: string[] = Array.from(
-        new Set([
-          ...allCategories.map((c) => c.category_code),
-          ...categories.map((c) => c.category_code),
-        ]),
-      ).filter((c): c is string => typeof c === "string" && c.trim() !== "");
-
-      for (const cat of allCategories) {
-        if (!cat.category_code) {
-          cat.category_code = generateEntityCode(
-            "category",
-            cat.category_1 || cat.industry_name || "",
-            categoryExitingCode,
-          );
-        }
-        //@ts-ignore
-        if (existingCategories.has(cat.breadcrumb)) {
-          console.log(`Skipping breadcrumbs :${cat.breadcrumb}`);
-          skippedCount++;
-          continue;
-        }
-        const matchedIndustry = industries.find(
-          (ind) => ind.industry_name === cat.industry_name,
-        );
-
-        cat.industry_code = matchedIndustry?.industry_code;
-
-        await MasterAPI.create("categories", cat);
-        categoryExitingCode.push(cat.category_code);
-        createdCount++;
-      }
-
+    const validation = validateImportFormat(data, expectedColumns);
+    if (!validation.isValid) {
       setToast({
-        message: `${allCategories.length} categories imported (including parent categories)`,
-        type: "success",
+        message: validation.errorMessage || "Import failed!",
+        type: "error",
       });
-      loadCategories();
-    } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      e.target.value = "";
+      return;
     }
 
-    e.target.value = "";
-  };
+    const validData: Partial<Category>[] = [];
+    const importErrors: string[] = [];
+    const industriesToCreate = new Map<
+      string,
+      { industry_code: string; industry_name: string }
+    >();
+
+    // Process each row as a full hierarchy category
+    data.forEach((row, index) => {
+      const rowErrors: string[] = [];
+
+      const categoryData: Partial<Category> = {
+        ...row,
+      };
+
+      // Validate full category hierarchy
+      const hierarchyErrors = validateCategoryHierarchy(categoryData);
+      if (hierarchyErrors.length > 0) {
+        rowErrors.push(...hierarchyErrors);
+      }
+
+      if (rowErrors.length > 0) {
+        importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
+      } else {
+        // Industry code generation / normalization
+        if (categoryData.industry_name && categoryData.industry_name.trim()) {
+          const industryName = categoryData.industry_name.trim();
+          const industryCode =
+            categoryData.industry_code?.trim() ||
+            industryName
+              .substring(0, 4)
+              .toUpperCase()
+              .replace(/[^A-Z]/g, "");
+
+          categoryData.industry_code = industryCode;
+
+          if (!industriesToCreate.has(industryCode)) {
+            industriesToCreate.set(industryCode, {
+              industry_code: industryCode,
+              industry_name: industryName,
+            });
+          }
+        }
+
+        // Build breadcrumb for full hierarchy row
+        categoryData.breadcrumb = generateBreadcrumb(categoryData as Category);
+
+        // Push full category (one per row)
+        validData.push(categoryData);
+      }
+    });
+
+    if (importErrors.length > 0) {
+      setToast({
+        message: `Import failed: ${importErrors.join("; ")}`,
+        type: "error",
+      });
+      return;
+    }
+
+    // Fetch existing industries
+    const existingIndustries = await MasterAPI.getIndustries();
+    const existingCodes = new Set(
+      existingIndustries.map((ind: any) => ind.industry_code),
+    );
+
+    // Create new industries if any
+    if (industriesToCreate.size > 0) {
+      const newIndustries = Array.from(industriesToCreate.values()).filter(
+        (ind) => !existingCodes.has(ind.industry_code),
+      );
+
+      for (const ind of newIndustries) {
+        try {
+          await MasterAPI.create("industries", ind);
+        } catch (error) {
+          console.warn(
+            `Industry ${ind.industry_code} likely exists, skipping.`,
+          );
+        }
+      }
+      loadIndustries();
+    }
+
+    // Check existing categories by breadcrumb to avoid duplicates
+    const existingCategories = new Set(
+      categories.map((cat) => cat.breadcrumb),
+    );
+
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const cat of validData) {
+      if (existingCategories.has(cat.breadcrumb)) {
+        console.log(`Skipping breadcrumb: ${cat.breadcrumb}`);
+        skippedCount++;
+        continue;
+      }
+
+      const matchedIndustry = industries.find(
+        (ind) => ind.industry_name === cat.industry_name,
+      );
+      cat.industry_code = matchedIndustry?.industry_code;
+
+      await MasterAPI.create("categories", cat);
+      createdCount++;
+    }
+
+    setToast({
+      message: `${createdCount} categories imported (excluding ${skippedCount} duplicates)`,
+      type: "success",
+    });
+    loadCategories();
+  } catch (error: any) {
+    setToast({ message: error.message, type: "error" });
+  }
+
+  e.target.value = "";
+};
 
   const downloadTemplate = () => {
     const template = [

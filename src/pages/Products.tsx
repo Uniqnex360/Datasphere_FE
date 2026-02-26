@@ -587,655 +587,713 @@ export function Products() {
     setToast({ message: "Products exported successfully", type: "success" });
   };
 
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
 
-    try {
-      setLoading(true);
-      const rawData = await parseCSV(file);
+  //   try {
+  //     setLoading(true);
+  //     const rawData = await parseCSV(file);
 
-      if (rawData.length > 0) {
-        console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
+  //     if (rawData.length > 0) {
+  //       console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
+  //     }
+
+  //     const hasProductName =
+  //       rawData.length > 0 &&
+  //       (rawData[0].product_name ||
+  //         rawData[0].product_title ||
+  //         rawData[0].title ||
+  //         rawData[0].name);
+
+  //     if (!hasProductName) {
+  //       setToast({
+  //         message:
+  //           "Import failed: Product name column is required (product_name, product_title, title, or name)",
+  //         type: "error",
+  //       });
+  //       e.target.value = "";
+  //       return;
+  //     }
+
+  //     const bundleAssets = (row: any, type: string) => {
+  //       const assets: Record<string, { name: string; url: string }> = {};
+  //       Object.keys(row).forEach((key) => {
+  //         const urlMatch = key.match(
+  //           new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),
+  //         );
+  //         const nameMatch = key.match(
+  //           new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),
+  //         );
+
+  //         if (urlMatch) {
+  //           const idx = urlMatch[1];
+  //           if (!assets[idx]) assets[idx] = { name: "", url: "" };
+  //           assets[idx].url = String(row[key] || "").trim();
+  //         }
+  //         if (nameMatch) {
+  //           const idx = nameMatch[1];
+  //           if (!assets[idx]) assets[idx] = { name: "", url: "" };
+  //           assets[idx].name = String(row[key] || "").trim();
+  //         }
+  //       });
+
+  //       const cleaned: Record<string, any> = {};
+  //       Object.entries(assets).forEach(([idx, data]) => {
+  //         if (data.url) {
+  //           cleaned[idx] = {
+  //             url: data.url,
+  //             name:
+  //               data.name ||
+  //               `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
+  //           };
+  //         }
+  //       });
+  //       return Object.keys(cleaned).length > 0 ? cleaned : {};
+  //     };
+
+  //     const validData: Partial<Product>[] = [];
+  //     const importErrors: string[] = [];
+  //     const brandsToCreate = new Map<string, any>();
+  //     const vendorsToCreate = new Map<string, any>();
+  //     const categoriesToCreate = new Map<string, any>();
+  //     const industriesToCreate = new Map<string, any>();
+
+  //     // @ts-ignore
+  //     const safeTrim = (value) => (value != null ? String(value).trim() : "");
+
+  //     const data = rawData
+  //       .map((row: any, index: number) => {
+  //         const mapped: any = {};
+
+  //         try {
+  //           const productNameKey = Object.keys(row).find(
+  //             (k) =>
+  //               k.toLowerCase().replace(/_/g, " ") === "product name" ||
+  //               k.toLowerCase() === "name",
+  //           );
+  //           mapped.product_name = String(
+  //             row[productNameKey || "product_name"] || "",
+  //           ).trim();
+
+  //           if (!mapped.product_name) {
+  //             throw new Error("Missing Product Name column or empty value");
+  //           }
+  //           mapped.product_code = row.product_code?.trim() || null;
+  //           mapped.price = parseFloat(row.price) || 0;
+  //           mapped.sale_price = parseFloat(row.sale_price) || 0;
+  //           mapped.list_price = parseFloat(row.list_price) || 0;
+  //           mapped.base_price = parseFloat(row.base_price) || 0;
+  //           mapped.regular_price = parseFloat(row.regular_price) || 0;
+  //           mapped.retail_price = parseFloat(row.retail_price) || 0;
+  //           mapped.msrp = parseFloat(row.msrp) || 0;
+  //           mapped.map_price = parseFloat(row.map_price || row.map) || 0;
+  //           mapped.sku = safeTrim(row.sku);
+  //           mapped.variant_sku = safeTrim(row.variant_sku);
+  //           mapped.mpn = safeTrim(row.mpn);
+  //           mapped.model_series = safeTrim(row.model_series) ;
+  //           mapped.ean = safeTrim(row.ean);
+  //           mapped.upc = safeTrim(row.upc);
+  //           mapped.unspsc = safeTrim(row.unspc);
+  //           mapped.gtin = safeTrim(row.gtin);
+  //           mapped.product_type = safeTrim(row.product_type);
+  //           mapped.prod_short_desc = safeTrim(row.prod_short_desc);
+  //           mapped.prod_long_desc = safeTrim(row.prod_long_desc);
+  //           mapped.meta_title =safeTrim(row.meta_title);
+  //           mapped.meta_desc =safeTrim(row.meta_desc);
+  //           mapped.meta_keywords = safeTrim(row.meta_keywords);
+
+  //           const brandName = safeTrim(row.brand_name);
+  //           const mfgName = safeTrim(row.mfg_name);
+  //           const industryName = safeTrim(row.industry_name);
+  //           mapped.industry_name = industryName || "";
+  //           if (industryName) {
+  //             const industryKey = industryName.toLowerCase().trim();
+  //             if (!industriesToCreate.has(industryKey)) {
+  //               industriesToCreate.set(industryKey, {
+  //                 industry_code:
+  //                   row.industry_code?.trim() ||
+  //                   industryName
+  //                     .substring(0, 4)
+  //                     .toUpperCase()
+  //                     .replace(/[^A-Z]/g, ""),
+  //                 industry_name: industryName,
+  //               });
+  //             }
+  //           }
+
+  //           if (brandName) {
+  //             mapped.brand_name = brandName;
+  //             mapped.mfg_name = mfgName || brandName;
+  //             const existingBrand = brands.find(
+  //               (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
+  //             );
+  //             if (existingBrand) {
+  //               mapped.brand_code = existingBrand.brand_code;
+  //             } else {
+  //               // const brandCode = `BRND-${brandName
+  //               //   .substring(0, 8)
+  //               //   .toUpperCase()
+  //               //   .replace(/[^A-Z0-9]/g, "")}`;
+  //               // mapped.brand_code = brandCode;
+  //               brandsToCreate.set(brandName, {
+  //                 // brand_code: brandCode,
+  //                 brand_name: brandName,
+  //                 mfg_name: mfgName || brandName,
+  //               });
+  //             }
+  //           }
+
+  //           const vendorName = row.vendor_name?.trim();
+  //           if (vendorName) {
+  //             mapped.vendor_name = vendorName;
+  //             const existingVendor = vendors.find(
+  //               (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
+  //             );
+  //             if (existingVendor) {
+  //               mapped.vendor_code = existingVendor.vendor_code;
+  //             } else {
+  //               // const vendorCode = `VEND-${vendorName
+  //               //   .substring(0, 8)
+  //               //   .toUpperCase()
+  //               //   .replace(/[^A-Z0-9]/g, "")}`;
+  //               const vendorCode = "";
+  //               mapped.vendor_code = vendorCode;
+  //               if (vendorName) {
+  //                 vendorsToCreate.set(vendorName.toLowerCase(), {
+  //                   vendor_code: vendorCode,
+  //                   vendor_name: vendorName,
+  //                   industry_name: industryName,
+  //                   contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
+  //                   contact_phone: "000-000-0000",
+  //                 });
+  //               }
+  //             }
+  //           }
+
+  //           // const industryName = row.industry_name?.trim();
+  //           // mapped.industry_name = industryName || "";
+
+  //           const categoryLevels: string[] = [];
+  //           Object.keys(row).forEach((key) => {
+  //             const categoryMatch = key.match(/^category[_\s]*(\d+)$/i);
+  //             if (categoryMatch) {
+  //               const level = parseInt(categoryMatch[1]);
+  //               const value = row[key]?.trim();
+  //               if (value) {
+  //                 categoryLevels[level - 1] = value;
+  //                 mapped[`category_${level}`] = value;
+  //               }
+  //             }
+  //           });
+
+  //           if (categoryLevels.length > 0) {
+  //             const cat1 = categoryLevels[0];
+  //             const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
+  //             const existingCategory = categories.find(
+  //               (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
+  //             );
+
+  //             if (existingCategory) {
+  //               mapped.category_code = existingCategory.category_code;
+  //             } else {
+  //               const categoryCode = `CAT-${cat1
+  //                 .substring(0, 8)
+  //                 .toUpperCase()
+  //                 .replace(/[^A-Z0-9]/g, "")}`;
+  //               mapped.category_code = categoryCode;
+  //               const categoryData: any = {
+  //                 category_code: categoryCode,
+  //                 industry_name: industryName || "General",
+  //                 breadcrumb: breadcrumb,
+  //               };
+  //               categoryLevels.forEach((cat, index) => {
+  //                 if (cat) categoryData[`category_${index + 1}`] = cat;
+  //               });
+  //               categoriesToCreate.set(categoryCode, categoryData);
+  //             }
+  //           }
+
+  //           Object.keys(row).forEach((key) => {
+  //             const featureMatch = key.match(/^features?_?(\d+)$/i);
+  //             if (featureMatch) {
+  //               const num = featureMatch[1];
+  //               const value = row[key]?.trim();
+  //               if (value) mapped[`features_${num}`] = value;
+  //             }
+  //           });
+
+  //           const attributeData = new Map();
+  //           Object.keys(row).forEach((key) => {
+  //             const nameMatch = key.match(/^attribute_?names?_?(\d+)$/i);
+  //             const valueMatch = key.match(/^attribute_?values?_?(\d+)$/i);
+  //             const uomMatch = key.match(/^attribute_?uoms?_?(\d+)$/i);
+
+  //             if (nameMatch) {
+  //               const num = nameMatch[1];
+  //               const value = String(row[key] || "").trim();
+  //               if (value) {
+  //                 if (!attributeData.has(num)) attributeData.set(num, {});
+  //                 attributeData.get(num).name = value;
+  //               }
+  //             }
+  //             if (valueMatch) {
+  //               const num = valueMatch[1];
+  //               const value = String(row[key] || "").trim();
+  //               if (value) {
+  //                 if (!attributeData.has(num)) attributeData.set(num, {});
+  //                 attributeData.get(num).value = value;
+  //               }
+  //             }
+  //             if (uomMatch) {
+  //               const num = uomMatch[1];
+  //               const value = String(row[key] || "").trim();
+  //               if (value) {
+  //                 if (!attributeData.has(num)) attributeData.set(num, {});
+  //                 attributeData.get(num).uom = value;
+  //               }
+  //             }
+  //           });
+  //           const attributesJson: Record<string, any> = {};
+  //           attributeData.forEach((attr, num) => {
+  //             if (attr.name && attr.value) {
+  //               attributesJson[num] = {
+  //                 name: attr.name,
+  //                 value: attr.value,
+  //                 uom: attr.uom || null,
+  //               };
+  //             }
+  //           });
+  //           if (Object.keys(attributesJson).length > 0) {
+  //             mapped.attributes = attributesJson;
+  //           }
+
+  //           mapped.images = bundleAssets(row, "image");
+  //           mapped.videos = bundleAssets(row, "video");
+
+  //           let documents = bundleAssets(row, "document");
+
+  //           if (Object.keys(documents).length === 0) {
+  //             let docCount = 1;
+  //             const allKeys = Object.keys(row);
+  //             allKeys.forEach((key, idx) => {
+  //               const value = String(row[key] || "").trim();
+  //               if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
+  //                 let docName = "";
+  //                 if (idx > 0) {
+  //                   const prevKey = allKeys[idx - 1];
+  //                   const prevValue = String(row[prevKey] || "").trim();
+  //                   if (prevValue && !prevValue.startsWith("http")) {
+  //                     docName = prevValue;
+  //                   }
+  //                 }
+  //                 if (!docName) {
+  //                   docName = key.replace(/_/g, " ").replace(/url/i, "").trim();
+  //                   docName =
+  //                     docName.charAt(0).toUpperCase() + docName.slice(1);
+  //                 }
+  //                 // let name = key.replace(/_/g, " ").trim();
+
+  //                 // if (!name || name.length > 50) {
+  //                 //   name = `Document ${docCount}`;
+  //                 // }
+
+  //                 documents[docCount] = { name: docName, url: value };
+  //                 docCount++;
+  //               }
+  //             });
+  //           }
+  //           mapped.documents = documents;
+
+  //           return mapped;
+  //         } catch (error: any) {
+  //           console.error(`Error processing row ${index + 1}:`, error);
+  //           importErrors.push(
+  //             `Row ${index + 2}: Error processing data - ${error.message}`,
+  //           );
+  //           return null;
+  //         }
+  //       })
+  //       .filter(Boolean);
+
+  //     data.forEach((row: any, index: number) => {
+  //       if (!row.product_name?.trim()) {
+  //         importErrors.push(`Row ${index + 2}: Product Name is required`);
+  //       } else {
+  //         validData.push(row);
+  //       }
+  //     });
+
+  //     if (importErrors.length > 0) {
+  //       setToast({
+  //         message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`,
+  //         type: "error",
+  //       });
+  //       return;
+  //     }
+
+  //     let createdBrands = 0;
+  //     let createdVendors = 0;
+  //     let createdCategories = 0;
+  //     let createdIndustries = 0;
+  //     let createdCount = 0;
+  //     let skippedCount = 0;
+
+  //     if (brandsToCreate.size > 0) {
+  //       try {
+  //         const existingBrands = await MasterAPI.getBrands();
+  //         const existingCodes = new Set(
+  //           existingBrands.map((b: any) => b.brand_code),
+  //         );
+  //         const newBrands = Array.from(brandsToCreate.values()).filter(
+  //           (b) => !existingCodes.has(b.brand_code),
+  //         );
+
+  //         for (const brand of newBrands) {
+  //           try {
+  //             await MasterAPI.create("brands", brand);
+  //             createdBrands++;
+  //           } catch (err) {
+  //             console.warn("Brand create failed", err);
+  //           }
+  //         }
+  //       } catch (e) {
+  //         console.error("Brand sync error", e);
+  //       }
+  //     }
+  //     if (industriesToCreate.size > 0) {
+  //       try {
+  //         const existingIndustries = await MasterAPI.getIndustries();
+  //         const existingNames = new Set(
+  //           (existingIndustries || []).map((i: any) =>
+  //             (i.industry_name || "").toLowerCase().trim(),
+  //           ),
+  //         );
+  //         const newIndustries = Array.from(industriesToCreate.values()).filter(
+  //           (i) => !existingNames.has((i.industry_name || "").toLowerCase()),
+  //         );
+  //         if (newIndustries.length > 0) {
+  //           for (const ind of newIndustries) {
+  //             try {
+  //               await MasterAPI.create("industries", ind);
+  //               createdIndustries++;
+  //             } catch (error) {
+  //               console.warn(
+  //                 `Failed to create industry: ${ind.industry_name}`,
+  //                 error,
+  //               );
+  //             }
+  //           }
+  //         }
+  //       } catch (error) {
+  //         console.error("Industry sync error", error);
+  //       }
+  //     }
+
+  //     const latestIndustries = await MasterAPI.getIndustries();
+
+  //     const industryNameToIdMap = new Map(
+  //       (latestIndustries || [])
+  //         .filter((i: any) => i.industry_name)
+  //         .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
+  //     );
+  //     if (vendorsToCreate.size > 0) {
+  //       try {
+  //         const industryNameToIdMap = new Map(
+  //           (latestIndustries || [])
+  //             .filter((i: any) => i.industry_name)
+  //             .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
+  //         );
+
+  //         const existingVendors = await MasterAPI.getVendors();
+  //         const existingNames = new Set(
+  //           existingVendors.map((v: any) => v.vendor_name.toLowerCase().trim()),
+  //         );
+
+  //         const newVendors = Array.from(vendorsToCreate.values()).filter(
+  //           (v) => !existingNames.has(v.vendor_name.toLowerCase()),
+  //         );
+
+  //         for (const vendor of newVendors) {
+  //           try {
+  //             const indName = (vendor as any).industry_name
+  //               ?.toLowerCase()
+  //               .trim();
+  //             if (indName && industryNameToIdMap.has(indName)) {
+  //               vendor.industry_id = industryNameToIdMap.get(indName);
+  //             }
+
+  //             await MasterAPI.create("vendors", vendor);
+  //             createdVendors++;
+  //           } catch (err) {
+  //             console.warn("Vendor create failed", err);
+  //           }
+  //         }
+  //       } catch (e) {
+  //         console.error("Vendor sync error", e);
+  //       }
+  //     }
+  //     if (categoriesToCreate.size > 0) {
+  //       try {
+  //         const existingCategories = await MasterAPI.getCategories();
+  //         const existingCodes = new Set(
+  //           (existingCategories || []).map((c: any) => c.category_code),
+  //         );
+  //         const newCategories = Array.from(categoriesToCreate.values()).filter(
+  //           (c) => !existingCodes.has(c.category_code),
+  //         );
+
+  //         for (const category of newCategories) {
+  //           try {
+  //             const catIndName = (category as any).industry_name
+  //               ?.toLowerCase()
+  //               .trim();
+  //             if (catIndName && industryNameToIdMap.has(catIndName)) {
+  //               (category as any).industry_id =
+  //                 industryNameToIdMap.get(catIndName);
+  //             }
+
+  //             await MasterAPI.create("categories", category);
+  //             createdCategories++; // Use the variable that shows up in your toast!
+  //           } catch (err) {
+  //             console.warn("Category create failed", err);
+  //           }
+  //         }
+  //       } catch (e) {
+  //         console.error("Category sync error", e);
+  //       }
+  //     }
+
+  //     let processedCount = 0;
+  //     let errorCount = 0;
+  //     const existingProductMap = new Map(
+  //       products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]),
+  //     );
+
+  //     for (const productData of validData) {
+  //       if (!productData.product_code) {
+  //         const mpnKey = productData.mpn?.trim().toLowerCase();
+  //         if (mpnKey && existingProductMap.has(mpnKey)) {
+  //           productData.product_code = existingProductMap.get(mpnKey);
+  //         } else {
+  //           productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  //         }
+  //       }
+
+  //       try {
+  //         await ProductAPI.upsert(productData);
+  //         processedCount++;
+  //       } catch (e) {
+  //         console.error(
+  //           "Failed to import product:",
+  //           productData.product_name,
+  //           e,
+  //         );
+  //         errorCount++;
+  //       }
+  //     }
+  //     loadData();
+
+  //     const masterDataMessage = [];
+  //     if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
+  //     if (createdVendors > 0)
+  //       masterDataMessage.push(`${createdVendors} vendors`);
+  //     if (createdCategories > 0)
+  //       masterDataMessage.push(`${createdCategories} categories`);
+  //     if (createdIndustries > 0) {
+  //       masterDataMessage.push(`${createdIndustries} industries`);
+  //     }
+  //     const masterDataText =
+  //       masterDataMessage.length > 0
+  //         ? ` (Auto-created: ${masterDataMessage.join(", ")})`
+  //         : "";
+
+  //     setToast({
+  //       message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
+  //       type: errorCount === 0 ? "success" : "error",
+  //     });
+
+  //     loadData();
+  //   } catch (error: any) {
+  //     setToast({ message: error.message || "Import failed", type: "error" });
+  //   } finally {
+  //     setLoading(false);
+  //     e.target.value = "";
+  //   }
+  // };
+  
+  
+const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  try {
+    setLoading(true);
+
+    const rawData = await parseCSV(file);
+    let successCount = 0;
+    const errorRows: { row: number; message: string }[] = [];
+
+    for (let i = 0; i < rawData.length; i++) {
+      const row = rawData[i];
+
+      console.log(row)
+
+
+      const mappedRow = {
+        sku: row?.sku,
+        product_name : row?.product_name,
+        brand_name: row?.brand,
+        model_3d_url: row["3d_model_url"],
+        ...row
       }
 
-      const hasProductName =
-        rawData.length > 0 &&
-        (rawData[0].product_name ||
-          rawData[0].product_title ||
-          rawData[0].title ||
-          rawData[0].name);
+      console.log("mapped row", mappedRow)
 
-      if (!hasProductName) {
-        setToast({
+      try {
+        await ProductAPI.upsert(mappedRow);
+        successCount++;
+      } catch (error: any) {
+        errorRows.push({
+          row: i + 2, // +2 if row 1 is header in CSV
           message:
-            "Import failed: Product name column is required (product_name, product_title, title, or name)",
-          type: "error",
+            error?.response?.data?.detail ||
+            error.message ||
+            "Unknown error",
         });
-        e.target.value = "";
-        return;
       }
+    }
 
-      const bundleAssets = (row: any, type: string) => {
-        const assets: Record<string, { name: string; url: string }> = {};
-        Object.keys(row).forEach((key) => {
-          const urlMatch = key.match(
-            new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),
-          );
-          const nameMatch = key.match(
-            new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),
-          );
-
-          if (urlMatch) {
-            const idx = urlMatch[1];
-            if (!assets[idx]) assets[idx] = { name: "", url: "" };
-            assets[idx].url = String(row[key] || "").trim();
-          }
-          if (nameMatch) {
-            const idx = nameMatch[1];
-            if (!assets[idx]) assets[idx] = { name: "", url: "" };
-            assets[idx].name = String(row[key] || "").trim();
-          }
-        });
-
-        const cleaned: Record<string, any> = {};
-        Object.entries(assets).forEach(([idx, data]) => {
-          if (data.url) {
-            cleaned[idx] = {
-              url: data.url,
-              name:
-                data.name ||
-                `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
-            };
-          }
-        });
-        return Object.keys(cleaned).length > 0 ? cleaned : {};
-      };
-
-      const validData: Partial<Product>[] = [];
-      const importErrors: string[] = [];
-      const brandsToCreate = new Map<string, any>();
-      const vendorsToCreate = new Map<string, any>();
-      const categoriesToCreate = new Map<string, any>();
-      const industriesToCreate = new Map<string, any>();
-
-      // @ts-ignore
-      const safeTrim = (value) => (value != null ? String(value).trim() : "");
-
-      const data = rawData
-        .map((row: any, index: number) => {
-          const mapped: any = {};
-
-          try {
-            const productNameKey = Object.keys(row).find(
-              (k) =>
-                k.toLowerCase().replace(/_/g, " ") === "product name" ||
-                k.toLowerCase() === "name",
-            );
-            mapped.product_name = String(
-              row[productNameKey || "product_name"] || "",
-            ).trim();
-
-            if (!mapped.product_name) {
-              throw new Error("Missing Product Name column or empty value");
-            }
-            mapped.product_code = row.product_code?.trim() || null;
-            mapped.price = parseFloat(row.price) || 0;
-            mapped.sale_price = parseFloat(row.sale_price) || 0;
-            mapped.list_price = parseFloat(row.list_price) || 0;
-            mapped.base_price = parseFloat(row.base_price) || 0;
-            mapped.regular_price = parseFloat(row.regular_price) || 0;
-            mapped.retail_price = parseFloat(row.retail_price) || 0;
-            mapped.msrp = parseFloat(row.msrp) || 0;
-            mapped.map_price = parseFloat(row.map_price || row.map) || 0;
-            mapped.sku = safeTrim(row.sku);
-            mapped.variant_sku = safeTrim(row.variant_sku);
-            mapped.mpn = safeTrim(row.mpn);
-            mapped.model_series = safeTrim(row.model_series) ;
-            mapped.ean = safeTrim(row.ean);
-            mapped.upc = safeTrim(row.upc);
-            mapped.unspsc = safeTrim(row.unspc);
-            mapped.gtin = safeTrim(row.gtin);
-            mapped.product_type = safeTrim(row.product_type);
-            mapped.prod_short_desc = safeTrim(row.prod_short_desc);
-            mapped.prod_long_desc = safeTrim(row.prod_long_desc);
-            mapped.meta_title =safeTrim(row.meta_title);
-            mapped.meta_desc =safeTrim(row.meta_desc);
-            mapped.meta_keywords = safeTrim(row.meta_keywords);
-
-            const brandName = safeTrim(row.brand_name);
-            const mfgName = safeTrim(row.mfg_name);
-            const industryName = safeTrim(row.industry_name);
-            mapped.industry_name = industryName || "";
-            if (industryName) {
-              const industryKey = industryName.toLowerCase().trim();
-              if (!industriesToCreate.has(industryKey)) {
-                industriesToCreate.set(industryKey, {
-                  industry_code:
-                    row.industry_code?.trim() ||
-                    industryName
-                      .substring(0, 4)
-                      .toUpperCase()
-                      .replace(/[^A-Z]/g, ""),
-                  industry_name: industryName,
-                });
-              }
-            }
-
-            if (brandName) {
-              mapped.brand_name = brandName;
-              mapped.mfg_name = mfgName || brandName;
-              const existingBrand = brands.find(
-                (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
-              );
-              if (existingBrand) {
-                mapped.brand_code = existingBrand.brand_code;
-              } else {
-                // const brandCode = `BRND-${brandName
-                //   .substring(0, 8)
-                //   .toUpperCase()
-                //   .replace(/[^A-Z0-9]/g, "")}`;
-                // mapped.brand_code = brandCode;
-                brandsToCreate.set(brandName, {
-                  // brand_code: brandCode,
-                  brand_name: brandName,
-                  mfg_name: mfgName || brandName,
-                });
-              }
-            }
-
-            const vendorName = row.vendor_name?.trim();
-            if (vendorName) {
-              mapped.vendor_name = vendorName;
-              const existingVendor = vendors.find(
-                (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
-              );
-              if (existingVendor) {
-                mapped.vendor_code = existingVendor.vendor_code;
-              } else {
-                // const vendorCode = `VEND-${vendorName
-                //   .substring(0, 8)
-                //   .toUpperCase()
-                //   .replace(/[^A-Z0-9]/g, "")}`;
-                const vendorCode = "";
-                mapped.vendor_code = vendorCode;
-                if (vendorName) {
-                  vendorsToCreate.set(vendorName.toLowerCase(), {
-                    vendor_code: vendorCode,
-                    vendor_name: vendorName,
-                    industry_name: industryName,
-                    contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-                    contact_phone: "000-000-0000",
-                  });
-                }
-              }
-            }
-
-            // const industryName = row.industry_name?.trim();
-            // mapped.industry_name = industryName || "";
-
-            const categoryLevels: string[] = [];
-            Object.keys(row).forEach((key) => {
-              const categoryMatch = key.match(/^category[_\s]*(\d+)$/i);
-              if (categoryMatch) {
-                const level = parseInt(categoryMatch[1]);
-                const value = row[key]?.trim();
-                if (value) {
-                  categoryLevels[level - 1] = value;
-                  mapped[`category_${level}`] = value;
-                }
-              }
-            });
-
-            if (categoryLevels.length > 0) {
-              const cat1 = categoryLevels[0];
-              const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
-              const existingCategory = categories.find(
-                (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
-              );
-
-              if (existingCategory) {
-                mapped.category_code = existingCategory.category_code;
-              } else {
-                const categoryCode = `CAT-${cat1
-                  .substring(0, 8)
-                  .toUpperCase()
-                  .replace(/[^A-Z0-9]/g, "")}`;
-                mapped.category_code = categoryCode;
-                const categoryData: any = {
-                  category_code: categoryCode,
-                  industry_name: industryName || "General",
-                  breadcrumb: breadcrumb,
-                };
-                categoryLevels.forEach((cat, index) => {
-                  if (cat) categoryData[`category_${index + 1}`] = cat;
-                });
-                categoriesToCreate.set(categoryCode, categoryData);
-              }
-            }
-
-            Object.keys(row).forEach((key) => {
-              const featureMatch = key.match(/^features?_?(\d+)$/i);
-              if (featureMatch) {
-                const num = featureMatch[1];
-                const value = row[key]?.trim();
-                if (value) mapped[`features_${num}`] = value;
-              }
-            });
-
-            const attributeData = new Map();
-            Object.keys(row).forEach((key) => {
-              const nameMatch = key.match(/^attribute_?names?_?(\d+)$/i);
-              const valueMatch = key.match(/^attribute_?values?_?(\d+)$/i);
-              const uomMatch = key.match(/^attribute_?uoms?_?(\d+)$/i);
-
-              if (nameMatch) {
-                const num = nameMatch[1];
-                const value = String(row[key] || "").trim();
-                if (value) {
-                  if (!attributeData.has(num)) attributeData.set(num, {});
-                  attributeData.get(num).name = value;
-                }
-              }
-              if (valueMatch) {
-                const num = valueMatch[1];
-                const value = String(row[key] || "").trim();
-                if (value) {
-                  if (!attributeData.has(num)) attributeData.set(num, {});
-                  attributeData.get(num).value = value;
-                }
-              }
-              if (uomMatch) {
-                const num = uomMatch[1];
-                const value = String(row[key] || "").trim();
-                if (value) {
-                  if (!attributeData.has(num)) attributeData.set(num, {});
-                  attributeData.get(num).uom = value;
-                }
-              }
-            });
-            const attributesJson: Record<string, any> = {};
-            attributeData.forEach((attr, num) => {
-              if (attr.name && attr.value) {
-                attributesJson[num] = {
-                  name: attr.name,
-                  value: attr.value,
-                  uom: attr.uom || null,
-                };
-              }
-            });
-            if (Object.keys(attributesJson).length > 0) {
-              mapped.attributes = attributesJson;
-            }
-
-            mapped.images = bundleAssets(row, "image");
-            mapped.videos = bundleAssets(row, "video");
-
-            let documents = bundleAssets(row, "document");
-
-            if (Object.keys(documents).length === 0) {
-              let docCount = 1;
-              const allKeys = Object.keys(row);
-              allKeys.forEach((key, idx) => {
-                const value = String(row[key] || "").trim();
-                if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
-                  let docName = "";
-                  if (idx > 0) {
-                    const prevKey = allKeys[idx - 1];
-                    const prevValue = String(row[prevKey] || "").trim();
-                    if (prevValue && !prevValue.startsWith("http")) {
-                      docName = prevValue;
-                    }
-                  }
-                  if (!docName) {
-                    docName = key.replace(/_/g, " ").replace(/url/i, "").trim();
-                    docName =
-                      docName.charAt(0).toUpperCase() + docName.slice(1);
-                  }
-                  // let name = key.replace(/_/g, " ").trim();
-
-                  // if (!name || name.length > 50) {
-                  //   name = `Document ${docCount}`;
-                  // }
-
-                  documents[docCount] = { name: docName, url: value };
-                  docCount++;
-                }
-              });
-            }
-            mapped.documents = documents;
-
-            return mapped;
-          } catch (error: any) {
-            console.error(`Error processing row ${index + 1}:`, error);
-            importErrors.push(
-              `Row ${index + 2}: Error processing data - ${error.message}`,
-            );
-            return null;
-          }
-        })
-        .filter(Boolean);
-
-      data.forEach((row: any, index: number) => {
-        if (!row.product_name?.trim()) {
-          importErrors.push(`Row ${index + 2}: Product Name is required`);
-        } else {
-          validData.push(row);
-        }
+    if (errorRows.length === 0) {
+      setToast({
+        message: `Import completed ✅ ${successCount} rows inserted.`,
+        type: "success",
       });
-
-      if (importErrors.length > 0) {
-        setToast({
-          message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`,
-          type: "error",
-        });
-        return;
-      }
-
-      let createdBrands = 0;
-      let createdVendors = 0;
-      let createdCategories = 0;
-      let createdIndustries = 0;
-      let createdCount = 0;
-      let skippedCount = 0;
-
-      if (brandsToCreate.size > 0) {
-        try {
-          const existingBrands = await MasterAPI.getBrands();
-          const existingCodes = new Set(
-            existingBrands.map((b: any) => b.brand_code),
-          );
-          const newBrands = Array.from(brandsToCreate.values()).filter(
-            (b) => !existingCodes.has(b.brand_code),
-          );
-
-          for (const brand of newBrands) {
-            try {
-              await MasterAPI.create("brands", brand);
-              createdBrands++;
-            } catch (err) {
-              console.warn("Brand create failed", err);
-            }
-          }
-        } catch (e) {
-          console.error("Brand sync error", e);
-        }
-      }
-      if (industriesToCreate.size > 0) {
-        try {
-          const existingIndustries = await MasterAPI.getIndustries();
-          const existingNames = new Set(
-            (existingIndustries || []).map((i: any) =>
-              (i.industry_name || "").toLowerCase().trim(),
-            ),
-          );
-          const newIndustries = Array.from(industriesToCreate.values()).filter(
-            (i) => !existingNames.has((i.industry_name || "").toLowerCase()),
-          );
-          if (newIndustries.length > 0) {
-            for (const ind of newIndustries) {
-              try {
-                await MasterAPI.create("industries", ind);
-                createdIndustries++;
-              } catch (error) {
-                console.warn(
-                  `Failed to create industry: ${ind.industry_name}`,
-                  error,
-                );
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Industry sync error", error);
-        }
-      }
-
-      const latestIndustries = await MasterAPI.getIndustries();
-
-      const industryNameToIdMap = new Map(
-        (latestIndustries || [])
-          .filter((i: any) => i.industry_name)
-          .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
-      );
-      if (vendorsToCreate.size > 0) {
-        try {
-          const industryNameToIdMap = new Map(
-            (latestIndustries || [])
-              .filter((i: any) => i.industry_name)
-              .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
-          );
-
-          const existingVendors = await MasterAPI.getVendors();
-          const existingNames = new Set(
-            existingVendors.map((v: any) => v.vendor_name.toLowerCase().trim()),
-          );
-
-          const newVendors = Array.from(vendorsToCreate.values()).filter(
-            (v) => !existingNames.has(v.vendor_name.toLowerCase()),
-          );
-
-          for (const vendor of newVendors) {
-            try {
-              const indName = (vendor as any).industry_name
-                ?.toLowerCase()
-                .trim();
-              if (indName && industryNameToIdMap.has(indName)) {
-                vendor.industry_id = industryNameToIdMap.get(indName);
-              }
-
-              await MasterAPI.create("vendors", vendor);
-              createdVendors++;
-            } catch (err) {
-              console.warn("Vendor create failed", err);
-            }
-          }
-        } catch (e) {
-          console.error("Vendor sync error", e);
-        }
-      }
-      if (categoriesToCreate.size > 0) {
-        try {
-          const existingCategories = await MasterAPI.getCategories();
-          const existingCodes = new Set(
-            (existingCategories || []).map((c: any) => c.category_code),
-          );
-          const newCategories = Array.from(categoriesToCreate.values()).filter(
-            (c) => !existingCodes.has(c.category_code),
-          );
-
-          for (const category of newCategories) {
-            try {
-              const catIndName = (category as any).industry_name
-                ?.toLowerCase()
-                .trim();
-              if (catIndName && industryNameToIdMap.has(catIndName)) {
-                (category as any).industry_id =
-                  industryNameToIdMap.get(catIndName);
-              }
-
-              await MasterAPI.create("categories", category);
-              createdCategories++; // Use the variable that shows up in your toast!
-            } catch (err) {
-              console.warn("Category create failed", err);
-            }
-          }
-        } catch (e) {
-          console.error("Category sync error", e);
-        }
-      }
-
-      let processedCount = 0;
-      let errorCount = 0;
-      const existingProductMap = new Map(
-        products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]),
-      );
-
-      for (const productData of validData) {
-        if (!productData.product_code) {
-          const mpnKey = productData.mpn?.trim().toLowerCase();
-          if (mpnKey && existingProductMap.has(mpnKey)) {
-            productData.product_code = existingProductMap.get(mpnKey);
-          } else {
-            productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-          }
-        }
-
-        try {
-          await ProductAPI.upsert(productData);
-          processedCount++;
-        } catch (e) {
-          console.error(
-            "Failed to import product:",
-            productData.product_name,
-            e,
-          );
-          errorCount++;
-        }
-      }
-      loadData();
-
-      const masterDataMessage = [];
-      if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
-      if (createdVendors > 0)
-        masterDataMessage.push(`${createdVendors} vendors`);
-      if (createdCategories > 0)
-        masterDataMessage.push(`${createdCategories} categories`);
-      if (createdIndustries > 0) {
-        masterDataMessage.push(`${createdIndustries} industries`);
-      }
-      const masterDataText =
-        masterDataMessage.length > 0
-          ? ` (Auto-created: ${masterDataMessage.join(", ")})`
-          : "";
+    } else {
+      const failedRowNumbers = errorRows.map((e) => e.row).join(", ");
 
       setToast({
-        message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
-        type: errorCount === 0 ? "success" : "error",
+        message: `Import finished. ✅ ${successCount} success, ❌ ${errorRows.length} failed. Failed rows: ${failedRowNumbers}`,
+        type: "error",
       });
 
-      loadData();
-    } catch (error: any) {
-      setToast({ message: error.message || "Import failed", type: "error" });
-    } finally {
-      setLoading(false);
-      e.target.value = "";
+      console.log("Failed Rows Details:", errorRows);
     }
-  };
+  } catch (err: any) {
+    setToast({
+      message: err.message || "Failed to process file",
+      type: "error",
+    });
+  } finally {
+    setLoading(false);
+    e.target.value = "";
+  }
+};
+  
   const downloadTemplate = () => {
-    const template: any = {
-      product_name: "Garmin GPSMAP 8617 Chartplotter",
-      brand_name: "Garmin",
-      mfg_name: "Garmin Ltd.",
-      vendor_name: "Marine Electronics Distributor",
-      industry_name: "Marine",
+  const template: Record<string, any> = {
+    // Product basic info
+    "Prod ID": "010-02092-00",
+    sku: "10100388",
+    product_name: `High Bay Light, 80 CRI, 4000K, 11.33 in. Dia, 8.67 in. ht, White,
+Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DLC`,
+    brand: "Cooper Lighting LLC",
+    gtin: "0753759197087",
+    ean: "0753759197087",
+    upc: "753759197087",
+    unspc: "43191501",
+    mpn: "010-02092-00",
+    industry_name: "Marine",
+    category_1: "Electronics",
+    category_2: "Marine Electronics",
+    category_3: "GPS & Chartplotters",
+    category_4: "17-inch Models",
+    category_5: "",
+    category_6: "",
+    category_7: "",
+    category_8: "",
+    taxonomy: "Marine > Electronics > GPS & Chartplotters",
+    country_of_origin: "USA",
+    warranty: "3 years",
 
-      "category 1": "Electronics",
-      "category 2": "Marine Electronics",
-      "category 3": "GPS & Chartplotters",
-      "category 4": "17-inch Models",
+    // Dimensions & Pricing
+    weight: "4.2",
+    weight_unit: "kg",
+    length: "30",
+    width: "25",
+    height: "10",
+    dimension_unit: "cm",
+    currency: "USD",
+    base_price: "2499.99",
+    sale_price: "2299.99",
+    selling_price: "2299.99",
+    special_price: "2199.99",
+    stock_qty: "50",
+    stock_status: "In Stock",
 
-      product_type: "Chartplotter",
-      product_code: "",
-      sku: "GPSMAP-8617",
-      variant_sku: "",
-      mpn: "010-02092-00",
-      model_series: "GPSMAP 8600 Series",
-      ean: "0753759197087",
-      upc: "753759197087",
-      unspc: "43191501",
-      gtin: "00753759197087",
-      prod_short_desc:
-        "17-inch touchscreen chartplotter with worldwide basemap",
-      prod_long_desc:
-        "The GPSMAP 8617 features a 17-inch multi-touch widescreen display with worldwide basemap, built-in Wi-Fi and support for premium charts. Includes NMEA 2000 and NMEA 0183 network support for easy integration with compatible marine instruments.",
-      price: "199.99",
-      sale_price: "149.99",
-      list_price: "210.00",
-      base_price: "120.00",
-      regular_price: "199.99",
-      retail_price: "220.00",
-      msrp: "249.99",
-      map_price: "180.00",
-      features_1: "17-inch multi-touch widescreen display",
-      features_2: "Worldwide basemap included",
-      features_3: "Built-in Wi-Fi connectivity",
-      features_4: "NMEA 2000 and NMEA 0183 network support",
-      features_5: "Premium chart compatibility",
-      features_6: "Garmin Marine Network compatible",
-      features_7: "IPX7 waterproof rating",
-      features_8: "Auto guidance technology",
-      features_9: "Sonar support",
-      features_10: "Radar integration",
+    // Vendor info
+    vendor_name: "Garmin",
+    vendor_sku: "GAR-8617",
 
-      attribute_name1: "Screen Size",
-      attribute_value1: "17",
-      attribute_uom1: "inches",
-      attribute_name2: "Display Type",
-      attribute_value2: "Multi-touch LCD",
-      attribute_uom2: "",
-      attribute_name3: "Power Consumption",
-      attribute_value3: "24",
-      attribute_uom3: "watts",
-      attribute_name4: "Operating Temperature",
-      attribute_value4: "-15 to 55",
-      attribute_uom4: "°C",
-      attribute_name5: "Waterproof Rating",
-      attribute_value5: "IPX7",
-      attribute_uom5: "",
-      attribute_name6: "Display Resolution",
-      attribute_value6: "1920 x 1200",
-      attribute_uom6: "pixels",
-      attribute_name7: "Weight",
-      attribute_value7: "4.2",
-      attribute_uom7: "kg",
+    // Images
+    image_name_1: "010-02092-00-Image-1",
+    image_url_1: "https://example.com/images/gpsmap-8617-front.jpg",
+    image_name_2: "010-02092-00-Image-2",
+    image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
+    image_name_3: "010-02092-00-Image-3",
+    image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
 
-      meta_title:
-        "Garmin GPSMAP 8617 17-inch Marine Chartplotter | Marine Electronics",
-      meta_desc:
-        "Professional 17-inch marine chartplotter with worldwide basemap, Wi-Fi, and premium chart support. Perfect for serious boaters and commercial vessels.",
-      meta_keywords:
-        "marine GPS, chartplotter, Garmin, navigation, marine electronics",
+    // Videos
+    video_name_1: "010-02092-00-Video-1",
+    video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
 
-      related_products_1: "010-02091-00",
-      related_products_2: "010-02093-00",
-      related_products_3: "010-02094-00",
+    // Documents
+    document_name_1: "010-02092-00-Manual",
+    document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
 
-      pairs_well_with_1: "010-12234-00",
-      pairs_well_with_2: "010-12345-00",
-      pairs_well_with_3: "010-12456-00",
+    // 3D Model
+    "3d_model_url": "https://example.com/models/gpsmap-8617.glb",
 
-      image_name_1: "010-02092-00-Image-1",
-      image_url_1: "https://example.com/images/gpsmap-8617-front.jpg",
-      image_name_2: "010-02092-00-Image-2",
-      image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
-      image_name_3: "010-02092-00-Image-3",
-      image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
-      image_name_4: "010-02092-00-Image-4",
-      image_url_4: "https://example.com/images/gpsmap-8617-screen.jpg",
-      image_name_5: "010-02092-00-Image-5",
-      image_url_5: "https://example.com/images/gpsmap-8617-installation.jpg",
+    // Descriptions
+    short_description: "17-inch marine chartplotter with Wi-Fi connectivity",
+    long_description: `Professional 17-inch marine chartplotter with worldwide basemap, built-in Wi-Fi, and premium chart support. Ideal for recreational and commercial vessels. IPX7 waterproof, NMEA 2000 and 0183 compatible.`,
 
-      video_name_1: "010-02092-00-Video-1",
-      video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
-      video_name_2: "010-02092-00-Video-2",
-      video_url_2: "https://example.com/videos/gpsmap-8617-installation.mp4",
-      video_name_3: "010-02092-00-Video-3",
-      video_url_3: "https://example.com/videos/gpsmap-8617-features.mp4",
+    // Features
+    features_1: "17-inch multi-touch widescreen display",
+    features_2: "Worldwide basemap included",
+    features_3: "Built-in Wi-Fi connectivity",
+    features_4: "NMEA 2000 and NMEA 0183 network support",
+    features_5: "Premium chart compatibility",
+    features_6: "Garmin Marine Network compatible",
+    features_7: "IPX7 waterproof rating",
+    features_8: "Auto guidance technology",
+    features_9: "Sonar support",
+    features_10: "Radar integration",
 
-      document_name_1: "010-02092-00-Manual",
-      document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
-      document_name_2: "010-02092-00-Installation-Guide",
-      document_url_2: "https://example.com/docs/gpsmap-8617-install.pdf",
-      document_name_3: "010-02092-00-Specifications",
-      document_url_3: "https://example.com/docs/gpsmap-8617-specs.pdf",
-      document_name_4: "010-02092-00-Quick-Start",
-      document_url_4: "https://example.com/docs/gpsmap-8617-quickstart.pdf",
-      document_name_5: "010-02092-00-Warranty",
-      document_url_5: "https://example.com/docs/gpsmap-8617-warranty.pdf",
-    };
+    // SEO
+    meta_title: "Garmin GPSMAP 8617 17-inch Marine Chartplotter | Marine Electronics",
+    meta_description: "Professional 17-inch marine chartplotter with worldwide basemap, Wi-Fi, and premium chart support. Perfect for serious boaters and commercial vessels.",
+    search_keywords: "marine GPS, chartplotter, Garmin, navigation, marine electronics",
 
-    exportToCSV([template], "product_import_template.csv");
+    // Compliance
+    certification: "UL, CE, FCC",
+    safety_standard: "IPX7 waterproof",
+    hazardous_material: "None",
+    prop65_warning: "Not applicable",
   };
+
+  // --- Dynamically add 20 attribute slots ---
+  for (let i = 1; i <= 20; i++) {
+    template[`attribute_name${i}`] = "";
+    template[`attribute_value${i}`] = "";
+    template[`attribute_uom${i}`] = "";
+    template[`validation_value${i}`] = "";
+    template[`validation_uom${i}`] = "";
+  }
+
+  exportToCSV([template], "product_import_template.csv");
+};
+
   const getVariantStatusBadge = (status: VariantStatus) => {
     const styles = {
       Base: "bg-blue-100 text-blue-800",
