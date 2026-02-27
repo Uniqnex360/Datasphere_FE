@@ -433,6 +433,7 @@ export function Attributes() {
     if (!validateForm()) return;
 
     try {
+      console.log("final", selectedCategories, selectedCategories.join(","))
       const dataToSubmit: any = {
         ...formData,
         applicable_categories: selectedCategories.join(","),
@@ -476,7 +477,7 @@ export function Attributes() {
             updateData[`attribute_value_${index + 1}`] = item.value;
             updateData[`attribute_uom_${index + 1}`] = item.uom;
           });
-
+          console.log("update data", updateData)
           await MasterAPI.update(
             "attributes",
             duplicate.attribute_code,
@@ -491,7 +492,6 @@ export function Attributes() {
           // const attributeCode = generateAttributeCode(attributes);
           // dataToSubmit.attribute_code = attributeCode;
           dataToSubmit.usage_count = 1;
-
           await MasterAPI.create("attributes", dataToSubmit);
 
           setToast({
@@ -917,7 +917,6 @@ export function Attributes() {
         selectedCategories.filter((c) => c !== categoryCode),
       );
     } else {
-      console.log("selected catgory", [...selectedCategories, categoryCode]);
       setSelectedCategories([...selectedCategories, categoryCode]);
     }
   };
@@ -1456,13 +1455,14 @@ export function Attributes() {
                 ) : (
                   categories.map((cat) => (
                     <label
-                      key={cat.category_code}
+                      key={cat.breadcrumb}
                       className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50"
                     >
                       <input
                         type="checkbox"
-                        checked={selectedCategories.includes(cat.category_code)}
-                        onChange={() => toggleCategory(cat.category_code)}
+                        // checked={selectedCategories.includes(cat.breadcrumb)}
+                        checked={selectedCategories.includes(cat.breadcrumb)}
+                        onChange={() => toggleCategory(cat.breadcrumb)}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700">
@@ -1476,7 +1476,7 @@ export function Attributes() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {selectedCategories.map((code) => {
                     const cat = categories.find(
-                      (c) => c.category_code === code,
+                      (c) => c.breadcrumb === code,
                     );
                     return (
                       <span

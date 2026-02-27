@@ -11,6 +11,7 @@ export interface Category {
   category_7: string;
   category_8: string;
   breadcrumb: string;
+  breadcrumb_code?: string;
   product_type: string;
   created_at?: string;
   updated_at?: string;
