@@ -26,6 +26,8 @@ import {
 import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { isValidInventoryFile } from "../utils/fileValidator";
 import { FilterSelect } from "../components/Filter";
+import CustomDownloadIcon from "../assets/download-custom.png";
+import InventoryQuntityEdit from "./helperComponents/InventoryQuntityEdit";
 
 const STATUS_OPTIONS: InventoryStatus[] = [
   "In Stock",
@@ -52,10 +54,9 @@ export default function Inventory() {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
-  const [editQty, setEditQty] = useState<number>(0);
+  const [editQty, setEditQty] = useState<number | "">("");
   const [editStatus, setEditStatus] = useState<InventoryStatus>("In Stock");
-  const [tablefilteredInvertoryProduct, settablefilteredInvertoryProduct] =
-    useState<InventoryProduct[]>([]);
+
   const downloadTemplate = () => {
     const template = [
       {
@@ -103,45 +104,124 @@ export default function Inventory() {
       setLoading(false);
     }
   };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     if (!isValidInventoryFile(file)) {
       setToast({
-        message: "Invalid format.Please upload a csv,.xlsx, or .xls file",
+        message: "Invalid format. Please upload a CSV, .xlsx, or .xls file",
         type: "error",
       });
       e.target.value = "";
       return;
     }
-    if (!file) return;
+
     try {
       setLoading(true);
+
       const rawData = await parseCSV(file);
+
+      if (!rawData || rawData.length === 0) {
+        setToast({
+          message: "File is empty or invalid format",
+          type: "error",
+        });
+        return;
+      }
+
       const response = await api.post("/inventory/bulk-update", rawData);
+
       const { success_count, errors_count, errors } = response.data;
+
       if (errors_count === 0) {
         setToast({
           message: `Successfully updated ${success_count} products`,
           type: "success",
         });
       } else {
+        // Show first 3 errors in toast
+        const previewErrors = errors
+          ?.slice(0, 3)
+          ?.map(
+            (err: any) =>
+              `Row ${err.row + 1}${err.sku ? ` (SKU: ${err.sku})` : ""}: ${
+                err.reason
+              }`,
+          )
+          .join(" | ");
+
         setToast({
-          message: `Updated  ${success_count}.Failed ${errors_count}`,
+          message: `Updated ${success_count}. Failed ${errors_count}. ${previewErrors}`,
           type: "error",
         });
       }
+
       loadInventory();
-    } catch (error) {
-      setToast({
-        message: "An error occured while importing file",
-        type: "error",
-      });
+    } catch (error: any) {
+      console.error("Import error:", error);
+
+      // Axios error handling
+      if (error.response) {
+        const status = error.response.status;
+
+        // FastAPI validation error (422)
+        if (status === 422) {
+          const details = error.response.data.detail;
+          const message =
+            details?.[0]?.msg || "Validation error in uploaded file";
+
+          setToast({
+            message: message,
+            type: "error",
+          });
+        }
+
+        // Custom 400 errors from backend
+        else if (status === 400) {
+          setToast({
+            message: error.response.data.detail || "Invalid request",
+            type: "error",
+          });
+        }
+
+        // 500 internal server error
+        else if (status === 500) {
+          setToast({
+            message:
+              error.response.data.detail ||
+              "Server error. No data has been saved.",
+            type: "error",
+          });
+        }
+
+        // Any other HTTP error
+        else {
+          setToast({
+            message: "Unexpected error occurred during import",
+            type: "error",
+          });
+        }
+      } else if (error.request) {
+        // Network error
+        setToast({
+          message: "Network error. Please check your connection.",
+          type: "error",
+        });
+      } else {
+        // Unknown error
+        setToast({
+          message: "An unexpected error occurred",
+          type: "error",
+        });
+      }
     } finally {
       setLoading(false);
       e.target.value = "";
     }
   };
+
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -149,6 +229,16 @@ export default function Inventory() {
       setSortKey(key);
       setSortDirection("asc");
     }
+  };
+
+  const handleExport = () => {
+    if (filteredAndSortedProducts.length === 0) {
+      setToast({ message: "No data to export", type: "error" });
+      return;
+    }
+
+    exportToCSV(filteredAndSortedProducts, "inventory.csv");
+    setToast({ message: "Inventory exported successfully", type: "success" });
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -249,6 +339,41 @@ export default function Inventory() {
     });
   };
 
+  const handleBulkQuntityEdit = async (
+    codes: Set<string>,
+    editQty: number | "",
+  ) => {
+    if (codes.size === 0) {
+      setToast({ message: "No products selected", type: "error" });
+      return;
+    }
+
+    if (editQty === "" || editQty < 0) {
+      setToast({ message: "Please enter a valid quantity", type: "error" });
+      return;
+    }
+
+    try {
+      await Promise.all(
+        Array.from(codes).map((code) =>
+          ProductAPI.update(code, {
+            available_quantity: editQty,
+          }),
+        ),
+      );
+
+      setToast({
+        message: "Inventory updated successfully",
+        type: "success",
+      });
+
+      setSelectedCodes(new Set());
+      setEditQty(0);
+      loadInventory();
+    } catch (error) {
+      setToast({ message: "Update failed", type: "error" });
+    }
+  };
   const columns = [
     // { key: "product_code", label: "Code", sortable: true },
     {
@@ -345,10 +470,7 @@ export default function Inventory() {
       render: (_: string, row: InventoryProduct) => (
         <button
           onClick={() => {
-            setSelectedProduct(row);
-            setEditQty(row.inventory?.available_quantity || 0);
-            setEditStatus(row.inventory?.inventory_status || "In Stock");
-            setIsDrawerOpen(true);
+            toggleSelect(row.product_code);
           }}
           className="p-1 hover:bg-blue-100 text-blue-600 rounded"
         >
@@ -406,7 +528,7 @@ export default function Inventory() {
         {/* bulk import export options */}
         <div className="flex gap-2">
           <button
-            onClick={downloadTemplate}
+            onClick={handleExport}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
           >
             <Download size={18} />
@@ -422,6 +544,17 @@ export default function Inventory() {
               className="hidden"
             />
           </label>
+          <button
+            onClick={downloadTemplate}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Download template"
+          >
+            <img
+              src={CustomDownloadIcon}
+              className="w-5 h-5 object-contain opacity-70 hover:opacity-100"
+              alt="Template"
+            />
+          </button>
         </div>
       </section>
 
@@ -458,21 +591,27 @@ export default function Inventory() {
             <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
               {selectedCodes.size} selected
             </span>
-            <p className="text-sm font-medium">Bulk Actions:</p>
+            {/* <p className="text-sm font-medium">Bulk Actions:</p> */}
           </div>
           <div className="flex items-center gap-2">
-            {/* <button
-              onClick={() => handleBulkStatusChange(true)}
+            <label htmlFor="quantity">Quantity</label>
+            <input
+              id="quantity"
+              type="number"
+              min={0}
+              value={editQty}
+              onChange={(e) => {
+                const value = e.target.value;
+                setEditQty(value === "" ? "" : Number(value));
+              }}
+              className="focus:outline-none text-black border px-2 py-1 rounded"
+            />
+            <button
+              onClick={() => handleBulkQuntityEdit(selectedCodes, editQty)}
               className="flex items-center gap-2 px-4 py-1.5 bg-green-500 hover:bg-green-400 rounded-lg text-xs font-bold transition-colors"
             >
-              <CheckCircle size={14} /> Set Active
+              Save
             </button>
-            <button
-              onClick={() => handleBulkStatusChange(false)}
-              className="flex items-center gap-2 px-4 py-1.5 bg-red-500 hover:bg-red-400 rounded-lg text-xs font-bold transition-colors"
-            >
-              <X size={14} /> Set Inactive
-            </button> */}
             <div className="w-px h-6 bg-white/20 mx-2"></div>
             <button
               onClick={() => setSelectedCodes(new Set())}
@@ -483,7 +622,6 @@ export default function Inventory() {
           </div>
         </div>
       )}
-
 
       <DataTable
         columns={columns}

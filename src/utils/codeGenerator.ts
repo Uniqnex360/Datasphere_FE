@@ -10,6 +10,7 @@ export const generateEntityCode = (
   name: string,
   existingCodes: string[] = [] 
 ): string => {
+  console.log("entity", entityType, name, existingCodes)
   const typePrefix = entityType.charAt(0).toUpperCase();
 
   const sanitizedName = (name || "XXX")
