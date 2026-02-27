@@ -23,12 +23,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('isAuthenticated');
-      window.location.href = '/login';
+      localStorage.removeItem("token");
+      localStorage.removeItem("isAuthenticated");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export const ProductAPI = {
@@ -36,40 +36,40 @@ export const ProductAPI = {
     const response = await api.post("/products/upsert", data);
     return response.data;
   },
-  
+
   getAll: async (skip = 0, limit = 100, search = "", filters = {}) => {
     const response = await api.get("/products/", {
       params: { skip, limit, search, ...filters },
     });
     return response.data;
   },
-  
+
   getOne: async (code: string) => {
     const response = await api.get(`/products/${code}`);
     return response.data;
   },
-  
+
   create: async (data: any) => {
     const response = await api.post("/products/", data);
     return response.data;
   },
-  
+
   update: async (code: string, data: any) => {
     const response = await api.put(`/products/${code}`, data);
     return response.data;
   },
-  
+
   delete: async (code: string) => {
     const response = await api.delete(`/products/${code}`);
     return response.data;
   },
 
   // === VARIANT METHODS ===
-  
+
   createVariant: async (parentProductCode: string, variantData: any) => {
     const response = await api.post(
       `/products/${parentProductCode}/variants`,
-      variantData
+      variantData,
     );
     return response.data;
   },
@@ -82,18 +82,18 @@ export const ProductAPI = {
   updateVariant: async (
     parentProductCode: string,
     variantCode: string,
-    variantData: any
+    variantData: any,
   ) => {
     const response = await api.put(
       `/products/${parentProductCode}/variants/${variantCode}`,
-      variantData
+      variantData,
     );
     return response.data;
   },
 
   deleteVariant: async (parentProductCode: string, variantCode: string) => {
     const response = await api.delete(
-      `/products/${parentProductCode}/variants/${variantCode}`
+      `/products/${parentProductCode}/variants/${variantCode}`,
     );
     return response.data;
   },
@@ -143,10 +143,10 @@ type DigitalAssetFilters = {
   search: string;
   brand_name: string | null;
   category: string | null;
-}
+};
 export const DigitalAssetAPI = {
   getAll: async (filters: DigitalAssetFilters) => {
-    const response = await api.get(`/assets/`, {params: filters});
+    const response = await api.get(`/assets/`, { params: filters });
     return response.data;
   },
   create: async (data: any) => {
@@ -160,31 +160,31 @@ export const DigitalAssetAPI = {
   archive: async (id: string) => {
     const response = await api.patch(`/assets/${id}`);
     return response.data;
-  }
+  },
 };
 
-export const UserAPI = {
-  getAll: async () => {
-    const response = await api.get("/users/");
-    return response.data;
-  },
-  create: async (data: any) => {
-    const response = await api.post("/users/", data);
-    return response.data;
-  },
-  update: async (id: string, data: any) => {
-    const response = await api.put(`/users/${id}`, data);
-    return response.data;
-  },
-  delete: async (id: string) => {
-    const response = await api.delete(`/users/${id}`);
-    return response.data;
-  },
-  getActivityLogs: async () => {
-    const response = await api.get("/users/activity-logs");
-    return response.data;
-  },
-};
+// export const UserAPI = {
+//   getAll: async () => {
+//     const response = await api.get("/users/");
+//     return response.data;
+//   },
+//   create: async (data: any) => {
+//     const response = await api.post("/users/", data);
+//     return response.data;
+//   },
+//   update: async (id: string, data: any) => {
+//     const response = await api.put(`/users/${id}`, data);
+//     return response.data;
+//   },
+//   delete: async (id: string) => {
+//     const response = await api.delete(`/users/${id}`);
+//     return response.data;
+//   },
+//   getActivityLogs: async () => {
+//     const response = await api.get("/users/activity-logs");
+//     return response.data;
+//   },
+// };
 
 export const RoleAPI = {
   getAll: async () => {
@@ -250,11 +250,11 @@ export const MasterAPI = {
     return response.data;
   },
   getCategorymeta: async () => {
-    const response =await api.get("/master/categories/meta");
+    const response = await api.get("/master/categories/meta");
     return response.data;
   },
   getProductMPNMeta: async () => {
-    const response =await api.get("/products/mpn/meta");
+    const response = await api.get("/products/mpn/meta");
     return response.data;
   },
   getVendors: async () => {
@@ -288,16 +288,24 @@ export const MasterAPI = {
     const response = await api.get("/master/industries/");
     return response.data;
   },
-  create: async (type: "brands" | "vendors" | "categories" | "industries" | "attributes",data: any,) => {
+  create: async (
+    type: "brands" | "vendors" | "categories" | "industries" | "attributes",
+    data: any,
+  ) => {
     const response = await api.post(`/master/${type}`, data);
     return response.data;
   },
-  updateVendorStatus: async (type: "brands" | "vendors" | "categories" | "industries" | "attributes", code: string,) => {
+  updateVendorStatus: async (
+    type: "brands" | "vendors" | "categories" | "industries" | "attributes",
+    code: string,
+  ) => {
     const response = await api.patch(`/master/${type}/${code}`);
     return response.data;
   },
-  getAttributeMeta : async (category_code : string) => {
-    const response = await api.get(`/master/categories/meta/${category_code}/attributes`);
+  getAttributeMeta: async (category_code: string) => {
+    const response = await api.get(
+      `/master/categories/meta/${category_code}/attributes`,
+    );
     return response.data;
   },
 };
@@ -310,6 +318,21 @@ export const AuthAPI = {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       },
     );
+    return response.data;
+  },
+  validateClient: async (client_name: string) => {
+    const response = await api.post("client/clients/validate/", {
+      client_name,
+    });
+    return response.data;
+  },
+};
+
+export const UserAPI = {
+  getUsers: async (search: string, role: string) => {
+    const response = await api.get("client/clients/list/", {
+      params: { search, role },
+    });
     return response.data;
   },
 };
