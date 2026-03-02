@@ -8,17 +8,21 @@ import DataTable from "../../components/DataTable";
 type UserListProps = {
   searchTerm: string;
   roleFilter: string;
+  refreshKey: number;
   setTotal: (value: number) => void;
   setCount: (value: number) => void;
   handleEdit: (value: User) => void;
+  setUpdateUser: (value: boolean) => void;
 };
 
 const UserList = ({
   searchTerm,
   roleFilter,
+  refreshKey,
   setTotal,
   setCount,
   handleEdit,
+  setUpdateUser,
 }: UserListProps) => {
   /* code structure should follow this
     
@@ -47,7 +51,7 @@ const UserList = ({
 
   useEffect(() => {
     loadUsers();
-  }, [roleFilter]);
+  }, [roleFilter, refreshKey]);
 
   // for search we load using this
   useEffect(() => {
@@ -98,7 +102,9 @@ const UserList = ({
       render: (_: any, row: User) => (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleEdit(row)}
+            onClick={() => {
+              (handleEdit(row), setUpdateUser(true));
+            }}
             className="p-1 hover:bg-blue-100 text-blue-600 rounded transition-colors"
             title="Edit"
           >

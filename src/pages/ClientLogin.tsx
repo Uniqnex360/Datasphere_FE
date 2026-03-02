@@ -17,7 +17,7 @@ export function ClientLogin({ onLogin }: LoginProps) {
   // ✅ Validate client from URL
   useEffect(() => {
     const validateClient = async () => {
-      const path = window.location.pathname; // "/client1"
+      const path = window.location.pathname; // e.g. "/final%20test"
       const segments = path.split("/").filter(Boolean);
 
       if (segments.length === 0) {
@@ -25,7 +25,8 @@ export function ClientLogin({ onLogin }: LoginProps) {
         return;
       }
 
-      const client = segments[0];
+      // Decode URI component to handle spaces or special characters
+      const client = decodeURIComponent(segments[0]);
       setClientName(client);
 
       try {
@@ -87,7 +88,7 @@ export function ClientLogin({ onLogin }: LoginProps) {
       const data = await AuthAPI.login(params);
 
       // Optional: ensure logged user belongs to this client
-      console.log(data, clientName)
+      console.log(data, clientName);
       if (data.full_name !== clientName) {
         setError("Invalid client credentials");
         setLoading(false);

@@ -335,5 +335,13 @@ export const UserAPI = {
     });
     return response.data;
   },
+  createUser: async (data: any) => {
+    const response = await api.post("client/create/", data);
+    return response.data;
+  },
+  updateUser: async (id: string | undefined, data: any) => {
+    const response = await api.put(`client/clients/update/${id}/`, data);
+    return response.data;
+  },
 };
 export default api;
