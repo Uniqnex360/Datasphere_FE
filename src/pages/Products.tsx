@@ -167,7 +167,7 @@ export function Products() {
       console.error("Failed to load variant attributes:", error);
     }
   };
-  console.log("VARIANTATTRIBUTES", variantAttributes);
+
   useEffect(() => {
     if (editingProduct && editingProduct.product_code) {
       loadVariants(editingProduct.product_code);
@@ -192,6 +192,7 @@ export function Products() {
       setToast({ message: "Failed to load variants", type: "error" });
     }
   };
+
   const processCategoryData = (categories: Category[]): Category[] => {
     const sorted = [...categories].sort(
       (a, b) => b.breadcrumb.split(">").length - a.breadcrumb.split(">").length,
@@ -252,7 +253,6 @@ export function Products() {
         productsData || [],
       );
       setProducts(productsWithStatus);
-      console.log(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
       const prossedCategories = processCategoryData(categoriesData || []);
@@ -467,7 +467,6 @@ export function Products() {
     if (!validateForm()) return;
     try {
       if (editingProduct) {
-        console.log("form data", formData);
         await ProductAPI.update(editingProduct.product_code, formData);
         setToast({ message: "Product updated successfully", type: "success" });
       } else {
@@ -1137,29 +1136,44 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     for (let i = 0; i < rawData.length; i++) {
       const row = rawData[i];
 
-      console.log(row)
-
-
       const mappedRow = {
         sku: row?.sku,
-        product_name : row?.product_name,
+        product_name: row?.product_name,
         brand_name: row?.brand,
         model_3d_url: row["3d_model_url"],
-        ...row
-      }
-
-      console.log("mapped row", mappedRow)
+        ...row,
+      };
 
       try {
         await ProductAPI.upsert(mappedRow);
         successCount++;
       } catch (error: any) {
+        // Extract error text from response
+        let errorMessage = "Unknown error";
+        if (error?.response?.data) {
+          const data = error.response.data;
+
+          if (typeof data === "string") {
+            errorMessage = data;
+          } else if (data.detail) {
+            errorMessage = data.detail;
+          } else if (data.errors) {
+            // handle nested errors array/object
+            if (Array.isArray(data.errors)) {
+              errorMessage = data.errors.map((e: any) => e.msg || JSON.stringify(e)).join("; ");
+            } else {
+              errorMessage = JSON.stringify(data.errors);
+            }
+          } else {
+            errorMessage = JSON.stringify(data);
+          }
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
         errorRows.push({
           row: i + 2, // +2 if row 1 is header in CSV
-          message:
-            error?.response?.data?.detail ||
-            error.message ||
-            "Unknown error",
+          message: errorMessage,
         });
       }
     }
@@ -1169,15 +1183,16 @@ const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         message: `Import completed ✅ ${successCount} rows inserted.`,
         type: "success",
       });
-    } else {
-      const failedRowNumbers = errorRows.map((e) => e.row).join(", ");
+    } 
+    else if (errorRows.length > 0) {
+      const errorMessages = errorRows
+        .map((e) => `Row ${e.row}: ${e.message}`)
+        .join(" | "); // or "\n" if your toast supports multiline
 
       setToast({
-        message: `Import finished. ✅ ${successCount} success, ❌ ${errorRows.length} failed. Failed rows: ${failedRowNumbers}`,
+        message: `Import finished. ✅ ${successCount} success, ❌ ${errorRows.length} failed. Errors: ${errorMessages}`,
         type: "error",
       });
-
-      console.log("Failed Rows Details:", errorRows);
     }
   } catch (err: any) {
     setToast({
