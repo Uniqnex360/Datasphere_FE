@@ -24,6 +24,7 @@ import { validateImportFormat } from "../utils/importValidator";
 import { exportToExcel } from "../utils/ExcelHelper";
 import { FilterSelect } from "../components/Filter";
 import { parseCSV } from "../utils/csvHelper";
+import { SearchableSelect } from "../components/SearchableSelect";
 
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
@@ -140,13 +141,13 @@ export function Attributes() {
   const [formData, setFormData] = useState<Partial<Attribute>>({
     attribute_name: "",
     description: "",
-    applicable_categories: "",
+    category_id: "",
     attribute_type: "",
     data_type: "",
     unit: "",
     filter: "No",
     filter_display_name: "",
-    variants:false,
+    variants: false,
   });
 
   const [attributeValues, setAttributeValues] = useState<AttributeValue[]>(
@@ -293,10 +294,12 @@ export function Attributes() {
     try {
       const data = await MasterAPI.getCategories();
       setCategories(data || []);
+      console.log("data", data);
       const breadcrumbs = (data || []).map((item: any) => {
         return `${item.breadcrumb}`;
       });
       setCategoryOptions(breadcrumbs || []);
+      console.log(breadcrumbs);
     } catch (error: any) {
       console.error("Error loading categories:", error);
     }
@@ -323,13 +326,17 @@ export function Attributes() {
     if (dataTypeFilter) {
       filtered = filtered.filter((a) => a.data_type === dataTypeFilter);
     }
-     if (categoryFilter) {
-      const targetCategory = categories.find((c) => c.breadcrumb === categoryFilter);
-      
+    if (categoryFilter) {
+      const targetCategory = categories.find(
+        (c) => c.breadcrumb === categoryFilter,
+      );
+
       if (targetCategory) {
         filtered = filtered.filter((a) => {
           if (!a.applicable_categories) return false;
-          const appliedCats = a.applicable_categories.split(",").map((c) => c.trim());
+          const appliedCats = a.applicable_categories
+            .split(",")
+            .map((c) => c.trim());
           return appliedCats.includes(targetCategory.category_code);
         });
       }
@@ -366,6 +373,10 @@ export function Attributes() {
     const parts = attribute.category_path.split(">");
     return parts[parts.length - 1].trim();
   };
+
+  const categoryMap = new Map(categories.map((c) => [c.breadcrumb, c.id]));
+
+  const idToBreadcrumb = new Map(categories.map((c) => [c.id, c.breadcrumb]));
 
   const toggleSelect = (code: string) => {
     const newSet = new Set(selectedCodes);
@@ -433,7 +444,7 @@ export function Attributes() {
     if (!validateForm()) return;
 
     try {
-      console.log("final", selectedCategories, selectedCategories.join(","))
+      console.log("final", selectedCategories, selectedCategories.join(","));
       const dataToSubmit: any = {
         ...formData,
         applicable_categories: selectedCategories.join(","),
@@ -457,7 +468,7 @@ export function Attributes() {
       } else {
         const duplicate = findDuplicateAttribute(
           attributes,
-          formData.attribute_name || "",
+          formData.category_id || "",
         );
 
         if (duplicate) {
@@ -477,7 +488,6 @@ export function Attributes() {
             updateData[`attribute_value_${index + 1}`] = item.value;
             updateData[`attribute_uom_${index + 1}`] = item.uom;
           });
-          console.log("update data", updateData)
           await MasterAPI.update(
             "attributes",
             duplicate.attribute_code,
@@ -506,7 +516,10 @@ export function Attributes() {
       resetForm();
       loadAttributes();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      setToast({
+        message: error?.response?.data?.error || error?.response?.data?.detail,
+        type: "error",
+      });
     }
   };
 
@@ -552,13 +565,13 @@ export function Attributes() {
       attribute_code: "",
       attribute_name: "",
       description: "",
-      applicable_categories: "",
+      category_id: "",
       attribute_type: "",
       data_type: "",
       unit: "",
       filter: "No",
       filter_display_name: "",
-      variants: false, 
+      variants: false,
     });
     setAttributeValues(
       Array.from({ length: 50 }, () => ({ value: "", uom: "" })),
@@ -666,7 +679,6 @@ export function Attributes() {
           const attributeData: any = {};
           attributeData.attribute_name = row.attribute_name;
           attributeData.description = row.description || "";
-          attributeData.applicable_categories = row.applicable_categories || "";
           attributeData.attribute_type = row.attribute_type || "";
           attributeData.data_type = row.data_type || "";
           attributeData.unit = row.unit || "";
@@ -693,7 +705,7 @@ export function Attributes() {
 
           const duplicate = findDuplicateAttribute(
             currentAttributes,
-            row.attribute_name,
+            row.category_id,
           );
 
           if (duplicate) {
@@ -970,7 +982,7 @@ export function Attributes() {
     { key: "attribute_name", label: "Name", sortable: true },
     { key: "attribute_type", label: "Attr Type", sortable: true },
     {
-      key: "category_list_string",
+      key: "category_path",
       label: "Category",
     },
     {
@@ -979,25 +991,25 @@ export function Attributes() {
       sortable: false,
       render: (_: any, row: Attribute) => getValueCount(row),
     },
-    {
-      key: "usage_count",
-      label: "# of Categories",
-      sortable: false,
-      render: (_: any, row: Attribute) => {
-        const categoryCount = row.applicable_categories
-          ? row.applicable_categories.split(",").filter((c) => c.trim()).length
-          : 0;
+    // {
+    //   key: "usage_count",
+    //   label: "# of Categories",
+    //   sortable: false,
+    //   render: (_: any, row: Attribute) => {
+    //     const categoryCount = row.applicable_categories
+    //       ? row.applicable_categories.split(",").filter((c) => c.trim()).length
+    //       : 0;
 
-        return (
-          <span
-            className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800"
-            title={categoryCount > 0 ? "Applied to Categories" : "Unused"}
-          >
-            {categoryCount}
-          </span>
-        );
-      },
-    },
+    //     return (
+    //       <span
+    //         className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800"
+    //         title={categoryCount > 0 ? "Applied to Categories" : "Unused"}
+    //       >
+    //         {categoryCount}
+    //       </span>
+    //     );
+    //   },
+    // },
     {
       key: "filter",
       label: "Filter",
@@ -1091,11 +1103,11 @@ export function Attributes() {
         <div className="flex items-center gap-4 justify-between">
           <div className="flex flex-wrap items-center gap-4">
             <FilterSelect
-            options={categories.map((c)=>c.breadcrumb)}
-            value={categoryFilter}
-            onChange={setCategoryFilter}
-            placeholder="Category"
-            className="w-48 lg:w-64 truncate" 
+              options={categories.map((c) => c.breadcrumb)}
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              placeholder="Category"
+              className="w-48 lg:w-64 truncate"
             />
             <FilterSelect
               options={["Multi-select", "Single-select"]}
@@ -1149,7 +1161,7 @@ export function Attributes() {
           {searchTerm ||
           industryFilter ||
           attributeTypeFilter ||
-          categoryFilter||
+          categoryFilter ||
           dataTypeFilter ? (
             <span>
               Showing <strong>{filteredAttributes.length}</strong> matching
@@ -1165,7 +1177,7 @@ export function Attributes() {
         {(searchTerm ||
           industryFilter ||
           attributeTypeFilter ||
-           categoryFilter||
+          categoryFilter ||
           dataTypeFilter) && (
           <button
             onClick={() => {
@@ -1173,7 +1185,7 @@ export function Attributes() {
               setIndustryFilter("");
               setAttributeTypeFilter("");
               setDataTypeFilter("");
-              setCategoryFilter("")
+              setCategoryFilter("");
             }}
             className="text-sm text-blue-600 hover:underline font-medium"
           >
@@ -1445,56 +1457,32 @@ export function Attributes() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Applicable Categories ({categories.length})
+                Categories
               </label>
-              <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto">
-                {categories.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    No categories available
-                  </p>
-                ) : (
-                  categories.map((cat) => (
-                    <label
-                      key={cat.breadcrumb}
-                      className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        // checked={selectedCategories.includes(cat.breadcrumb)}
-                        checked={selectedCategories.includes(cat.breadcrumb)}
-                        onChange={() => toggleCategory(cat.breadcrumb)}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {cat.breadcrumb}
-                      </span>
-                    </label>
-                  ))
-                )}
-              </div>
-              {selectedCategories.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedCategories.map((code) => {
-                    const cat = categories.find(
-                      (c) => c.breadcrumb === code,
-                    );
-                    return (
-                      <span
-                        key={code}
-                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
-                      >
-                        {cat?.breadcrumb || code}
-                        <button
-                          onClick={() => toggleCategory(code)}
-                          className="hover:text-blue-900"
-                        >
-                          <X size={14} />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
+              <SearchableSelect
+                options={[...categoryMap.keys()]}
+                value={idToBreadcrumb.get(formData.category_id) || ""}
+                onChange={(breadcrumb) => {
+                  setFormData({
+                    ...formData,
+                    category_id: categoryMap.get(breadcrumb) || "",
+                  });
+                }}
+              />
+              {/* <select
+                value={formData.category_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, category_id: e.target.value })
+                }
+                className="border border-gray-300 rounded-lg p-2 w-full text-sm"
+              >
+                <option value="">Select a category</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.breadcrumb}
+                  </option>
+                ))}
+              </select> */}
             </div>
 
             <div>
@@ -1687,18 +1675,19 @@ export function Attributes() {
                 Variants
               </label>
               <select
-                value={formData.variants?"Yes":"No"}
+                value={formData.variants ? "Yes" : "No"}
                 onChange={(e) =>
-                  setFormData({ ...formData, variants: e.target.value === "Yes" }) 
+                  setFormData({
+                    ...formData,
+                    variants: e.target.value === "Yes",
+                  })
                 }
-
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="No">No</option>
                 <option value="Yes">Yes</option>
               </select>
             </div>
-            
           </div>
         </div>
 
