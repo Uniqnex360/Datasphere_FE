@@ -292,7 +292,7 @@ export const MasterAPI = {
     type: "brands" | "vendors" | "categories" | "industries" | "attributes",
     data: any,
   ) => {
-    const response = await api.post(`/master/${type}`, data);
+    const response = await api.post(`/master/${type}/`, data);
     return response.data;
   },
   updateVendorStatus: async (
