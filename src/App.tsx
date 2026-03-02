@@ -16,6 +16,8 @@ import DigitalAssets from './pages/DigitalAssets';
 import Price from './pages/PriceManagement';
 import Inventory from './pages/Inventory';
 import { IndustryMaster } from './pages/IndustryMaster';
+import { ClientLogin } from './pages/ClientLogin';
+import User from './pages/user/User';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -36,10 +38,21 @@ function App() {
     setCurrentPage('dashboard');
   };
 
+  // Get the first segment of the path
+  const path = window.location.pathname; // e.g., "/" or "/client1"
+  const segments = path.split('/').filter(Boolean); // removes empty strings
+  const isClientPortal = segments.length > 0; // true if path is not "/"
+
+  // Show login pages
   if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+    return isClientPortal ? (
+      <ClientLogin onLogin={handleLogin} />
+    ) : (
+      <Login onLogin={handleLogin} />
+    );
   }
 
+  // Render pages
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
@@ -49,7 +62,7 @@ function App() {
       case 'price':
         return <Price />;
       case 'industries':
-        return <IndustryMaster/>
+        return <IndustryMaster />;
       case 'inventory':
         return <Inventory />;
       case 'enrichment':
@@ -64,12 +77,12 @@ function App() {
         return <BrandMaster />;
       case 'assets':
         return <DigitalAssets />;
-      case 'import-export':
-        return <ImportExport />;
+      // case 'import-export':
+      //   return <ImportExport />;
       case 'channels':
         return <Channels />;
       case 'users':
-        return <Users />;
+        return <User />;
       case 'settings':
         return <Settings />;
       default:

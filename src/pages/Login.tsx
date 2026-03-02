@@ -20,6 +20,10 @@ export function Login({ onLogin }: LoginProps) {
       params.append('username', username);
       params.append('password', password);
       const data=await AuthAPI.login(params)
+      if (!data.is_super_admin) {
+        setError("Please Login Via Client Portal");
+        return;
+      }
       localStorage.setItem('token',data.access_token)
       localStorage.setItem('isAuthenticated', 'true');
       onLogin()

@@ -14,9 +14,9 @@ interface Column {
 interface DataTableProps {
   columns: Column[];
   data: any[];
-  sortKey: string;
-  sortDirection: "asc" | "desc";
-  onSort: (key: string) => void;
+  sortKey?: string;
+  sortDirection?: "asc" | "desc";
+  onSort?: (key: string) => void;
   isLoading?: boolean;
 }
 
@@ -61,13 +61,13 @@ export default function DataTable({
     );
   }
 
-  if (data.length === 0) {
-    return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-8 text-center text-gray-500">No data found</div>
-      </div>
-    );
-  }
+  // if (data.length === 0) {
+  //   return (
+  //     <div className="bg-white rounded-lg shadow overflow-hidden">
+  //       <div className="p-8 text-center text-gray-500">No data found</div>
+  //     </div>
+  //   );
+  // }
 
   return (
     // <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -174,14 +174,27 @@ export default function DataTable({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((row, index) => (
-                <tr key={index} className="hover:bg-gray-50 transition-colors">
-                  {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className="px-6 py-4 text-sm text-gray-900"
-                    >
-                      {/* <div
+              {data.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-6 py-4 text-center text-gray-500"
+                  >
+                    No data available
+                  </td>
+                </tr>
+              ) : (
+                data.map((row, index) => (
+                  <tr
+                    key={index}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column.key}
+                        className="px-6 py-4 text-sm text-gray-900"
+                      >
+                        {/* <div
                         className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
                         title={String(row[column.key] || "")}
                       >
@@ -189,25 +202,25 @@ export default function DataTable({
                           ? column.render(row[column.key], row)
                           : row[column.key] || "-"}
                       </div> */}
-                      {/* added custom truncate functionality */}
-                      <div
-                        title={String(row[column.key] || "")} // tooltip
-                        className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
-                      >
-                        {column.customTruncate === true
-                          ? truncateText(
-                              String(row[column.key]),
-                              column.truncateLength ?? 15,
-                            )
-                          : column.render
-                            ? column.render(row[column.key], row)
-                            : row[column.key] || "-"}{" "}
-                      
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
+                        {/* added custom truncate functionality */}
+                        <div
+                          title={String(row[column.key] || "")} // tooltip
+                          className="truncate max-w-[150px] md:max-w-[200px] lg:max-w-[300px]"
+                        >
+                          {column.customTruncate === true
+                            ? truncateText(
+                                String(row[column.key]),
+                                column.truncateLength ?? 15,
+                              )
+                            : column.render
+                              ? column.render(row[column.key], row)
+                              : row[column.key] || "-"}{" "}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
