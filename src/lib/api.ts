@@ -330,17 +330,17 @@ export const AuthAPI = {
 
 export const UserAPI = {
   getUsers: async (search: string, role: string) => {
-    const response = await api.get("client/clients/list/", {
+    const response = await api.get("client/clients/list", {
       params: { search, role },
     });
     return response.data;
   },
   createUser: async (data: any) => {
-    const response = await api.post("client/create/", data);
+    const response = await api.post("client/create", data);
     return response.data;
   },
   updateUser: async (id: string | undefined, data: any) => {
-    const response = await api.put(`client/clients/update/${id}/`, data);
+    const response = await api.put(`client/clients/update/${id}`, data);
     return response.data;
   },
 };
