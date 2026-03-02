@@ -259,6 +259,7 @@ export function Products() {
       setCategories(prossedCategories || []);
       setIndustries(industriesData || []);
     } catch (error: any) {
+      console.log('error', error)
       setToast({ message: "Failed to load data", type: "error" });
     } finally {
       setLoading(false);
@@ -478,7 +479,7 @@ export function Products() {
       resetForm();
       loadData();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      setToast({ message: error?.response?.data?.detail?.mpn || error.message, type: "error" });
     }
   };
   const handleEdit = (product: ProductWithVariantStatus) => {
@@ -1257,14 +1258,36 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
     image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
     image_name_3: "010-02092-00-Image-3",
     image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
+    image_name_4: "010-02092-00-Image-3",
+    image_url_4: "https://example.com/images/gpsmap-8617-back.jpg",
+    image_name_5: "010-02092-00-Image-3",
+    image_url_5: "https://example.com/images/gpsmap-8617-back.jpg",
+    image_name_6: "010-02092-00-Image-3",
+    image_url_6: "https://example.com/images/gpsmap-8617-back.jpg",
+    image_name_7: "010-02092-00-Image-3",
+    image_url_7: "https://example.com/images/gpsmap-8617-back.jpg",
+    image_name_8: "010-02092-00-Image-3",
+    image_url_8: "https://example.com/images/gpsmap-8617-back.jpg",
 
     // Videos
     video_name_1: "010-02092-00-Video-1",
     video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
+    video_name_2: "010-02092-00-Video-1",
+    video_url_2: "https://example.com/videos/gpsmap-8617-overview.mp4",
+    video_name_3: "010-02092-00-Video-1",
+    video_url_3: "https://example.com/videos/gpsmap-8617-overview.mp4",
 
     // Documents
     document_name_1: "010-02092-00-Manual",
     document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
+    document_name_2: "010-02092-00-Manual",
+    document_url_2: "https://example.com/docs/gpsmap-8617-manual.pdf",
+    document_name_3: "010-02092-00-Manual",
+    document_url_3: "https://example.com/docs/gpsmap-8617-manual.pdf",
+    document_name_4: "010-02092-00-Manual",
+    document_url_4: "https://example.com/docs/gpsmap-8617-manual.pdf",
+    document_name_5: "010-02092-00-Manual",
+    document_url_5: "https://example.com/docs/gpsmap-8617-manual.pdf",
 
     // 3D Model
     "3d_model_url": "https://example.com/models/gpsmap-8617.glb",

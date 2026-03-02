@@ -1,10 +1,48 @@
-import { Search, X, Plus, Loader2, Triangle } from "lucide-react";
+import { Search, X, Plus, Loader2 } from "lucide-react";
 import { useState } from "react";
 
+import Toast from "../../components/Toast";
+import Drawer from "../../components/Drawer";
+import Modal from "../../components/Modal";
 import { FilterSelect } from "../../components/Filter";
 import UserList from "./UserList";
-import Drawer from "../../components/Drawer";
 import { User as UserType } from "./types";
+import { UserAPI } from "../../lib/api";
+
+const CopyField = ({ label, value }: { label: string; value: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium mb-1">{label}</label>
+
+      <div className="relative">
+        <input
+          type="text"
+          value={value}
+          readOnly
+          onClick={handleCopy}
+          className="w-full border rounded px-3 py-2 bg-gray-100 cursor-pointer"
+        />
+
+        {copied && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-green-600">
+            Copied!
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const User = () => {
   // fillter related states
@@ -14,21 +52,31 @@ const User = () => {
   const [count, setCount] = useState(0);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // move this to create or update page
   const [editUser, setEditUser] = useState<UserType | null>(null);
+  const [updateUser, setUpdateUser] = useState(false);
   const [submitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<Partial<UserType>>({
     email: "",
     full_name: "",
     role: "client",
+    is_active: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+  const [passwordCard, setPasswordCard] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loginUrl, setLoginUrl] = useState("");
 
   // create page edit functions
   const handleEdit = (data: UserType) => {
-    console.log(data);
     setIsDrawerOpen(true);
+    setEditUser(data);
     setFormData(data);
     setErrors({});
   };
@@ -60,9 +108,41 @@ const User = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
+
     setIsSubmitting(true);
-    console.log(formData);
-    setIsSubmitting(false);
+
+    try {
+      if (updateUser && editUser) {
+        await UserAPI.updateUser(editUser.id, formData);
+
+        setToast({ message: "User updated successfully", type: "success" });
+      } else {
+        const { data } = await UserAPI.createUser(formData);
+
+        setPassword(data?.password);
+        setLoginUrl(data?.login_url);
+
+        setToast({ message: "User added successfully", type: "success" });
+
+        setPasswordCard(true);
+      }
+
+      // ✅ Common cleanup
+      setEditUser(null);
+      resetForm();
+      setRefreshKey((prev) => prev + 1);
+      setIsDrawerOpen(false);
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.error ||
+        error?.message ||
+        "Something went wrong";
+
+      setToast({ message, type: "error" });
+    } finally {
+      setIsSubmitting(false);
+      setUpdateUser(false);
+    }
   };
 
   return (
@@ -163,9 +243,11 @@ const User = () => {
       <UserList
         searchTerm={searchTerm}
         roleFilter={roleFilter}
+        refreshKey={refreshKey}
         setTotal={setTotal}
         setCount={setCount}
         handleEdit={handleEdit}
+        setUpdateUser={setUpdateUser}
       />
 
       <Drawer
@@ -173,6 +255,7 @@ const User = () => {
         onClose={() => {
           setIsDrawerOpen(false);
           setEditUser(null);
+          setFormData({});
         }}
         title={editUser ? "Edit User" : "Add User"}
       >
@@ -194,7 +277,7 @@ const User = () => {
                     errors.full_name
                       ? "border-red-500 focus:ring-red-200"
                       : "border-gray-300 focus:ring-blue-500"
-                  }`}
+                  } focus:outline-none`}
                   placeholder="Enter name"
                 />
                 {errors.full_name && (
@@ -219,12 +302,36 @@ const User = () => {
                     errors.email
                       ? "border-red-500 focus:ring-red-200"
                       : "border-gray-300 focus:ring-blue-500"
-                  }`}
+                  } focus:outline-none`}
                   placeholder="Enter Email"
                 />
                 {errors.email && (
                   <p className="text-red-500 text-sm mt-1">{errors.email}</p>
                 )}
+              </div>
+
+              {/*Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.is_active ? "Active" : "Inactive"}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      is_active: e.target.value === "Active",
+                    });
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all ${
+                    formData.is_active
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-red-50 border-red-200 text-red-700"
+                  } focus:outline-none`}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
               </div>
             </div>
           </div>
@@ -255,12 +362,41 @@ const User = () => {
                   Saving...
                 </>
               ) : (
-                <>{editUser ? "Update" : "Add"} User</>
+                <>{updateUser ? "Update" : "Add"} User</>
               )}
             </button>
           </div>
         </div>
       </Drawer>
+
+      {/* model to show password one time */}
+      <Modal
+        isOpen={passwordCard}
+        onClose={() => {
+          setPasswordCard(false);
+          setPassword("");
+          setLoginUrl("");
+        }}
+        title="User Credentials"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            These credentials are displayed only once. Please copy and store
+            them securely, as the password cannot be retrieved later.
+          </p>
+          <CopyField label="LoginURL" value={loginUrl} />
+          <CopyField label="Password" value={password} />
+        </div>
+      </Modal>
+
+      {/* toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

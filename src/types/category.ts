@@ -1,4 +1,5 @@
 export interface Category {
+  id?: string;
   category_code: string;
   industry_code: string;
   industry_name: string;

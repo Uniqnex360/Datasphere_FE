@@ -3,6 +3,6 @@ export type User = {
   email: string;
   full_name: string;
   role: "client" | "admin";
-  is_active: boolean;
+  is_active?: boolean;
   client_login_url?: string | null;
 };
