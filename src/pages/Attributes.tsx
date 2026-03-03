@@ -610,7 +610,7 @@ export function Attributes() {
 
     exportToExcel({
       data: export_data,
-      fileName: "attributes.xlsx",
+      fileName: "attribute_export.xlsx",
       columns: exportColumns,
       dropdowns: {
         category_path: categoryOptions,

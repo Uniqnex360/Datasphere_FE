@@ -237,7 +237,7 @@ export default function Inventory() {
       return;
     }
 
-    exportToCSV(filteredAndSortedProducts, "inventory.csv");
+    exportToCSV(filteredAndSortedProducts, "inventory_export.csv");
     setToast({ message: "Inventory exported successfully", type: "success" });
   };
 

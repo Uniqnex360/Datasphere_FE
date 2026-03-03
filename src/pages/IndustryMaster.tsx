@@ -265,7 +265,7 @@ export function IndustryMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredIndustries, "industries.csv", ["id", "created_at", "updated_at"]);
+    exportToCSV(filteredIndustries, "industry_export.csv", ["id", "created_at", "updated_at"]);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
