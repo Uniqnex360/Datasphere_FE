@@ -294,12 +294,10 @@ export function Attributes() {
     try {
       const data = await MasterAPI.getCategories();
       setCategories(data || []);
-      console.log("data", data);
       const breadcrumbs = (data || []).map((item: any) => {
         return `${item.breadcrumb}`;
       });
       setCategoryOptions(breadcrumbs || []);
-      console.log(breadcrumbs);
     } catch (error: any) {
       console.error("Error loading categories:", error);
     }
@@ -444,7 +442,6 @@ export function Attributes() {
     if (!validateForm()) return;
 
     try {
-      console.log("final", selectedCategories, selectedCategories.join(","));
       const dataToSubmit: any = {
         ...formData,
         applicable_categories: selectedCategories.join(","),
@@ -629,15 +626,15 @@ export function Attributes() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    let rowNo = 0;
+    let errors = 0;
+    const rowErrorStrings: string[] = [];
+
     try {
       setLoading(true);
       const data = await parseCSV(file);
 
-      if (data.length > 0) {
-        console.log("CSV Column Names:", Object.keys(data[0]));
-        console.log("First Row Sample:", data[0]);
-      }
-
+      // Validations
       const requiredColumns = ["attribute_name"];
       const validation = validateImportFormat(data, requiredColumns);
       if (!validation.isValid) {
@@ -649,219 +646,44 @@ export function Attributes() {
         return;
       }
 
-      let added = 0;
-      let merged = 0;
-      let errors = 0;
-      let totalNewValues = 0;
-      let totalIgnoredValues = 0;
-      const importDetails: string[] = [];
-
-      // let nextCodeNumber = 1;
-      // const codes = attributes
-      //   .map((a) => a.attribute_code)
-      //   .filter((c) => c && c.startsWith("ATTR-"))
-      //   .sort((a, b) => b.localeCompare(a));
-
-      // if (codes.length > 0) {
-      //   const match = codes[0].match(/ATTR-(\d+)/);
-      //   if (match) nextCodeNumber = parseInt(match[1], 10) + 1;
-      // }
-
-      const currentAttributes = [...attributes];
-
+      // Upload to backend
       for (const row of data) {
+        rowNo++;
         if (!row.attribute_name?.trim()) {
+          rowErrorStrings.push(
+            `row-${rowNo} -> Missing required field: Attribute Name`,
+          );
           errors++;
           continue;
         }
 
         try {
-          const attributeData: any = {};
-          attributeData.attribute_name = row.attribute_name;
-          attributeData.description = row.description || "";
-          attributeData.attribute_type = row.attribute_type || "";
-          attributeData.data_type = row.data_type || "";
-          attributeData.unit = row.unit || "";
-          attributeData.filter = row.filter || "No";
-          attributeData.filter_display_name = row.filter_display_name || "";
+          await MasterAPI.createAttribute(row);
 
-          const newValues: AttributeValue[] = [];
-          for (let i = 1; i <= 50; i++) {
-            const val = row[`attribute_value_${i}`] || "";
-            const uom = row[`attribute_uom_${i}`] || "";
-
-            if (val && String(val).trim()) {
-              newValues.push({
-                value: String(val).trim(),
-                uom: String(uom || "").trim(),
-              });
-            }
-
-            attributeData[`attribute_value_${i}`] = val
-              ? String(val).trim()
-              : "";
-            attributeData[`attribute_uom_${i}`] = uom ? String(uom).trim() : "";
-          }
-
-          const duplicate = findDuplicateAttribute(
-            currentAttributes,
-            row.category_id,
-          );
-
-          if (duplicate) {
-            console.log(
-              `Merging values for existing attribute: ${duplicate.attribute_name}`,
-            );
-
-            const existingValues: AttributeValue[] = [];
-            for (let i = 1; i <= 50; i++) {
-              const value =
-                duplicate[`attribute_value_${i}` as keyof Attribute];
-              const uom = duplicate[`attribute_uom_${i}` as keyof Attribute];
-              if (value && String(value).trim()) {
-                existingValues.push({
-                  value: String(value).trim(),
-                  uom: String(uom || "").trim(),
-                });
-              }
-            }
-
-            const mergedValues = [...existingValues];
-            let newValuesAdded = 0;
-            let ignoredValuesCount = 0;
-
-            newValues.forEach((newVal) => {
-              if (newVal.value.trim()) {
-                const isDuplicate = existingValues.some(
-                  (existing) =>
-                    existing.value.toLowerCase().trim() ===
-                      newVal.value.toLowerCase().trim() &&
-                    existing.uom.toLowerCase().trim() ===
-                      newVal.uom.toLowerCase().trim(),
-                );
-
-                if (!isDuplicate && mergedValues.length < 50) {
-                  mergedValues.push(newVal);
-                  newValuesAdded++;
-                } else if (isDuplicate) {
-                  ignoredValuesCount++;
-                }
-              }
-            });
-
-            while (mergedValues.length < 50) {
-              mergedValues.push({ value: "", uom: "" });
-            }
-
-            const updateData: any = {
-              ...duplicate,
-              ...attributeData,
-              usage_count: (duplicate.usage_count || 1) + 1,
-            };
-            delete updateData.attribute_code;
-
-            mergedValues.forEach((item, idx) => {
-              updateData[`attribute_value_${idx + 1}`] = item.value;
-              updateData[`attribute_uom_${idx + 1}`] = item.uom;
-            });
-
-            await MasterAPI.update(
-              "attributes",
-              duplicate.attribute_code,
-              updateData,
-            );
-
-            merged++;
-            totalNewValues += newValuesAdded;
-            totalIgnoredValues += ignoredValuesCount;
-
-            if (newValuesAdded > 0 || ignoredValuesCount > 0) {
-              importDetails.push(
-                `${duplicate.attribute_name}: +${newValuesAdded} values, ${ignoredValuesCount} ignored`,
-              );
-            }
-
-            const index = currentAttributes.findIndex(
-              (attr) => attr.attribute_code === duplicate.attribute_code,
-            );
-            if (index !== -1) {
-              currentAttributes[index] = {
-                ...updateData,
-                attribute_code: duplicate.attribute_code,
-              };
-            }
-          } else {
-            console.log(
-              `Creating new attribute: ${attributeData.attribute_name}`,
-            );
-
-            // const attributeCode = `ATTR-${String(nextCodeNumber).padStart(6, "0")}`;
-            // attributeData.attribute_code = attributeCode;
-            attributeData.usage_count = 1;
-
-            const createdAttr = await MasterAPI.createAttribute(
-              attributeData,
-            );
-
-            currentAttributes.push(createdAttr);
-
-            added++;
-
-            const valueCount = newValues.filter((v) => v.value.trim()).length;
-            if (valueCount > 0) {
-              importDetails.push(
-                `${attributeData.attribute_name}: new attribute with ${valueCount} values`,
-              );
-            }
-          }
+      
         } catch (error: any) {
-          console.error(
-            `Error processing row for ${row.attribute_name}:`,
-            error,
-          );
           errors++;
-          importDetails.push(`${row.attribute_name}: ERROR - ${error.message}`);
+          rowErrorStrings.push(
+            `row-${rowNo} -> ${error?.response?.data?.error || "Unknown error"}`,
+          );
         }
       }
-
-      let message = "";
-      if (errors === 0) {
-        if (added > 0 && merged > 0) {
-          message = ` Import completed! ${added} new attributes added, ${merged} existing attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
-        } else if (added > 0) {
-          message = ` Import successful! ${added} new attributes added`;
-        } else if (merged > 0) {
-          message = ` Import completed! ${merged} attributes updated with ${totalNewValues} new values (${totalIgnoredValues} duplicate values ignored)`;
-        } else {
-          message = `ℹ No changes made - all attributes and values already exist`;
-        }
-      } else {
-        message = ` Import completed with issues: ${added} added, ${merged} merged, ${errors} errors`;
-      }
-
-      console.log("Import Summary:", {
-        added,
-        merged,
-        errors,
-        totalNewValues,
-        totalIgnoredValues,
-        details: importDetails,
-      });
-
-      setToast({
-        message,
-        type: errors > 0 ? "error" : "success",
-      });
-
-      loadAttributes();
     } catch (error: any) {
-      console.error("Import error:", error);
-      setToast({ message: `Import error: ${error.message}`, type: "error" });
+      rowErrorStrings.push(
+        `row-${rowNo} -> ${error?.message || "Unknown error"}`,
+      );
     } finally {
       setLoading(false);
+      setToast({ message: "uploaded successfully", type: "success" });
       e.target.value = "";
     }
+
+    if (rowErrorStrings.length > 0) {
+      const rowErrorSummary = rowErrorStrings.join(", ");
+      setToast({ message: rowErrorSummary, type: "error" });
+    }
   };
+
   const downloadTemplate = () => {
     function getBreadcrumbEndValues(categories: Category[]): string[] {
       return categories.map((cat) => {
