@@ -57,6 +57,13 @@ export function VendorMaster() {
   const [selectedStateCode, setSelectedStateCode] = useState("");
   const [stateOptions, setStateOptions] = useState<any[]>([]);
   const [cityOptions, setCityOptions] = useState<any[]>([]);
+  const [allowedCountries, setAllowedCountries] = useState<string[]>([
+    "United States",
+    "United Kingdom",
+    "Ireland",
+    "Australia",
+    "United Arab Emirates",
+  ]);
 
   // use Ref to handle contact phone number
   const contactPhoneNumberInput = useRef<HTMLInputElement>(null);
@@ -119,12 +126,10 @@ export function VendorMaster() {
     try {
       setLoading(true);
       await Promise.all(
-        codes.map((code) =>
-          MasterAPI.updateVendorStatus("vendors", code),
-        ),
+        codes.map((code) => MasterAPI.updateVendorStatus("vendors", code)),
       );
       setToast({
-        message: `Successfully updated ${codes.length} ${ codes.length > 1 ? "vendors": "vendor"}`,
+        message: `Successfully updated ${codes.length} ${codes.length > 1 ? "vendors" : "vendor"}`,
         type: "success",
       });
       setSelectedCodes(new Set());
@@ -309,6 +314,19 @@ export function VendorMaster() {
         const names = industryData.map((i: any) => i.industry_name).sort();
         setIndustryOptions(names);
       }
+      if (vendorData) {
+        // Create a new set to avoid duplicates
+        const newCountries = new Set(allowedCountries);
+
+        for (const vd of vendorData) {
+          if (vd.country) {
+            newCountries.add(vd.country); // Set automatically prevents duplicates
+          }
+        }
+
+        // Update state with a new array
+        setAllowedCountries(Array.from(newCountries));
+      }
     } catch (error: any) {
       setToast({ message: error.message, type: "error" });
     } finally {
@@ -368,6 +386,7 @@ export function VendorMaster() {
     const getWebsite = () => formData.vendor_website?.trim() || "";
     const getIndustry = () => formData.industry?.trim() || "";
     const getBusinessType = () => formData.business_type?.trim() || "";
+
     const country = formData.country?.trim();
     if (!getName()) {
       newErrors.vendor_name = "Vendor name is required";
@@ -675,18 +694,16 @@ export function VendorMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    const dataToExport = filteredVendors.map(
-      ({
-        id,
-
-        ...cleanVendor
-      }) => ({
-        ...cleanVendor,
-        industry:
-          cleanVendor.industry || (industry_obj as any)?.industry_name || "N/A",
-      }),
-    );
-    exportToCSV(dataToExport, "vendors.csv");
+    console.log(filteredVendors);
+    const dataToExport = filteredVendors.map(({ id, ...cleanVendor }) => ({
+      ...cleanVendor,
+      industry: cleanVendor.industry || "",
+    }));
+    exportToCSV(dataToExport, "vendors.csv", [
+      "industry_id",
+      "created_at",
+      "updated_at",
+    ]);
     setToast({ message: "Vendors exported successfully", type: "success" });
   };
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -707,6 +724,8 @@ export function VendorMaster() {
         "industry",
         "description",
         "address",
+        "country",
+        "state",
         "city",
         "tax_info",
         "vendor_logo_url",
@@ -894,7 +913,9 @@ export function VendorMaster() {
         industry: "HVAC",
         description: "Sample description",
         address: "123 Main St",
-        city: "New York",
+        country: "United States",
+        state: "New York",
+        city: "Adams",
         tax_info: "TAX123",
         vendor_logo_url: "",
         dept1_poc_name: "John Doe",
@@ -968,7 +989,11 @@ export function VendorMaster() {
       ) as any,
       width: "100px",
       render: (_: any, row: Vendor) => (
-        <div onClick={(e) => {e.stopPropagation()}}>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
           <input
             type="checkbox"
             checked={selectedCodes.has(row.vendor_code)}
@@ -1071,7 +1096,9 @@ export function VendorMaster() {
   }, [formData.country]);
 
   // useEffect to update wether to show active or inactive status
-  const selectedVendors = vendors.filter((v) => selectedCodes.has(v.vendor_code));
+  const selectedVendors = vendors.filter((v) =>
+    selectedCodes.has(v.vendor_code),
+  );
   const allActive = selectedVendors.every((v) => v.is_active);
   const allInactive = selectedVendors.every((v) => !v.is_active);
 
@@ -1139,7 +1166,7 @@ export function VendorMaster() {
               placeholder="Select Industry"
             />
             <FilterSelect
-              options={ALLOWED_COUNTRIES}
+              options={allowedCountries}
               value={countryFilter}
               onChange={setCountryFilter}
               placeholder="Select Country"
@@ -1560,7 +1587,11 @@ export function VendorMaster() {
                     setFormData({ ...formData, contact_email: e.target.value });
                     clearFieldError("contact_email", setErrors);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 transition-all ${
+                    errors.vendor_name
+                      ? "border-red-500 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-blue-500"
+                  }`}
                 />
                 {errors.contact_email && (
                   <p className="text-red-500 text-sm mt-1">
@@ -1627,7 +1658,7 @@ export function VendorMaster() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span className="flex items-center gap-2">
-                    Industry
+                    Industry <span className="text-red-500">*</span>
                     {isCustomIndustry && formData.industry?.trim() && (
                       <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
                         New
@@ -1701,7 +1732,7 @@ export function VendorMaster() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Type
+                  Business Type <span className="text-red-500">*</span>
                 </label>
                 <div className="relative group">
                   <select
