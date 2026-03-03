@@ -502,7 +502,7 @@ export function Attributes() {
           // const attributeCode = generateAttributeCode(attributes);
           // dataToSubmit.attribute_code = attributeCode;
           dataToSubmit.usage_count = 1;
-          await MasterAPI.create("attributes", dataToSubmit);
+          await MasterAPI.createAttribute(dataToSubmit);
 
           setToast({
             message: `Attribute added successfully`,
@@ -799,8 +799,7 @@ export function Attributes() {
             // attributeData.attribute_code = attributeCode;
             attributeData.usage_count = 1;
 
-            const createdAttr = await MasterAPI.create(
-              "attributes",
+            const createdAttr = await MasterAPI.createAttribute(
               attributeData,
             );
 
