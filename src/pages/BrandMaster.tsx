@@ -353,7 +353,7 @@ export function BrandMaster() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredBrands, "brands.csv", [
+    exportToCSV(filteredBrands, "brand_export.csv", [
       "id",
       "updated_at",
       "created_at",
@@ -535,7 +535,7 @@ export function BrandMaster() {
         brand_name: "Example Brand",
         brand_website: "",
         brand_logo: "https://example.com/brand-logo.png",
-        mfg_code: "MFG001",
+        mfg_code: "",
         mfg_name: "Example Manufacturer",
         manufacturer_website: "",
         mfg_logo: "https://example.com/mfg-logo.png",

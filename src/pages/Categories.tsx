@@ -523,7 +523,7 @@ const convertToTreeNodes = (
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredCategories, "categories.csv", [
+    exportToCSV(filteredCategories, "category_export.csv", [
       "id",
       "created_at",
       "updated_at",

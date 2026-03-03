@@ -261,6 +261,10 @@ export const MasterAPI = {
     const response = await api.get("/master/vendors");
     return response.data;
   },
+  getVendorsWithFilterMeta: async (params?: {}) => {
+    const response = await api.get("/master/vendor/filter-meta/", { params });
+    return response.data;
+  },
   getAttributes: async () => {
     const response = await api.get("/master/attributes/");
     return response.data;
@@ -295,9 +299,7 @@ export const MasterAPI = {
     const response = await api.post(`/master/${type}`, data);
     return response.data;
   },
-  createAttribute: async (
-    data: any,
-  ) => {
+  createAttribute: async (data: any) => {
     const response = await api.post(`/master/attributes/`, data);
     return response.data;
   },

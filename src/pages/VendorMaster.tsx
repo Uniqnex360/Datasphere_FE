@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   Building2,
+  Bus,
   CheckCircle,
   ChevronDown,
   Download,
@@ -30,6 +31,7 @@ import { useIndustryManager } from "../hooks/useIndustryManager";
 import { City, Country, State } from "country-state-city";
 import CustomDownloadIcon from "../assets/download-custom.png";
 import { FilterSelect } from "../components/Filter.tsx";
+import { MultiSelect } from "../components/MultiSelect.tsx";
 
 const ALLOWED_COUNTRIES = [
   "United States",
@@ -158,10 +160,14 @@ export function VendorMaster() {
     type: "success" | "error";
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [businessTypeFilter, setBusinessTypeFilter] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
+  const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
+  const [businessTypeFilter, setBusinessTypeFilter] = useState<string[]>([]);
+  const [countryFilterOptions, setCountryFilterOptions] = useState<string[]>(
+    [],
+  );
+  const [countryFilter, setCountryFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
-  const [industryFilter, setIndustryFilter] = useState("");
+  const [industryFilter, setIndustryFilter] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState("vendor_code");
   const [industries, setIndustries] = useState<any[]>([]);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -277,7 +283,7 @@ export function VendorMaster() {
   };
   useEffect(() => {
     loadVendors();
-  }, []);
+  }, [businessTypeFilter, industryFilter, countryFilter, statusFilter]);
   useEffect(() => {
     filterAndSortVendors();
   }, [
@@ -299,26 +305,28 @@ export function VendorMaster() {
   const loadVendors = async () => {
     try {
       setLoading(true);
-      const [vendorData, industryData] = await Promise.all([
-        MasterAPI.getVendors(),
+      const [vendorData, ] = await Promise.all([
+        MasterAPI.getVendorsWithFilterMeta({
+          business_type: businessTypeFilter,
+          business_type_filter: businessTypeOptions,
+          industry: industryFilter,
+          industry_filter: industryOptions,
+          country: countryFilter,
+          country_filter: countryFilterOptions,
+          is_active: statusFilter,
+        }),
         MasterAPI.getIndustries(),
       ]);
-      setVendors(vendorData || []);
-      if (vendorData) {
-        const usedIndustries = vendorData
-          .map((v: Vendor) => v.industry)
-          .filter((i): i is string => !!i);
-      }
-      if (industryData) {
-        setIndustries(industryData);
-        const names = industryData.map((i: any) => i.industry_name).sort();
-        setIndustryOptions(names);
-      }
-      if (vendorData) {
+      setVendors(vendorData?.vendors || []);
+      setBusinessTypeOptions(vendorData?.filter_meta?.business_type || []);
+      setCountryFilterOptions(vendorData?.filter_meta?.country || []);
+      setIndustryOptions(vendorData?.filter_meta?.industry || []);
+
+      if (vendorData?.vendors) {
         // Create a new set to avoid duplicates
         const newCountries = new Set(allowedCountries);
 
-        for (const vd of vendorData) {
+        for (const vd of vendorData?.vendors) {
           if (vd.country) {
             newCountries.add(vd.country); // Set automatically prevents duplicates
           }
@@ -354,19 +362,21 @@ export function VendorMaster() {
           (v.country || "")?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
-    if (businessTypeFilter) {
-      filtered = filtered.filter((v) => v.business_type === businessTypeFilter);
-    }
-    if (countryFilter) {
-      filtered = filtered.filter((v) => v.country === countryFilter);
-    }
-    if (statusFilter) {
-      const activeBool = statusFilter === "Active";
-      filtered = filtered.filter((v) => v.is_active === activeBool);
-    }
-    if (industryFilter) {
-      filtered = filtered.filter((v) => v.industry === industryFilter);
-    }
+    // if (businessTypeFilter && businessTypeFilter.length > 0) {
+    //   filtered = filtered.filter((v) =>
+    //     businessTypeFilter.includes(v.business_type),
+    //   );
+    // }
+    // if (countryFilter && countryFilter.length > 0) {
+    //   filtered = filtered.filter((v) => v.country === countryFilter);
+    // }
+    // if (statusFilter) {
+    //   const activeBool = statusFilter === "Active";
+    //   filtered = filtered.filter((v) => v.is_active === activeBool);
+    // }
+    // if (industryFilter) {
+    //   filtered = filtered.filter((v) => v.industry === industryFilter);
+    // }
     filtered.sort((a, b) => {
       const aVal = a[sortKey as keyof Vendor] || "";
       const bVal = b[sortKey as keyof Vendor] || "";
@@ -699,7 +709,7 @@ export function VendorMaster() {
       ...cleanVendor,
       industry: cleanVendor.industry || "",
     }));
-    exportToCSV(dataToExport, "vendors.csv", [
+    exportToCSV(dataToExport, "vendor_export.csv", [
       "industry_id",
       "created_at",
       "updated_at",
@@ -1010,7 +1020,7 @@ export function VendorMaster() {
       label: "Industry",
       sortable: true,
       render: (_: any, row: any) =>
-        row.industry_obj?.industry_name || row.industry || "N/A",
+        row.industry_obj?.industry_name || row.industry_name || "N/A",
     },
     {
       key: "vendor_website",
@@ -1080,14 +1090,6 @@ export function VendorMaster() {
     },
   ];
 
-  const businessTypes = [
-    "Dealer",
-    "Distributor",
-    "Manufacturer",
-    "Retailer",
-    "Wholesaler",
-  ];
-
   // useEffect to change the contact number placeholder
   useEffect(() => {
     if (contactPhoneNumberInput.current) {
@@ -1153,20 +1155,21 @@ export function VendorMaster() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-3">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-            <FilterSelect
-              options={businessTypes}
+            <MultiSelect
+              options={businessTypeOptions}
               value={businessTypeFilter}
               onChange={setBusinessTypeFilter}
               placeholder="Select Business Type"
+              searchable={false}
             />
-            <FilterSelect
+            <MultiSelect
               options={industryOptions}
               value={industryFilter}
               onChange={setIndustryFilter}
               placeholder="Select Industry"
             />
-            <FilterSelect
-              options={allowedCountries}
+            <MultiSelect
+              options={countryFilterOptions}
               value={countryFilter}
               onChange={setCountryFilter}
               placeholder="Select Country"
@@ -1231,9 +1234,9 @@ export function VendorMaster() {
           <button
             onClick={() => {
               setSearchTerm("");
-              setBusinessTypeFilter("");
-              setIndustryFilter("");
-              setCountryFilter("");
+              setBusinessTypeFilter([]);
+              setIndustryFilter([]);
+              setCountryFilter([]);
               setStatusFilter("");
             }}
             className="text-sm text-blue-600 hover:underline font-medium"

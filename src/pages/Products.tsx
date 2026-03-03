@@ -583,7 +583,7 @@ export function Products() {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
-    exportToCSV(filteredProducts, "products.csv");
+    exportToCSV(filteredProducts, "product_export.csv");
     setToast({ message: "Products exported successfully", type: "success" });
   };
 
