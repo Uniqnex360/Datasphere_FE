@@ -97,6 +97,12 @@ export const ProductAPI = {
     );
     return response.data;
   },
+
+  // Update attributes
+  updateAttribute: async (payload: any) => {
+    const response = await api.patch("/products/attribute-value/update/", payload)
+    return response.data;
+  }
 };
 export const EnrichmentAPI = {
   enrich: async (productCode: string) => {

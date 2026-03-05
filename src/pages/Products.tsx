@@ -40,6 +40,7 @@ import {
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { FilterSelect } from "../components/Filter";
 import { Attribute } from "../types/attribute";
+import {ProductAttributeUpdate} from "./helperComponents/ProductAttribute";
 
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
@@ -484,7 +485,7 @@ export function Products() {
   };
   const handleEdit = (product: ProductWithVariantStatus) => {
     setEditingProduct(product);
-    setFormData(product);
+    setFormData({...product, brand_name: product.brand_name, brand_code: product.brand_code});
     setErrors({});
     setActiveTab("basic");
     setIsDrawerOpen(true);
@@ -2013,7 +2014,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                       )
                       .map((category) => (
                         <option
-                          key={category.category_code}
+                          key={category.breadcrumb}
                           value={category.category_code}
                         >
                           {category.breadcrumb}
@@ -2399,7 +2400,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
               </div>
             </div>
           )}
-          {activeTab === "attributes" && (
+          {/* {activeTab === "attributes" && (
             <div className="space-y-4">
               <h3 className="font-semibold text-gray-900">
                 Product Attributes
@@ -2493,6 +2494,35 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                                 className="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:border-blue-500"
                               />
                             )}
+                            {attr.options && attr.options.length > 0 ? (
+                            <div className="flex flex-col gap-1">
+                              {attr.options.map((opt: any, idx: number) => {
+                                const checked = attr.value?.includes(opt.value) || false;
+
+                                return (
+                                  <h1>Delson</h1>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              value={attr.value}
+                              onChange={(e) => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  attributes: {
+                                    ...prev.attributes,
+                                    [key]: {
+                                      ...prev.attributes![key],
+                                      value: e.target.value,
+                                    },
+                                  },
+                                }));
+                              }}
+                              className="w-full px-2 py-1 border border-gray-300 rounded bg-white focus:border-blue-500"
+                            />
+                          )}
                           </div>
 
                           <div>
@@ -2511,6 +2541,32 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                         </div>
                       </div>
                     ))}
+                </div>
+              ) : (
+                <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+                  <p>No attributes found for this product.</p>
+                </div>
+              )}
+            </div>
+          )} */}
+          {activeTab === "attributes" && (
+            <div className="space-y-4">
+              {formData.attributes && Object.keys(formData.attributes).length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {/* Use ProductAttributeUpdate component */}
+                  <ProductAttributeUpdate
+                    //@ts-ignore
+                    product_id={formData.product_code}
+                    data={Object.entries(formData.attributes).map(([key, attr]: any) => ({
+                      id: attr.id,
+                      attribute_code: attr.attribute_code,
+                      name: attr.name,
+                      selected_values: attr.selected_values || [], // keep existing selected values
+                      options: attr.options || [], // <-- include options always
+                    }),)}
+                    parentFormData={formData}
+                    setParentFormData={setFormData}
+                  />
                 </div>
               ) : (
                 <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
