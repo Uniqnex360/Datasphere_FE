@@ -485,7 +485,14 @@ export function Products() {
   };
   const handleEdit = (product: ProductWithVariantStatus) => {
     setEditingProduct(product);
-    setFormData({...product, brand_name: product.brand_name, brand_code: product.brand_code});
+    setFormData(
+      {...product, 
+        brand_code: product?.brand?.brand_code, 
+        brand_name: product?.brand?.brand_name,
+        vendor_code: product?.vendor?.vendor_code,
+        vendor_name: product?.vendor?.vendor_name
+      }
+      );
     setErrors({});
     setActiveTab("basic");
     setIsDrawerOpen(true);
