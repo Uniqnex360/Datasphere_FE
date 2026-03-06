@@ -168,6 +168,7 @@ export function VendorMaster() {
   const [countryFilter, setCountryFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [industryFilter, setIndustryFilter] = useState<string[]>([]);
+  const [industryCUFilter, setIndustryCUFilter] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState("vendor_code");
   const [industries, setIndustries] = useState<any[]>([]);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -305,7 +306,7 @@ export function VendorMaster() {
   const loadVendors = async () => {
     try {
       setLoading(true);
-      const [vendorData, ] = await Promise.all([
+      const [vendorData, industyData ] = await Promise.all([
         MasterAPI.getVendorsWithFilterMeta({
           business_type: businessTypeFilter,
           business_type_filter: businessTypeOptions,
@@ -321,6 +322,7 @@ export function VendorMaster() {
       setBusinessTypeOptions(vendorData?.filter_meta?.business_type || []);
       setCountryFilterOptions(vendorData?.filter_meta?.country || []);
       setIndustryOptions(vendorData?.filter_meta?.industry || []);
+      setIndustryCUFilter(industyData.map(industry => industry.industry_name))
 
       if (vendorData?.vendors) {
         // Create a new set to avoid duplicates
@@ -1721,7 +1723,7 @@ export function VendorMaster() {
                   </div>
                 ) : (
                   <SearchableSelect
-                    options={industryOptions}
+                    options={industryCUFilter}
                     value={formData.industry || ""}
                     onChange={(val) => handleIndustryChange(val)}
                     placeholder="Search or select from list..."
