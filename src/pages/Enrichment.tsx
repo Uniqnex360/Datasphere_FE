@@ -97,16 +97,16 @@ export function Enrichment() {
         MasterAPI.getCategories()
       ]);
       console.log(" Loaded Products:", productsData.length);
-      setProducts(productsData || []);
+      setProducts(productsData?.products || []);
       
-      const uniqueBrands = Array.from(new Set(productsData.map((p: any) => p.brand_name).filter(Boolean))).sort() as string[];
-      const uniqueCategories = Array.from(new Set(productsData.map((p: any) => p.category_1).filter(Boolean))).sort() as string[];
+      const uniqueBrands = Array.from(new Set(productsData?.products.map((p: any) => p.brand_name).filter(Boolean))).sort() as string[];
+      const uniqueCategories = Array.from(new Set(productsData?.products.map((p: any) => p.category_1).filter(Boolean))).sort() as string[];
       
       setBrands(uniqueBrands);
       setCategories(uniqueCategories);
 
       const statusMap = new Map<string, EnrichmentStatus>();
-      productsData.forEach((p: any) => {
+      productsData?.products.forEach((p: any) => {
           statusMap.set(p.product_code, {
               product_id: p.product_code,
               enrichment_status: p.enrichment_status || 'pending',

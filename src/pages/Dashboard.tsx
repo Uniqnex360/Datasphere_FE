@@ -112,20 +112,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         MasterAPI.getCategories(),
         api.get('/hitl/pending').then(res => res.data).catch(() => ({}))
       ]);
-
-      if (products) {
-        const totalProducts = products.length;
+      const product_data = products?.products || []
+      if (product_data) {
+        const totalProducts = product_data.length;
+        
 
         // --- 1. KPI STATS CALCULATIONS ---
         
         // Missing Attributes
-        const missingAttributes = products.filter((p: any) => {
+        const missingAttributes = product_data.filter((p: any) => {
           const attrs = p.attributes || {};
           return Object.keys(attrs).length === 0;
         }).length;
 
         // Missing Images (Dictionary Check)
-        const missingImages = products.filter((p: any) => {
+        const missingImages = product_data.filter((p: any) => {
           let hasImages = false;
           if (p.images && typeof p.images === 'object') {
             hasImages = Object.keys(p.images).some(k => p.images[k] && p.images[k].url);
@@ -133,16 +134,16 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           return !hasImages;
         }).length;
 
-        const unassignedCategories = products.filter(
+        const unassignedCategories = product_data.filter(
           (p: any) => !p.category_code && !p.category_1,
         ).length;
 
         // Dates
         const oneDayAgo = new Date(); oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-        const recentlyUpdated = products.filter((p: any) => p.updated_at && new Date(p.updated_at) > oneDayAgo).length;
+        const recentlyUpdated = product_data.filter((p: any) => p.updated_at && new Date(p.updated_at) > oneDayAgo).length;
 
         const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const productsLastWeek = products.filter((p: any) => p.created_at && new Date(p.created_at) > sevenDaysAgo).length;
+        const productsLastWeek = product_data.filter((p: any) => p.created_at && new Date(p.created_at) > sevenDaysAgo).length;
 
         // --- 2. GLOBAL SCORE CALCULATION & AGGREGATION MAPS ---
         
@@ -155,7 +156,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         const industryMap = new Map<string, { count: number; totalScore: number; missingAttr: number; missingImg: number }>();
         const brandMap = new Map<string, { count: number; totalScore: number }>();
 
-        products.forEach((p: any) => {
+        product_data.forEach((p: any) => {
           // A. Calculate/Get Score
           // Use backend score if available, else fallback logic could go here
           const pScore = p.completeness_score || 0; 
@@ -249,7 +250,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         // Category Coverage Chart
         const categoryMap = new Map<string, CategoryData>();
-        products.forEach((p: any) => {
+        product_data.forEach((p: any) => {
           const parent = p.category_1 || "Uncategorized";
           const productType = p.product_type || "General";
           if (!categoryMap.has(parent)) {
@@ -272,7 +273,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setBrandData(brandDataArray);
 
         // Recent Activity
-        const sortedProducts = [...products].sort((a: any, b: any) => 
+        const sortedProducts = [...products?.products].sort((a: any, b: any) => 
           new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()
         );
         
