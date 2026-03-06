@@ -65,7 +65,7 @@ export function MultiSelect({
       {/* Input Box */}
       <div
         className="flex items-center gap-1 w-full px-3 py-2 border border-gray-300 rounded-lg cursor-pointer bg-white overflow-hidden"
-        onClick={() => setIsOpen(true)}
+        onClick={() => setIsOpen((prev) => !prev)}
       >
         {value.length === 0 && (
           <span className="text-sm text-gray-400 truncate">{placeholder}</span>
@@ -103,7 +103,7 @@ export function MultiSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full min-w-[260px] bg-white border border-gray-200 rounded-lg shadow-lg max-h-[450px] overflow-y-auto">
+        <div className="absolute z-[1000] mt-1 w-full min-w-[260px] bg-white border border-gray-200 rounded-lg shadow-lg max-h-[450px] overflow-y-auto">
           {searchable && (
             <div className="p-2 border-b">
               <input
