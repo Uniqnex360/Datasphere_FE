@@ -12,8 +12,8 @@ interface Product {
   brand_name?: string;
   category_1?: string;
   completeness_score?: number;
-  prod_short_desc?: string;
-  prod_long_desc?: string;
+  short_description?: string;
+  long_description?: string;
   image_url_1?: string;
   enrichment_status?:string
   is_external?: boolean;
@@ -587,9 +587,9 @@ export function Enrichment() {
                         )}
                       </div>
 
-                      {(product.prod_short_desc || product.prod_long_desc) && (
+                      {(product.short_description || product.long_description) && (
                         <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                          {product.prod_short_desc || product.prod_long_desc}
+                          {product.short_description || product.long_description}
                         </p>
                       )}
                     </div>

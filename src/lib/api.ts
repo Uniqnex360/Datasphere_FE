@@ -271,8 +271,10 @@ export const MasterAPI = {
     const response = await api.get("/master/vendor/filter-meta/", { params });
     return response.data;
   },
-  getAttributes: async () => {
-    const response = await api.get("/master/attributes/");
+  getAttributes: async (skip=0, limit=100, search="", filters={}) => {
+    const response = await api.get("/master/attributes/", {
+      params: {skip, limit, search, ...filters}
+    });
     return response.data;
   },
   update: async (

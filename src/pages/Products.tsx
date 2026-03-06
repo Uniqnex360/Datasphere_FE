@@ -120,8 +120,8 @@ export function Products() {
     product_type: "",
     sku: "",
     variant_sku: "",
-    prod_short_desc: "",
-    prod_long_desc: "",
+    short_description: "",
+    long_description: "",
     model_series: "",
     mpn: "",
     gtin: "",
@@ -140,6 +140,8 @@ export function Products() {
     meta_keywords: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [totalProduct, setTotalProduct] = useState(0);
+  const [totalFilteredProduct, setTotalFilteredProduct] = useState(0);
   useEffect(() => {
     loadData();
   }, [searchTerm, industryFilter, brandFilter, vendorFilter, category1Filter]);
@@ -264,6 +266,8 @@ export function Products() {
       const productsWithStatus = await calculateVariantStatus(
         productsData || [],
       );
+      setTotalProduct(productsResponse?.total)
+      setTotalFilteredProduct(productsResponse?.filtered_total)
       setIndustryOptions(productsResponse?.filter_meta?.industry)
       setBrandOptions(productsResponse?.filter_meta?.brand)
       setVendorOptions(productsResponse?.filter_meta?.vendor)
@@ -485,10 +489,14 @@ export function Products() {
   const handleEdit = (product: ProductWithVariantStatus) => {
     setEditingProduct(product);
     setFormData(
-      {...product, 
-        brand_code: product?.brand?.brand_code, 
+      {...product,
+        //@ts-ignore
+        brand_code: product?.brand?.brand_code,
+        //@ts-ignore
         brand_name: product?.brand?.brand_name,
+        //@ts-ignore
         vendor_code: product?.vendor?.vendor_code,
+        //@ts-ignore
         vendor_name: product?.vendor?.vendor_name
       }
       );
@@ -563,8 +571,8 @@ export function Products() {
       product_type: "",
       sku: "",
       variant_sku: "",
-      prod_short_desc: "",
-      prod_long_desc: "",
+      short_description: "",
+      long_description: "",
       model_series: "",
       mpn: "",
       gtin: "",
@@ -594,541 +602,6 @@ export function Products() {
     setToast({ message: "Products exported successfully", type: "success" });
   };
 
-  // const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file) return;
-
-  //   try {
-  //     setLoading(true);
-  //     const rawData = await parseCSV(file);
-
-  //     if (rawData.length > 0) {
-  //       console.log("FIRST ROW KEYS:", Object.keys(rawData[0]));
-  //     }
-
-  //     const hasProductName =
-  //       rawData.length > 0 &&
-  //       (rawData[0].product_name ||
-  //         rawData[0].product_title ||
-  //         rawData[0].title ||
-  //         rawData[0].name);
-
-  //     if (!hasProductName) {
-  //       setToast({
-  //         message:
-  //           "Import failed: Product name column is required (product_name, product_title, title, or name)",
-  //         type: "error",
-  //       });
-  //       e.target.value = "";
-  //       return;
-  //     }
-
-  //     const bundleAssets = (row: any, type: string) => {
-  //       const assets: Record<string, { name: string; url: string }> = {};
-  //       Object.keys(row).forEach((key) => {
-  //         const urlMatch = key.match(
-  //           new RegExp(`^${type}[_\\s]*url[_\\s]*(\\d+)$`, "i"),
-  //         );
-  //         const nameMatch = key.match(
-  //           new RegExp(`^${type}[_\\s]*name[_\\s]*(\\d+)$`, "i"),
-  //         );
-
-  //         if (urlMatch) {
-  //           const idx = urlMatch[1];
-  //           if (!assets[idx]) assets[idx] = { name: "", url: "" };
-  //           assets[idx].url = String(row[key] || "").trim();
-  //         }
-  //         if (nameMatch) {
-  //           const idx = nameMatch[1];
-  //           if (!assets[idx]) assets[idx] = { name: "", url: "" };
-  //           assets[idx].name = String(row[key] || "").trim();
-  //         }
-  //       });
-
-  //       const cleaned: Record<string, any> = {};
-  //       Object.entries(assets).forEach(([idx, data]) => {
-  //         if (data.url) {
-  //           cleaned[idx] = {
-  //             url: data.url,
-  //             name:
-  //               data.name ||
-  //               `${type.charAt(0).toUpperCase() + type.slice(1)} ${idx}`,
-  //           };
-  //         }
-  //       });
-  //       return Object.keys(cleaned).length > 0 ? cleaned : {};
-  //     };
-
-  //     const validData: Partial<Product>[] = [];
-  //     const importErrors: string[] = [];
-  //     const brandsToCreate = new Map<string, any>();
-  //     const vendorsToCreate = new Map<string, any>();
-  //     const categoriesToCreate = new Map<string, any>();
-  //     const industriesToCreate = new Map<string, any>();
-
-  //     // @ts-ignore
-  //     const safeTrim = (value) => (value != null ? String(value).trim() : "");
-
-  //     const data = rawData
-  //       .map((row: any, index: number) => {
-  //         const mapped: any = {};
-
-  //         try {
-  //           const productNameKey = Object.keys(row).find(
-  //             (k) =>
-  //               k.toLowerCase().replace(/_/g, " ") === "product name" ||
-  //               k.toLowerCase() === "name",
-  //           );
-  //           mapped.product_name = String(
-  //             row[productNameKey || "product_name"] || "",
-  //           ).trim();
-
-  //           if (!mapped.product_name) {
-  //             throw new Error("Missing Product Name column or empty value");
-  //           }
-  //           mapped.product_code = row.product_code?.trim() || null;
-  //           mapped.price = parseFloat(row.price) || 0;
-  //           mapped.sale_price = parseFloat(row.sale_price) || 0;
-  //           mapped.list_price = parseFloat(row.list_price) || 0;
-  //           mapped.base_price = parseFloat(row.base_price) || 0;
-  //           mapped.regular_price = parseFloat(row.regular_price) || 0;
-  //           mapped.retail_price = parseFloat(row.retail_price) || 0;
-  //           mapped.msrp = parseFloat(row.msrp) || 0;
-  //           mapped.map_price = parseFloat(row.map_price || row.map) || 0;
-  //           mapped.sku = safeTrim(row.sku);
-  //           mapped.variant_sku = safeTrim(row.variant_sku);
-  //           mapped.mpn = safeTrim(row.mpn);
-  //           mapped.model_series = safeTrim(row.model_series) ;
-  //           mapped.ean = safeTrim(row.ean);
-  //           mapped.upc = safeTrim(row.upc);
-  //           mapped.unspsc = safeTrim(row.unspc);
-  //           mapped.gtin = safeTrim(row.gtin);
-  //           mapped.product_type = safeTrim(row.product_type);
-  //           mapped.prod_short_desc = safeTrim(row.prod_short_desc);
-  //           mapped.prod_long_desc = safeTrim(row.prod_long_desc);
-  //           mapped.meta_title =safeTrim(row.meta_title);
-  //           mapped.meta_desc =safeTrim(row.meta_desc);
-  //           mapped.meta_keywords = safeTrim(row.meta_keywords);
-
-  //           const brandName = safeTrim(row.brand_name);
-  //           const mfgName = safeTrim(row.mfg_name);
-  //           const industryName = safeTrim(row.industry_name);
-  //           mapped.industry_name = industryName || "";
-  //           if (industryName) {
-  //             const industryKey = industryName.toLowerCase().trim();
-  //             if (!industriesToCreate.has(industryKey)) {
-  //               industriesToCreate.set(industryKey, {
-  //                 industry_code:
-  //                   row.industry_code?.trim() ||
-  //                   industryName
-  //                     .substring(0, 4)
-  //                     .toUpperCase()
-  //                     .replace(/[^A-Z]/g, ""),
-  //                 industry_name: industryName,
-  //               });
-  //             }
-  //           }
-
-  //           if (brandName) {
-  //             mapped.brand_name = brandName;
-  //             mapped.mfg_name = mfgName || brandName;
-  //             const existingBrand = brands.find(
-  //               (b) => b.brand_name.toLowerCase() === brandName.toLowerCase(),
-  //             );
-  //             if (existingBrand) {
-  //               mapped.brand_code = existingBrand.brand_code;
-  //             } else {
-  //               // const brandCode = `BRND-${brandName
-  //               //   .substring(0, 8)
-  //               //   .toUpperCase()
-  //               //   .replace(/[^A-Z0-9]/g, "")}`;
-  //               // mapped.brand_code = brandCode;
-  //               brandsToCreate.set(brandName, {
-  //                 // brand_code: brandCode,
-  //                 brand_name: brandName,
-  //                 mfg_name: mfgName || brandName,
-  //               });
-  //             }
-  //           }
-
-  //           const vendorName = row.vendor_name?.trim();
-  //           if (vendorName) {
-  //             mapped.vendor_name = vendorName;
-  //             const existingVendor = vendors.find(
-  //               (v) => v.vendor_name.toLowerCase() === vendorName.toLowerCase(),
-  //             );
-  //             if (existingVendor) {
-  //               mapped.vendor_code = existingVendor.vendor_code;
-  //             } else {
-  //               // const vendorCode = `VEND-${vendorName
-  //               //   .substring(0, 8)
-  //               //   .toUpperCase()
-  //               //   .replace(/[^A-Z0-9]/g, "")}`;
-  //               const vendorCode = "";
-  //               mapped.vendor_code = vendorCode;
-  //               if (vendorName) {
-  //                 vendorsToCreate.set(vendorName.toLowerCase(), {
-  //                   vendor_code: vendorCode,
-  //                   vendor_name: vendorName,
-  //                   industry_name: industryName,
-  //                   contact_email: `info@${vendorName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`,
-  //                   contact_phone: "000-000-0000",
-  //                 });
-  //               }
-  //             }
-  //           }
-
-  //           // const industryName = row.industry_name?.trim();
-  //           // mapped.industry_name = industryName || "";
-
-  //           const categoryLevels: string[] = [];
-  //           Object.keys(row).forEach((key) => {
-  //             const categoryMatch = key.match(/^category[_\s]*(\d+)$/i);
-  //             if (categoryMatch) {
-  //               const level = parseInt(categoryMatch[1]);
-  //               const value = row[key]?.trim();
-  //               if (value) {
-  //                 categoryLevels[level - 1] = value;
-  //                 mapped[`category_${level}`] = value;
-  //               }
-  //             }
-  //           });
-
-  //           if (categoryLevels.length > 0) {
-  //             const cat1 = categoryLevels[0];
-  //             const breadcrumb = categoryLevels.filter(Boolean).join(" > ");
-  //             const existingCategory = categories.find(
-  //               (c) => c.category_1?.toLowerCase() === cat1.toLowerCase(),
-  //             );
-
-  //             if (existingCategory) {
-  //               mapped.category_code = existingCategory.category_code;
-  //             } else {
-  //               const categoryCode = `CAT-${cat1
-  //                 .substring(0, 8)
-  //                 .toUpperCase()
-  //                 .replace(/[^A-Z0-9]/g, "")}`;
-  //               mapped.category_code = categoryCode;
-  //               const categoryData: any = {
-  //                 category_code: categoryCode,
-  //                 industry_name: industryName || "General",
-  //                 breadcrumb: breadcrumb,
-  //               };
-  //               categoryLevels.forEach((cat, index) => {
-  //                 if (cat) categoryData[`category_${index + 1}`] = cat;
-  //               });
-  //               categoriesToCreate.set(categoryCode, categoryData);
-  //             }
-  //           }
-
-  //           Object.keys(row).forEach((key) => {
-  //             const featureMatch = key.match(/^features?_?(\d+)$/i);
-  //             if (featureMatch) {
-  //               const num = featureMatch[1];
-  //               const value = row[key]?.trim();
-  //               if (value) mapped[`features_${num}`] = value;
-  //             }
-  //           });
-
-  //           const attributeData = new Map();
-  //           Object.keys(row).forEach((key) => {
-  //             const nameMatch = key.match(/^attribute_?names?_?(\d+)$/i);
-  //             const valueMatch = key.match(/^attribute_?values?_?(\d+)$/i);
-  //             const uomMatch = key.match(/^attribute_?uoms?_?(\d+)$/i);
-
-  //             if (nameMatch) {
-  //               const num = nameMatch[1];
-  //               const value = String(row[key] || "").trim();
-  //               if (value) {
-  //                 if (!attributeData.has(num)) attributeData.set(num, {});
-  //                 attributeData.get(num).name = value;
-  //               }
-  //             }
-  //             if (valueMatch) {
-  //               const num = valueMatch[1];
-  //               const value = String(row[key] || "").trim();
-  //               if (value) {
-  //                 if (!attributeData.has(num)) attributeData.set(num, {});
-  //                 attributeData.get(num).value = value;
-  //               }
-  //             }
-  //             if (uomMatch) {
-  //               const num = uomMatch[1];
-  //               const value = String(row[key] || "").trim();
-  //               if (value) {
-  //                 if (!attributeData.has(num)) attributeData.set(num, {});
-  //                 attributeData.get(num).uom = value;
-  //               }
-  //             }
-  //           });
-  //           const attributesJson: Record<string, any> = {};
-  //           attributeData.forEach((attr, num) => {
-  //             if (attr.name && attr.value) {
-  //               attributesJson[num] = {
-  //                 name: attr.name,
-  //                 value: attr.value,
-  //                 uom: attr.uom || null,
-  //               };
-  //             }
-  //           });
-  //           if (Object.keys(attributesJson).length > 0) {
-  //             mapped.attributes = attributesJson;
-  //           }
-
-  //           mapped.images = bundleAssets(row, "image");
-  //           mapped.videos = bundleAssets(row, "video");
-
-  //           let documents = bundleAssets(row, "document");
-
-  //           if (Object.keys(documents).length === 0) {
-  //             let docCount = 1;
-  //             const allKeys = Object.keys(row);
-  //             allKeys.forEach((key, idx) => {
-  //               const value = String(row[key] || "").trim();
-  //               if (value.toLowerCase().match(/^http.*\.pdf(\?.*)?$/i)) {
-  //                 let docName = "";
-  //                 if (idx > 0) {
-  //                   const prevKey = allKeys[idx - 1];
-  //                   const prevValue = String(row[prevKey] || "").trim();
-  //                   if (prevValue && !prevValue.startsWith("http")) {
-  //                     docName = prevValue;
-  //                   }
-  //                 }
-  //                 if (!docName) {
-  //                   docName = key.replace(/_/g, " ").replace(/url/i, "").trim();
-  //                   docName =
-  //                     docName.charAt(0).toUpperCase() + docName.slice(1);
-  //                 }
-  //                 // let name = key.replace(/_/g, " ").trim();
-
-  //                 // if (!name || name.length > 50) {
-  //                 //   name = `Document ${docCount}`;
-  //                 // }
-
-  //                 documents[docCount] = { name: docName, url: value };
-  //                 docCount++;
-  //               }
-  //             });
-  //           }
-  //           mapped.documents = documents;
-
-  //           return mapped;
-  //         } catch (error: any) {
-  //           console.error(`Error processing row ${index + 1}:`, error);
-  //           importErrors.push(
-  //             `Row ${index + 2}: Error processing data - ${error.message}`,
-  //           );
-  //           return null;
-  //         }
-  //       })
-  //       .filter(Boolean);
-
-  //     data.forEach((row: any, index: number) => {
-  //       if (!row.product_name?.trim()) {
-  //         importErrors.push(`Row ${index + 2}: Product Name is required`);
-  //       } else {
-  //         validData.push(row);
-  //       }
-  //     });
-
-  //     if (importErrors.length > 0) {
-  //       setToast({
-  //         message: `Import failed with ${importErrors.length} errors. First error: ${importErrors[0]}`,
-  //         type: "error",
-  //       });
-  //       return;
-  //     }
-
-  //     let createdBrands = 0;
-  //     let createdVendors = 0;
-  //     let createdCategories = 0;
-  //     let createdIndustries = 0;
-  //     let createdCount = 0;
-  //     let skippedCount = 0;
-
-  //     if (brandsToCreate.size > 0) {
-  //       try {
-  //         const existingBrands = await MasterAPI.getBrands();
-  //         const existingCodes = new Set(
-  //           existingBrands.map((b: any) => b.brand_code),
-  //         );
-  //         const newBrands = Array.from(brandsToCreate.values()).filter(
-  //           (b) => !existingCodes.has(b.brand_code),
-  //         );
-
-  //         for (const brand of newBrands) {
-  //           try {
-  //             await MasterAPI.create("brands", brand);
-  //             createdBrands++;
-  //           } catch (err) {
-  //             console.warn("Brand create failed", err);
-  //           }
-  //         }
-  //       } catch (e) {
-  //         console.error("Brand sync error", e);
-  //       }
-  //     }
-  //     if (industriesToCreate.size > 0) {
-  //       try {
-  //         const existingIndustries = await MasterAPI.getIndustries();
-  //         const existingNames = new Set(
-  //           (existingIndustries || []).map((i: any) =>
-  //             (i.industry_name || "").toLowerCase().trim(),
-  //           ),
-  //         );
-  //         const newIndustries = Array.from(industriesToCreate.values()).filter(
-  //           (i) => !existingNames.has((i.industry_name || "").toLowerCase()),
-  //         );
-  //         if (newIndustries.length > 0) {
-  //           for (const ind of newIndustries) {
-  //             try {
-  //               await MasterAPI.create("industries", ind);
-  //               createdIndustries++;
-  //             } catch (error) {
-  //               console.warn(
-  //                 `Failed to create industry: ${ind.industry_name}`,
-  //                 error,
-  //               );
-  //             }
-  //           }
-  //         }
-  //       } catch (error) {
-  //         console.error("Industry sync error", error);
-  //       }
-  //     }
-
-  //     const latestIndustries = await MasterAPI.getIndustries();
-
-  //     const industryNameToIdMap = new Map(
-  //       (latestIndustries || [])
-  //         .filter((i: any) => i.industry_name)
-  //         .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
-  //     );
-  //     if (vendorsToCreate.size > 0) {
-  //       try {
-  //         const industryNameToIdMap = new Map(
-  //           (latestIndustries || [])
-  //             .filter((i: any) => i.industry_name)
-  //             .map((i: any) => [i.industry_name.toLowerCase().trim(), i.id]),
-  //         );
-
-  //         const existingVendors = await MasterAPI.getVendors();
-  //         const existingNames = new Set(
-  //           existingVendors.map((v: any) => v.vendor_name.toLowerCase().trim()),
-  //         );
-
-  //         const newVendors = Array.from(vendorsToCreate.values()).filter(
-  //           (v) => !existingNames.has(v.vendor_name.toLowerCase()),
-  //         );
-
-  //         for (const vendor of newVendors) {
-  //           try {
-  //             const indName = (vendor as any).industry_name
-  //               ?.toLowerCase()
-  //               .trim();
-  //             if (indName && industryNameToIdMap.has(indName)) {
-  //               vendor.industry_id = industryNameToIdMap.get(indName);
-  //             }
-
-  //             await MasterAPI.create("vendors", vendor);
-  //             createdVendors++;
-  //           } catch (err) {
-  //             console.warn("Vendor create failed", err);
-  //           }
-  //         }
-  //       } catch (e) {
-  //         console.error("Vendor sync error", e);
-  //       }
-  //     }
-  //     if (categoriesToCreate.size > 0) {
-  //       try {
-  //         const existingCategories = await MasterAPI.getCategories();
-  //         const existingCodes = new Set(
-  //           (existingCategories || []).map((c: any) => c.category_code),
-  //         );
-  //         const newCategories = Array.from(categoriesToCreate.values()).filter(
-  //           (c) => !existingCodes.has(c.category_code),
-  //         );
-
-  //         for (const category of newCategories) {
-  //           try {
-  //             const catIndName = (category as any).industry_name
-  //               ?.toLowerCase()
-  //               .trim();
-  //             if (catIndName && industryNameToIdMap.has(catIndName)) {
-  //               (category as any).industry_id =
-  //                 industryNameToIdMap.get(catIndName);
-  //             }
-
-  //             await MasterAPI.create("categories", category);
-  //             createdCategories++; // Use the variable that shows up in your toast!
-  //           } catch (err) {
-  //             console.warn("Category create failed", err);
-  //           }
-  //         }
-  //       } catch (e) {
-  //         console.error("Category sync error", e);
-  //       }
-  //     }
-
-  //     let processedCount = 0;
-  //     let errorCount = 0;
-  //     const existingProductMap = new Map(
-  //       products.map((p) => [p.mpn?.trim().toLowerCase(), p.product_code]),
-  //     );
-
-  //     for (const productData of validData) {
-  //       if (!productData.product_code) {
-  //         const mpnKey = productData.mpn?.trim().toLowerCase();
-  //         if (mpnKey && existingProductMap.has(mpnKey)) {
-  //           productData.product_code = existingProductMap.get(mpnKey);
-  //         } else {
-  //           productData.product_code = `PRD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-  //         }
-  //       }
-
-  //       try {
-  //         await ProductAPI.upsert(productData);
-  //         processedCount++;
-  //       } catch (e) {
-  //         console.error(
-  //           "Failed to import product:",
-  //           productData.product_name,
-  //           e,
-  //         );
-  //         errorCount++;
-  //       }
-  //     }
-  //     loadData();
-
-  //     const masterDataMessage = [];
-  //     if (createdBrands > 0) masterDataMessage.push(`${createdBrands} brands`);
-  //     if (createdVendors > 0)
-  //       masterDataMessage.push(`${createdVendors} vendors`);
-  //     if (createdCategories > 0)
-  //       masterDataMessage.push(`${createdCategories} categories`);
-  //     if (createdIndustries > 0) {
-  //       masterDataMessage.push(`${createdIndustries} industries`);
-  //     }
-  //     const masterDataText =
-  //       masterDataMessage.length > 0
-  //         ? ` (Auto-created: ${masterDataMessage.join(", ")})`
-  //         : "";
-
-  //     setToast({
-  //       message: `Import complete: ${processedCount} products processed, ${errorCount} failed${masterDataText}`,
-  //       type: errorCount === 0 ? "success" : "error",
-  //     });
-
-  //     loadData();
-  //   } catch (error: any) {
-  //     setToast({ message: error.message || "Import failed", type: "error" });
-  //   } finally {
-  //     setLoading(false);
-  //     e.target.value = "";
-  //   }
-  // };
-  
   
 const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
   const file = e.target.files?.[0];
@@ -1792,29 +1265,29 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
           </div>
           <div className="flex items-center justify-between px-1 py-4">
             <p className="text-sm text-gray-500 italic">
-              {industryFilter ||
-              brandFilter ||
-              vendorFilter ||
-              variantStatusFilter ||
-              category1Filter ||
+              {industryFilter.length > 0 ||
+              brandFilter.length > 0 ||
+              vendorFilter.length > 0 ||
+              variantStatusFilter.length > 0 ||
+              category1Filter.length > 0 ||
               productTypeFilter ? (
                 <span>
-                  Showing <strong>{filteredProducts.length}</strong> matching
-                  results out of {products.length} total products
+                  Showing <strong>{totalFilteredProduct}</strong> matching
+                  results out of {totalProduct} total products
                 </span>
               ) : (
                 <span>
-                  Showing all <strong>{products.length}</strong> products
+                  Showing all <strong>{totalProduct}</strong> products
                 </span>
               )}
             </p>
 
             {(searchTerm ||
-              industryFilter ||
-              brandFilter ||
-              vendorFilter ||
+              industryFilter.length > 0 ||
+              brandFilter.length > 0 ||
+              vendorFilter.length > 0 ||
               variantStatusFilter ||
-              category1Filter ||
+              category1Filter.length > 0 ||
               productTypeFilter) && (
               <button
                 onClick={() => {
@@ -1824,7 +1297,6 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   setVendorFilter([]);
                   setVariantStatusFilter("");
                   setCategory1Filter([]);
-                  setProductTypeFilter("");
                 }}
                 className="text-sm text-blue-600 hover:underline font-medium"
               >
@@ -2248,11 +1720,11 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   Short Description
                 </label>
                 <textarea
-                  value={formData.prod_short_desc}
+                  value={formData.short_description}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      prod_short_desc: e.target.value,
+                      short_description: e.target.value,
                     })
                   }
                   rows={3}
@@ -2264,80 +1736,13 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   Long Description
                 </label>
                 <textarea
-                  value={formData.prod_long_desc}
+                  value={formData.long_description}
                   onChange={(e) =>
-                    setFormData({ ...formData, prod_long_desc: e.target.value })
+                    setFormData({ ...formData, long_description: e.target.value })
                   }
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Model Series
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.model_series}
-                    onChange={(e) =>
-                      setFormData({ ...formData, model_series: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    MPN
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.mpn}
-                    onChange={(e) =>
-                      setFormData({ ...formData, mpn: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    GTIN
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.gtin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, gtin: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    UPC
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.upc}
-                    onChange={(e) =>
-                      setFormData({ ...formData, upc: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    UNSPSC
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.unspsc}
-                    onChange={(e) =>
-                      setFormData({ ...formData, unspsc: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
