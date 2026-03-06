@@ -27,16 +27,14 @@ export const ProductAttributeUpdate: React.FC<Props> = ({ product_id }) => {
         const result = await ProductAPI.getAll(0, 100, "", {
           product_code_q: product_id,
         });
-        console.log("API result:", result);
 
-        const productData = Array.isArray(result) ? result[0] : null;
+        const productData = Array.isArray(result?.products) ? result?.products[0] : null;
 
         // Convert attributes object to array
         const attributes: Attribute[] = productData?.attributes
           ? Object.values(productData.attributes)
           : [];
 
-        console.log("Attributes:", attributes);
 
         setData(attributes);
 

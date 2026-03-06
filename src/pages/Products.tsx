@@ -41,6 +41,7 @@ import { MasterAPI, ProductAPI } from "../lib/api";
 import { FilterSelect } from "../components/Filter";
 import { Attribute } from "../types/attribute";
 import {ProductAttributeUpdate} from "./helperComponents/ProductAttribute";
+import { MultiSelect } from "../components/MultiSelect";
 
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
@@ -72,11 +73,16 @@ export function Products() {
     type: "success" | "error";
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [industryFilter, setIndustryFilter] = useState("");
-  const [brandFilter, setBrandFilter] = useState("");
-  const [vendorFilter, setVendorFilter] = useState("");
+  const [industryOptions, setIndustryOptions] = useState<string[]>([]);
+  const [industryFilter, setIndustryFilter] = useState<string[]>([]);
+  const [brandOptions, setBrandOptions] = useState<string[]>([]);
+  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+  const [vendorOptions, setVendorOptions] = useState<string[]>([])
+  const [vendorFilter, setVendorFilter] = useState<string[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([])
+  const [category1Filter, setCategory1Filter] = useState<string[]>([]);
   const [variantStatusFilter, setVariantStatusFilter] = useState("");
-  const [category1Filter, setCategory1Filter] = useState("");
+  
   const [regularAttributes, setRegularAttributes] = useState<Attribute[]>([]);
   const [variants, setVariants] = useState<Product[]>([]);
   const [productTypeFilter, setProductTypeFilter] = useState("");
@@ -136,7 +142,7 @@ export function Products() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   useEffect(() => {
     loadData();
-  }, []);
+  }, [searchTerm, industryFilter, brandFilter, vendorFilter, category1Filter]);
   useEffect(() => {
     if (formData.category_code) {
       loadVariantAttributes(formData.category_code);
@@ -224,12 +230,7 @@ export function Products() {
     filterAndSortProducts();
   }, [
     products,
-    searchTerm,
-    industryFilter,
-    brandFilter,
-    vendorFilter,
     variantStatusFilter,
-    category1Filter,
     productTypeFilter,
     sortKey,
     sortDirection,
@@ -238,21 +239,35 @@ export function Products() {
     try {
       setLoading(true);
       const [
-        productsData,
+        productsResponse,
         brandsData,
         vendorsData,
         categoriesData,
         industriesData,
       ] = await Promise.all([
-        ProductAPI.getAll(),
+        ProductAPI.getAll(0, 100, searchTerm, {
+          industry: industryFilter,
+          industry_filter: industryOptions,
+          brand: brandFilter,
+          brand_filter: brandOptions,
+          vendor: vendorFilter,
+          vendor_filter: vendorOptions,
+          category: category1Filter,
+          category_filter: categoryOptions,
+        } ),
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
         MasterAPI.getIndustries(),
       ]);
+      const productsData = productsResponse?.products;
       const productsWithStatus = await calculateVariantStatus(
         productsData || [],
       );
+      setIndustryOptions(productsResponse?.filter_meta?.industry)
+      setBrandOptions(productsResponse?.filter_meta?.brand)
+      setVendorOptions(productsResponse?.filter_meta?.vendor)
+      setCategoryOptions(productsResponse?.filter_meta?.category)
       setProducts(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
@@ -382,26 +397,10 @@ export function Products() {
             .includes(term),
       );
     }
-    if (industryFilter) {
-      filtered = filtered.filter((p) => p.industry_name === industryFilter);
-    }
-    if (brandFilter) {
-      filtered = filtered.filter(
-        (p) => p.brand_code === brandFilter || p.brand_name === brandFilter,
-      );
-    }
-    if (vendorFilter) {
-      filtered = filtered.filter(
-        (p) => p.vendor_code === vendorFilter || p.vendor_name === vendorFilter,
-      );
-    }
     if (variantStatusFilter) {
       filtered = filtered.filter(
         (p) => p.variant_status === variantStatusFilter,
       );
-    }
-    if (category1Filter) {
-      filtered = filtered.filter((p) => p.category_1 === category1Filter);
     }
     if (productTypeFilter) {
       filtered = filtered.filter((p) => p.product_type === productTypeFilter);
@@ -1715,83 +1714,38 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
               </button>
             </div>
           </div>
-          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4 ">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              <FilterSelect
-                options={industries.map((value) => value.industry_name)}
-                value={industryFilter}
-                onChange={setIndustryFilter}
-                placeholder="All Industries"
-              />
-              <FilterSelect
-                options={Array.from(
-                  new Set(
-                    products
-                      .filter((p) => p.brand_name)
-                      .map((p) => p.brand_name),
-                  ),
-                ).sort()}
-                value={brandFilter}
-                onChange={setBrandFilter}
-                placeholder="All Brands"
-              />
-
-              <FilterSelect
-                options={Array.from(
-                  new Set(
-                    products
-                      .filter((p) => p.vendor_name)
-                      .map((p) => p.vendor_name),
-                  ),
-                ).sort()}
-                value={vendorFilter}
-                onChange={setVendorFilter}
-                placeholder="All Vendors"
-              />
-
-              <FilterSelect
+          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <MultiSelect
+              options={industryOptions}
+              value={industryFilter}
+              onChange={setIndustryFilter}
+              placeholder="Select Industry"
+            />
+            <MultiSelect
+              options={brandOptions}
+              value={brandFilter}
+              onChange={setBrandFilter}
+              placeholder="Select Brand"
+            />
+            <MultiSelect
+              options={vendorOptions}
+              value={vendorFilter}
+              onChange={setVendorFilter}
+              placeholder="Select Vendor"
+            />
+            <FilterSelect
                 options={["Base", "Variant", "Parent"]}
                 value={variantStatusFilter}
                 onChange={setVariantStatusFilter}
                 placeholder="All Status"
-              />
-
-              <FilterSelect
-                options={Array.from(
-                  new Set(
-                    categories
-                      .filter((c) => c.category_1)
-                      .map((c) => c.category_1),
-                  ),
-                ).sort()}
-                value={category1Filter}
-                onChange={(value) => {
-                  setCategory1Filter(value);
-                  setProductTypeFilter("");
-                }}
-                placeholder="All Category"
-              />
-
-              <FilterSelect
-                options={
-                  category1Filter
-                    ? Array.from(
-                        new Set(
-                          products
-                            .filter(
-                              (p) =>
-                                p.category_1 === category1Filter &&
-                                p.product_type,
-                            )
-                            .map((p) => p.product_type),
-                        ),
-                      ).sort()
-                    : []
-                }
-                value={productTypeFilter}
-                onChange={setProductTypeFilter}
-                placeholder="All Product Types"
-              />
+            />
+            <MultiSelect
+              options={categoryOptions}
+              value={category1Filter}
+              onChange={setCategory1Filter}
+              placeholder="Select Category"
+            />
 
               <div className="flex gap-2">
                 <button
@@ -1865,11 +1819,11 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setIndustryFilter("");
-                  setBrandFilter("");
-                  setVendorFilter("");
+                  setIndustryFilter([]);
+                  setBrandFilter([]);
+                  setVendorFilter([]);
                   setVariantStatusFilter("");
-                  setCategory1Filter("");
+                  setCategory1Filter([]);
                   setProductTypeFilter("");
                 }}
                 className="text-sm text-blue-600 hover:underline font-medium"
