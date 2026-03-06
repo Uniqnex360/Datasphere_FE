@@ -87,7 +87,7 @@ export function Products() {
     product_type: "",
     sku: "",
     variant_sku: "",
-    prod_short_desc: "",
+    short_description: "",
     prod_long_desc: "",
     model_series: "",
     mpn: "",
@@ -404,7 +404,7 @@ export function Products() {
       product_type: "",
       sku: "",
       variant_sku: "",
-      prod_short_desc: "",
+      short_description: "",
       prod_long_desc: "",
       model_series: "",
       mpn: "",
@@ -542,7 +542,7 @@ export function Products() {
             mapped.unspsc = row.unspc?.trim() || row.unspsc?.trim() || "";
             mapped.gtin = row.gtin?.trim() || "";
             mapped.product_type = row.product_type?.trim() || "";
-            mapped.prod_short_desc = row.prod_short_desc?.trim() || "";
+            mapped.short_description = row.short_description?.trim() || "";
             mapped.prod_long_desc = row.prod_long_desc?.trim() || "";
             mapped.meta_title = row.meta_title?.trim() || "";
             mapped.meta_desc = row.meta_desc?.trim() || "";
@@ -1012,7 +1012,7 @@ export function Products() {
       upc: "753759197087",
       unspc: "43191501",
       gtin: "00753759197087",
-      prod_short_desc:
+      short_description:
         "17-inch touchscreen chartplotter with worldwide basemap",
       prod_long_desc:
         "The GPSMAP 8617 features a 17-inch multi-touch widescreen display with worldwide basemap, built-in Wi-Fi and support for premium charts. Includes NMEA 2000 and NMEA 0183 network support for easy integration with compatible marine instruments.",
@@ -2027,11 +2027,11 @@ export function Products() {
                   Short Description
                 </label>
                 <textarea
-                  value={formData.prod_short_desc}
+                  value={formData.short_description}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      prod_short_desc: e.target.value,
+                      short_description: e.target.value,
                     })
                   }
                   rows={3}

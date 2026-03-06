@@ -25,6 +25,7 @@ import { exportToExcel } from "../utils/ExcelHelper";
 import { FilterSelect } from "../components/Filter";
 import { parseCSV } from "../utils/csvHelper";
 import { SearchableSelect } from "../components/SearchableSelect";
+import { MultiSelect } from "../components/MultiSelect";
 
 const findDuplicateAttribute = (
   allAttributes: Attribute[],
@@ -133,7 +134,7 @@ export function Attributes() {
   const [industryFilter, setIndustryFilter] = useState("");
   const [attributeTypeFilter, setAttributeTypeFilter] = useState("");
   const [dataTypeFilter, setDataTypeFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState("attribute_code");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
@@ -186,24 +187,19 @@ export function Attributes() {
   useEffect(() => {
     loadAttributes();
     loadCategories();
-  }, []);
+  }, [searchTerm, categoryFilter, attributeTypeFilter, dataTypeFilter]);
 
   useEffect(() => {
     filterAndSortAttributes();
-  }, [
-    attributes,
-    searchTerm,
-    industryFilter,
-    attributeTypeFilter,
-    dataTypeFilter,
-    categoryFilter,
-    sortKey,
-    sortDirection,
-  ]);
+  }, [attributes, industryFilter, sortKey, sortDirection]);
 
   const loadAttributes = async () => {
     try {
-      const data = await MasterAPI.getAttributes();
+      const data = await MasterAPI.getAttributes(0, 100, searchTerm, {
+        attribute_type: attributeTypeFilter,
+        data_type: dataTypeFilter,
+        category: categoryFilter,
+      });
       setAttributes(data || []);
     } catch (error: any) {
       setToast({ message: error.message, type: "error" });
@@ -305,40 +301,6 @@ export function Attributes() {
 
   const filterAndSortAttributes = () => {
     let filtered = [...attributes];
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (a) =>
-          a.attribute_code.toLowerCase().includes(term) ||
-          a.attribute_name.toLowerCase().includes(term),
-      );
-    }
-
-    if (attributeTypeFilter) {
-      filtered = filtered.filter(
-        (a) => a.attribute_type === attributeTypeFilter,
-      );
-    }
-
-    if (dataTypeFilter) {
-      filtered = filtered.filter((a) => a.data_type === dataTypeFilter);
-    }
-    if (categoryFilter) {
-      const targetCategory = categories.find(
-        (c) => c.breadcrumb === categoryFilter,
-      );
-
-      if (targetCategory) {
-        filtered = filtered.filter((a) => {
-          if (!a.applicable_categories) return false;
-          const appliedCats = a.applicable_categories
-            .split(",")
-            .map((c) => c.trim());
-          return appliedCats.includes(targetCategory.category_code);
-        });
-      }
-    }
 
     filtered.sort((a, b) => {
       const aVal = a[sortKey as keyof Attribute] || "";
@@ -659,8 +621,6 @@ export function Attributes() {
 
         try {
           await MasterAPI.createAttribute(row);
-
-      
         } catch (error: any) {
           errors++;
           rowErrorStrings.push(
@@ -923,12 +883,11 @@ export function Attributes() {
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-4 justify-between">
           <div className="flex flex-wrap items-center gap-4">
-            <FilterSelect
+            <MultiSelect
               options={categories.map((c) => c.breadcrumb)}
               value={categoryFilter}
               onChange={setCategoryFilter}
               placeholder="Category"
-              className="w-48 lg:w-64 truncate"
             />
             <FilterSelect
               options={["Multi-select", "Single-select"]}
@@ -1006,7 +965,7 @@ export function Attributes() {
               setIndustryFilter("");
               setAttributeTypeFilter("");
               setDataTypeFilter("");
-              setCategoryFilter("");
+              setCategoryFilter([]);
             }}
             className="text-sm text-blue-600 hover:underline font-medium"
           >

@@ -23,8 +23,8 @@ export interface Product {
   product_type: string;
   sku: string;
   variant_sku: string;
-  prod_short_desc: string;
-  prod_long_desc: string;
+  short_description: string;
+  long_description: string;
   model_series: string;
   model_no: string;
   mpn: string;
