@@ -1144,170 +1144,170 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   };
   return (
     <div className="space-y-6">
-      <div className="flex flex-col h-full">
-        <div className="sticky top-0 left-0">
-          <div className="flex items-center justify-between ">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Product Master
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Manage your complete product catalog
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
-              <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <Search size={20} />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search categories or product types..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
 
-              <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  resetForm();
-                  setIsDrawerOpen(true);
-                }}
-                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
-              >
-                <Plus size={20} />
-                Add Product
-              </button>
-            </div>
+
+        <div className="flex items-center justify-between ">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Product Master
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage your complete product catalog
+            </p>
           </div>
-          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <MultiSelect
-              options={industryOptions}
-              value={industryFilter}
-              onChange={setIndustryFilter}
-              placeholder="Select Industry"
-            />
-            <MultiSelect
-              options={brandOptions}
-              value={brandFilter}
-              onChange={setBrandFilter}
-              placeholder="Select Brand"
-            />
-            <MultiSelect
-              options={vendorOptions}
-              value={vendorFilter}
-              onChange={setVendorFilter}
-              placeholder="Select Vendor"
-            />
-            <FilterSelect
-                options={["Base", "Variant", "Parent"]}
-                value={variantStatusFilter}
-                onChange={setVariantStatusFilter}
-                placeholder="All Status"
-            />
-            <MultiSelect
-              options={categoryOptions}
-              value={category1Filter}
-              onChange={setCategory1Filter}
-              placeholder="Select Category"
-            />
-
-              <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+            <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search categories or product types..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+              />
+              {searchTerm && (
                 <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  <Download size={20} />
-                  Export
+                  <X size={20} />
                 </button>
-                <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                  <Upload size={20} />
-                  Import
-                  <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    onChange={handleImport}
-                    className="hidden"
-                  />
-                </label>
-                {/* <button
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                resetForm();
+                setIsDrawerOpen(true);
+              }}
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+            >
+              <Plus size={20} />
+              Add Product
+            </button>
+          </div>
+        </div>
+        <div className="z-[1000] sticky bg-white rounded-xl border border-slate-200 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <MultiSelect
+            options={industryOptions}
+            value={industryFilter}
+            onChange={setIndustryFilter}
+            placeholder="Select Industry"
+          />
+          <MultiSelect
+            options={brandOptions}
+            value={brandFilter}
+            onChange={setBrandFilter}
+            placeholder="Select Brand"
+          />
+          <MultiSelect
+            options={vendorOptions}
+            value={vendorFilter}
+            onChange={setVendorFilter}
+            placeholder="Select Vendor"
+          />
+          <FilterSelect
+              options={["Base", "Variant", "Parent"]}
+              value={variantStatusFilter}
+              onChange={setVariantStatusFilter}
+              placeholder="All Status"
+          />
+          <MultiSelect
+            options={categoryOptions}
+            value={category1Filter}
+            onChange={setCategory1Filter}
+            placeholder="Select Category"
+          />
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Download size={20} />
+                Export
+              </button>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <Upload size={20} />
+                Import
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+              {/* <button
+              onClick={downloadTemplate}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
+              title="Download Template"
+            >
+              <img
+                src={CustomDownloadIcon}
+                alt="Download"
+                className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
+              />
+            </button> */}
+              <button
                 onClick={downloadTemplate}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
-                title="Download Template"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Download template"
               >
                 <img
                   src={CustomDownloadIcon}
-                  alt="Download"
-                  className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
+                  className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
+                  alt="Template"
                 />
-              </button> */}
-                <button
-                  onClick={downloadTemplate}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  title="Download template"
-                >
-                  <img
-                    src={CustomDownloadIcon}
-                    className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
-                    alt="Template"
-                  />
-                </button>
-              </div>
+              </button>
             </div>
           </div>
-          <div className="flex items-center justify-between px-1 py-4">
-            <p className="text-sm text-gray-500 italic">
-              {industryFilter.length > 0 ||
-              brandFilter.length > 0 ||
-              vendorFilter.length > 0 ||
-              variantStatusFilter.length > 0 ||
-              category1Filter.length > 0 ||
-              productTypeFilter ? (
-                <span>
-                  Showing <strong>{totalFilteredProduct}</strong> matching
-                  results out of {totalProduct} total products
-                </span>
-              ) : (
-                <span>
-                  Showing all <strong>{totalProduct}</strong> products
-                </span>
-              )}
-            </p>
-
-            {(searchTerm ||
-              industryFilter.length > 0 ||
-              brandFilter.length > 0 ||
-              vendorFilter.length > 0 ||
-              variantStatusFilter ||
-              category1Filter.length > 0 ||
-              productTypeFilter) && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setIndustryFilter([]);
-                  setBrandFilter([]);
-                  setVendorFilter([]);
-                  setVariantStatusFilter("");
-                  setCategory1Filter([]);
-                }}
-                className="text-sm text-blue-600 hover:underline font-medium"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
         </div>
+        <div className="flex items-center justify-between px-1 py-4">
+          <p className="text-sm text-gray-500 italic">
+            {industryFilter.length > 0 ||
+            brandFilter.length > 0 ||
+            vendorFilter.length > 0 ||
+            variantStatusFilter.length > 0 ||
+            category1Filter.length > 0 ||
+            productTypeFilter ? (
+              <span>
+                Showing <strong>{totalFilteredProduct}</strong> matching
+                results out of {totalProduct} total products
+              </span>
+            ) : (
+              <span>
+                Showing all <strong>{totalProduct}</strong> products
+              </span>
+            )}
+          </p>
+
+          {(searchTerm ||
+            industryFilter.length > 0 ||
+            brandFilter.length > 0 ||
+            vendorFilter.length > 0 ||
+            variantStatusFilter ||
+            category1Filter.length > 0 ||
+            productTypeFilter) && (
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setIndustryFilter([]);
+                setBrandFilter([]);
+                setVendorFilter([]);
+                setVariantStatusFilter("");
+                setCategory1Filter([]);
+              }}
+              className="text-sm text-blue-600 hover:underline font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+
 
         <div className="">
           <DataTable
@@ -1326,7 +1326,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             isLoading={loading}
           />
         </div>
-      </div>
+      
 
       <Drawer
         isOpen={isDrawerOpen}
