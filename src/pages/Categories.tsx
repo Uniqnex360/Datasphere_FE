@@ -201,22 +201,25 @@ export function Categories() {
     setFilteredCategories(filtered);
   };
 
-const convertToTreeNodes = (
-  categories: Category[], 
-  seen = new Set<string>()
-): any[] => {
-  return categories.map(cat => {
-    if (seen.has(cat.id)) return null; // already processed
-    seen.add(cat.id);
-    return {
-      title: cat.name,
-      key: cat.id,
-      children: cat.children && cat.children.length > 0 
-        ? convertToTreeNodes(cat.children, seen) 
-        : undefined
-    };
-  }).filter(Boolean);
-};
+  const convertToTreeNodes = (
+    categories: Category[],
+    seen = new Set<string>(),
+  ): any[] => {
+    return categories
+      .map((cat) => {
+        if (seen.has(cat.id)) return null; // already processed
+        seen.add(cat.id);
+        return {
+          title: cat.name,
+          key: cat.id,
+          children:
+            cat.children && cat.children.length > 0
+              ? convertToTreeNodes(cat.children, seen)
+              : undefined,
+        };
+      })
+      .filter(Boolean);
+  };
 
   const handleCategorySelect = (id: string, data?: any) => {
     const category = data as Category;
@@ -533,153 +536,155 @@ const convertToTreeNodes = (
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    const data = await parseCSV(file);
-    const expectedColumns = [
-      "industry_name",
-      "category_1",
-      "category_2",
-      "category_3",
-      "category_4",
-      "category_5",
-      "category_6",
-      "category_7",
-      "category_8",
-      "product_type",
-    ];
+    try {
+      const data = await parseCSV(file);
+      const expectedColumns = [
+        "industry_name",
+        "category_1",
+        "category_2",
+        "category_3",
+        "category_4",
+        "category_5",
+        "category_6",
+        "category_7",
+        "category_8",
+        "product_type",
+      ];
 
-    const validation = validateImportFormat(data, expectedColumns);
-    if (!validation.isValid) {
-      setToast({
-        message: validation.errorMessage || "Import failed!",
-        type: "error",
-      });
-      e.target.value = "";
-      return;
-    }
-
-    const validData: Partial<Category>[] = [];
-    const importErrors: string[] = [];
-    const industriesToCreate = new Map<
-      string,
-      { industry_code: string; industry_name: string }
-    >();
-
-    // Process each row as a full hierarchy category
-    data.forEach((row, index) => {
-      const rowErrors: string[] = [];
-
-      const categoryData: Partial<Category> = {
-        ...row,
-      };
-
-      // Validate full category hierarchy
-      const hierarchyErrors = validateCategoryHierarchy(categoryData);
-      if (hierarchyErrors.length > 0) {
-        rowErrors.push(...hierarchyErrors);
+      const validation = validateImportFormat(data, expectedColumns);
+      if (!validation.isValid) {
+        setToast({
+          message: validation.errorMessage || "Import failed!",
+          type: "error",
+        });
+        e.target.value = "";
+        return;
       }
 
-      if (rowErrors.length > 0) {
-        importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
-      } else {
-        // Industry code generation / normalization
-        if (categoryData.industry_name && categoryData.industry_name.trim()) {
-          const industryName = categoryData.industry_name.trim();
-          const industryCode =
-            categoryData.industry_code?.trim() ||
-            industryName
-              .substring(0, 4)
-              .toUpperCase()
-              .replace(/[^A-Z]/g, "");
+      const validData: Partial<Category>[] = [];
+      const importErrors: string[] = [];
+      const industriesToCreate = new Map<
+        string,
+        { industry_code: string; industry_name: string }
+      >();
 
-          categoryData.industry_code = industryCode;
+      // Process each row as a full hierarchy category
+      data.forEach((row, index) => {
+        const rowErrors: string[] = [];
 
-          if (!industriesToCreate.has(industryCode)) {
-            industriesToCreate.set(industryCode, {
-              industry_code: industryCode,
-              industry_name: industryName,
-            });
+        const categoryData: Partial<Category> = {
+          ...row,
+        };
+
+        // Validate full category hierarchy
+        const hierarchyErrors = validateCategoryHierarchy(categoryData);
+        if (hierarchyErrors.length > 0) {
+          rowErrors.push(...hierarchyErrors);
+        }
+
+        if (rowErrors.length > 0) {
+          importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
+        } else {
+          // Industry code generation / normalization
+          if (categoryData.industry_name && categoryData.industry_name.trim()) {
+            const industryName = categoryData.industry_name.trim();
+            const industryCode =
+              categoryData.industry_code?.trim() ||
+              industryName
+                .substring(0, 4)
+                .toUpperCase()
+                .replace(/[^A-Z]/g, "");
+
+            categoryData.industry_code = industryCode;
+
+            if (!industriesToCreate.has(industryCode)) {
+              industriesToCreate.set(industryCode, {
+                industry_code: industryCode,
+                industry_name: industryName,
+              });
+            }
+          }
+
+          // Build breadcrumb for full hierarchy row
+          categoryData.breadcrumb = generateBreadcrumb(
+            categoryData as Category,
+          );
+
+          // Push full category (one per row)
+          validData.push(categoryData);
+        }
+      });
+
+      if (importErrors.length > 0) {
+        setToast({
+          message: `Import failed: ${importErrors.join("; ")}`,
+          type: "error",
+        });
+        return;
+      }
+
+      // Fetch existing industries
+      const existingIndustries = await MasterAPI.getIndustries();
+      const existingCodes = new Set(
+        existingIndustries.map((ind: any) => ind.industry_code),
+      );
+
+      // Create new industries if any
+      if (industriesToCreate.size > 0) {
+        const newIndustries = Array.from(industriesToCreate.values()).filter(
+          (ind) => !existingCodes.has(ind.industry_code),
+        );
+
+        for (const ind of newIndustries) {
+          try {
+            await MasterAPI.create("industries", ind);
+          } catch (error) {
+            console.warn(
+              `Industry ${ind.industry_code} likely exists, skipping.`,
+            );
           }
         }
-
-        // Build breadcrumb for full hierarchy row
-        categoryData.breadcrumb = generateBreadcrumb(categoryData as Category);
-
-        // Push full category (one per row)
-        validData.push(categoryData);
+        loadIndustries();
       }
-    });
 
-    if (importErrors.length > 0) {
-      setToast({
-        message: `Import failed: ${importErrors.join("; ")}`,
-        type: "error",
-      });
-      return;
-    }
-
-    // Fetch existing industries
-    const existingIndustries = await MasterAPI.getIndustries();
-    const existingCodes = new Set(
-      existingIndustries.map((ind: any) => ind.industry_code),
-    );
-
-    // Create new industries if any
-    if (industriesToCreate.size > 0) {
-      const newIndustries = Array.from(industriesToCreate.values()).filter(
-        (ind) => !existingCodes.has(ind.industry_code),
+      // Check existing categories by breadcrumb to avoid duplicates
+      const existingCategories = new Set(
+        categories.map((cat) => cat.breadcrumb),
       );
 
-      for (const ind of newIndustries) {
-        try {
-          await MasterAPI.create("industries", ind);
-        } catch (error) {
-          console.warn(
-            `Industry ${ind.industry_code} likely exists, skipping.`,
-          );
+      let createdCount = 0;
+      let skippedCount = 0;
+
+      for (const cat of validData) {
+        if (existingCategories.has(cat.breadcrumb)) {
+          console.log(`Skipping breadcrumb: ${cat.breadcrumb}`);
+          skippedCount++;
+          continue;
         }
-      }
-      loadIndustries();
-    }
 
-    // Check existing categories by breadcrumb to avoid duplicates
-    const existingCategories = new Set(
-      categories.map((cat) => cat.breadcrumb),
-    );
+        const matchedIndustry = industries.find(
+          (ind) => ind.industry_name === cat.industry_name,
+        );
+        cat.industry_code = matchedIndustry?.industry_code;
 
-    let createdCount = 0;
-    let skippedCount = 0;
-
-    for (const cat of validData) {
-      if (existingCategories.has(cat.breadcrumb)) {
-        console.log(`Skipping breadcrumb: ${cat.breadcrumb}`);
-        skippedCount++;
-        continue;
+        await MasterAPI.create("categories", cat);
+        createdCount++;
       }
 
-      const matchedIndustry = industries.find(
-        (ind) => ind.industry_name === cat.industry_name,
-      );
-      cat.industry_code = matchedIndustry?.industry_code;
-
-      await MasterAPI.create("categories", cat);
-      createdCount++;
+      setToast({
+        message: `${createdCount} categories imported (excluding ${skippedCount} duplicates)`,
+        type: "success",
+      });
+      loadCategories();
+    } catch (error: any) {
+      setToast({ message: error.message, type: "error" });
     }
 
-    setToast({
-      message: `${createdCount} categories imported (excluding ${skippedCount} duplicates)`,
-      type: "success",
-    });
-    loadCategories();
-  } catch (error: any) {
-    setToast({ message: error.message, type: "error" });
-  }
-
-  e.target.value = "";
-};
+    e.target.value = "";
+  };
 
   const downloadTemplate = () => {
     const template = [
@@ -1112,14 +1117,35 @@ const convertToTreeNodes = (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Category Schema</h2>
-          {Object.keys(selectedLevels).length > 0 && (
-            <button
-              onClick={clearAllLevels}
-              className="text-sm text-red-500 hover:text-red-700 font-medium"
-            >
-              Clear all
-            </button>
-          )}
+
+          <div className="flex gap-4">
+            {selectedCategory && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                  <span className="font-medium text-gray-500">Categories</span>
+                  <span className="font-semibold text-gray-900">
+                    {selectedCategory.total_sub_category_count}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+                  <span className="font-medium text-gray-500">Products</span>
+                  <span className="font-semibold text-gray-900">
+                    {selectedCategory.total_products_count}
+                  </span>
+                </div>
+              </>
+            )}
+
+            {Object.keys(selectedLevels).length > 0 && (
+              <button
+                onClick={clearAllLevels}
+                className="text-sm text-red-500 hover:text-red-700 font-medium"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

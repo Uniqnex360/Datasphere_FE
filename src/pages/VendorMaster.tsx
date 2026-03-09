@@ -306,7 +306,7 @@ export function VendorMaster() {
   const loadVendors = async () => {
     try {
       setLoading(true);
-      const [vendorData, industyData ] = await Promise.all([
+      const [vendorData, industyData] = await Promise.all([
         MasterAPI.getVendorsWithFilterMeta({
           business_type: businessTypeFilter,
           business_type_filter: businessTypeOptions,
@@ -322,7 +322,9 @@ export function VendorMaster() {
       setBusinessTypeOptions(vendorData?.filter_meta?.business_type || []);
       setCountryFilterOptions(vendorData?.filter_meta?.country || []);
       setIndustryOptions(vendorData?.filter_meta?.industry || []);
-      setIndustryCUFilter(industyData.map(industry => industry.industry_name))
+      setIndustryCUFilter(
+        industyData.map((industry) => industry.industry_name),
+      );
 
       if (vendorData?.vendors) {
         // Create a new set to avoid duplicates
@@ -584,7 +586,11 @@ export function VendorMaster() {
   // };
   const handleEdit = (vendor: Vendor) => {
     setEditingVendor(vendor);
-    setFormData(vendor);
+    setFormData({
+      ...vendor,
+      industry: vendor.industry_name,
+      industry_id: vendor.industry_id,
+    });
     setErrors({});
 
     // Check if country exists in the library
@@ -1606,26 +1612,6 @@ export function VendorMaster() {
               </div>
 
               {/* Contact Phone number */}
-              {/* <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Phone
-                </label>
-                <input
-                  type="text"
-                  value={formData.contact_phone}
-                  onChange={(e) => {
-                    setFormData({ ...formData, contact_phone: e.target.value });
-                    clearFieldError("contact_phone", setErrors);
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                {errors.contact_phone && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.contact_phone}
-                  </p>
-                )}
-              </div> */}
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Contact Phone
@@ -1659,7 +1645,7 @@ export function VendorMaster() {
                   </p>
                 )}
               </div>
-
+              {/* Industry */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span className="flex items-center gap-2">
@@ -1735,6 +1721,7 @@ export function VendorMaster() {
                   <p className="text-red-500 text-sm mt-1">{errors.industry}</p>
                 )}
               </div>
+              {/* Business Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Business Type <span className="text-red-500">*</span>
@@ -1760,19 +1747,19 @@ export function VendorMaster() {
                     }`}
                   >
                     <option value="">Select Business Type</option>
-                    <option value=" Dealer" className="text-gray-900">
+                    <option value="Dealer" className="text-gray-900">
                       Dealer
                     </option>
                     <option value="Distributor" className="text-gray-900">
                       Distributor
                     </option>
-                    <option value=" Manufacturer" className="text-gray-900">
+                    <option value="Manufacturer" className="text-gray-900">
                       Manufacturer
                     </option>
                     <option value="Retailer" className="text-gray-900">
                       Retailer
                     </option>
-                    <option value=" Wholesaler" className="text-gray-900">
+                    <option value="Wholesaler" className="text-gray-900">
                       Wholesaler
                     </option>
                   </select>
