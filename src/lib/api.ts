@@ -150,9 +150,21 @@ type DigitalAssetFilters = {
   brand_name: string | null;
   category: string | null;
 };
+
+type DigitalAssetWithFilters = {
+  search: string;
+  brand: string[] | null;
+  brand_filter: string[] | null;
+  category: string[] | null;
+  category_filter: string[] | null;
+};
 export const DigitalAssetAPI = {
   getAll: async (filters: DigitalAssetFilters) => {
     const response = await api.get(`/assets/`, { params: filters });
+    return response.data;
+  },
+  getAllWithFilter: async (filters: DigitalAssetWithFilters) => {
+    const response = await api.get(`/assets/filter-meta`, { params: filters });
     return response.data;
   },
   create: async (data: any) => {

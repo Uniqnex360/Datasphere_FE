@@ -3,12 +3,15 @@ import { ProductAttributeDefinition } from "./enrichment";
 export interface Product {
   product_code: string;
   product_name: string;
+  brand_id?: string;
   brand_code: string;
   brand_name: string;
   mfg_code: string;
   mfg_name: string;
+  vendor_id: string;
   vendor_code: string;
   vendor_name: string;
+  industry_id?: string;
   industry_name: string;
   category_code: string;
   category_level_1: string;

@@ -123,7 +123,7 @@ export function Categories() {
   useEffect(() => {
     if (parentCategoryCode && !isEditing) {
       const parent = categories.find(
-        (c) => c.category_code === parentCategoryCode,
+        (c) => c.breadcrumb === parentCategoryCode,
       );
       if (parent) {
         let lastParentLevel = 0;
@@ -1444,7 +1444,16 @@ export function Categories() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Parent Category (Optional)
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={categories
+                      .filter((c) => c && c.category_code)
+                      .map((cat) => cat.breadcrumb)}
+                    value={parentCategoryCode}
+                    onChange={(value) => setParentCategoryCode(value)}
+                    placeholder="Search Industry"
+                    error={!!errors.industry_code}
+                  />
+                  {/* <select
                     value={parentCategoryCode}
                     onChange={(e) => setParentCategoryCode(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -1460,7 +1469,7 @@ export function Categories() {
                           {cat.breadcrumb}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
               )}
 

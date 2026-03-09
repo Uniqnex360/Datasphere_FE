@@ -13,11 +13,12 @@ import {
   AlertCircle,
   LayoutGrid,
   List,
-  Video
+  Video,
 } from "lucide-react";
 import { DigitalAssetAPI, MasterAPI } from "../lib/api";
 import DataTable from "../components/DataTable";
 import { FilterSelect } from "../components/Filter";
+import { MultiSelect } from "../components/MultiSelect";
 
 const CLOUDINARY_CONFIG = {
   cloudName: import.meta.env.VITE_CLOUDINARY_API_KEY_NAME,
@@ -68,8 +69,13 @@ export default function DigitalAssets() {
   const [isGridView, setIsGridView] = useState(true);
 
   // filter brands states
+  const [brandOptions, setBrnadOptions] = useState<string[]>([]);
+  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
-  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
 
   const loadBrandData = async () => {
     const data: BrandMeta[] = await MasterAPI.getBrandMeta();
@@ -78,7 +84,7 @@ export default function DigitalAssets() {
   };
   // filter category states
   const [category, setCategories] = useState<CategoryMeta[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string[]>([]);
 
   type CategoryMeta = {
     id: string;
@@ -120,11 +126,7 @@ export default function DigitalAssets() {
     }, 350);
 
     return () => clearTimeout(delayDebounce);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    loadAssets();
-  }, [selectedBrand, selectedCategory]);
+  }, [searchTerm, brandFilter, categoryFilter]);
 
   useEffect(() => {
     const auth = localStorage.getItem("isAuthenticated");
@@ -150,12 +152,16 @@ export default function DigitalAssets() {
   const loadAssets = async () => {
     setLoading(true);
     try {
-      const data = await DigitalAssetAPI.getAll({
+      const data = await DigitalAssetAPI.getAllWithFilter({
         search: searchTerm,
-        brand_name: selectedBrand,
-        category: selectedCategory,
+        brand: brandFilter,
+        category: categoryFilter,
+        brand_filter: brandOptions,
+        category_filter: categoryOptions,
       });
-      setAssets(data || []);
+      setAssets(data?.assets || []);
+      setBrnadOptions(data?.filter_meta?.brand);
+      setCategoryOptions(data?.filter_meta?.category);
     } catch (error: any) {
       setToast({
         message: error.message || "Failed to load assets",
@@ -275,7 +281,7 @@ export default function DigitalAssets() {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
-  const getIcon = (type: string, size: number=20) => {
+  const getIcon = (type: string, size: number = 20) => {
     switch (type) {
       case "image":
         return <ImageIcon size={size} className="text-blue-600" />;
@@ -508,15 +514,27 @@ export default function DigitalAssets() {
                 </div>
 
                 {/* filters */}
-                <FilterSelect
+                <MultiSelect
+                  options={brandOptions}
+                  value={brandFilter}
+                  onChange={setBrandFilter}
+                  placeholder="All Brands"
+                />
+                {/* <FilterSelect
                   options={brands}
                   value={selectedBrand}
                   onChange={setSelectedBrand}
                   placeholder="All Brands"
-                />
+                /> */}
 
                 {/* category filter */}
-                <select
+                <MultiSelect
+                  options={categoryOptions}
+                  value={categoryFilter}
+                  onChange={setCategoryFilter}
+                  placeholder="All Category"
+                />
+                {/* <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-4 py-2 border max-w-40 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -528,12 +546,11 @@ export default function DigitalAssets() {
                       {c?.value}
                     </option>
                   ))}
-                </select>
+                </select> */}
               </div>
 
               {/* list grid view toggle */}
               <div className="flex items-center justify-center mx-4 space-x-2">
-
                 <button
                   onClick={() => setIsGridView(!isGridView)}
                   className={`p-2 rounded flex items-center justify-center transition-colors ${
@@ -544,7 +561,7 @@ export default function DigitalAssets() {
                 >
                   <List size={20} />
                 </button>
-                
+
                 <button
                   onClick={() => setIsGridView(!isGridView)}
                   className={`p-2 rounded flex items-center justify-center transition-colors ${
@@ -555,8 +572,6 @@ export default function DigitalAssets() {
                 >
                   <LayoutGrid size={20} />
                 </button>
-
-                
               </div>
 
               {/* <label className="inline-flex items-center cursor-pointer">
@@ -592,12 +607,14 @@ export default function DigitalAssets() {
                 </span>
               )}
             </p>
-            {(searchTerm || selectedBrand || selectedCategory) && (
+            {(searchTerm || brandFilter.length > 0 || categoryFilter.length > 0) && (
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedBrand("");
-                  setSelectedCategory("");
+                  setSelectedBrand([]);
+                  setSelectedCategory([]);
+                  setBrandFilter([]);
+                  setCategoryFilter([]);
                 }}
                 className="text-sm text-blue-600 hover:underline font-medium"
               >
@@ -634,9 +651,7 @@ export default function DigitalAssets() {
             data={filteredAssets}
             isLoading={loading}
           />
-          
         ) : (
-          
           <div
             ref={heighDiv}
             style={{ maxHeight: height || "auto", overflowY: "auto" }}

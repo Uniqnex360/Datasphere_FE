@@ -42,6 +42,8 @@ import { FilterSelect } from "../components/Filter";
 import { Attribute } from "../types/attribute";
 import {ProductAttributeUpdate} from "./helperComponents/ProductAttribute";
 import { MultiSelect } from "../components/MultiSelect";
+import { SearchableSelect } from "../components/SearchableSelect";
+import { SearchableSelectObject } from "../components/SearchableSelectObject";
 
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
@@ -433,11 +435,13 @@ export function Products() {
     if (brand) {
       setFormData({
         ...formData,
+        brand_id: brand.id,
         brand_code: brandCode,
         brand_name: brand.brand_name,
         mfg_code: brand.mfg_code,
         mfg_name: brand.mfg_name,
       });
+      console.log("b brand", formData)
     }
   };
   const handleVendorChange = (vendorCode: string) => {
@@ -445,6 +449,7 @@ export function Products() {
     if (vendor) {
       setFormData({
         ...formData,
+        vendor_id: vendor.id,
         vendor_code: vendorCode,
         vendor_name: vendor.vendor_name,
       });
@@ -882,52 +887,16 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   }
   const columns = [
     {
-      key: "image",
-      label: "Image",
-      render: (_: any, row: Row) => {
-        const imagesObj = row?.images;
+    key: "image",
+    label: "Image",
+    render: (_: any, row: Row) => {
+      const imagesObj = row?.images;
 
-        if (!imagesObj || Object.keys(imagesObj).length === 0) {
-          return (
-            <img
-              src={ImageComingSoonIcon}
-              alt="product default fallback image"
-              style={{
-                width: 50,
-                height: 50,
-                objectFit: "cover",
-                borderRadius: 4,
-              }}
-            />
-          );
-        }
-
-        const imagesArray = Object.values(imagesObj).filter(
-          (img): img is ImageItem => !!img?.url,
-        );
-
-        if (imagesArray.length === 0) {
-          return (
-            <img
-              src={ImageComingSoonIcon}
-              alt="product default fallback image"
-              style={{
-                width: 50,
-                height: 50,
-                objectFit: "cover",
-                borderRadius: 4,
-              }}
-            />
-          );
-        }
-
-        const randomIndex = Math.floor(Math.random() * imagesArray.length);
-        const randomImage = imagesArray[randomIndex];
-
+      if (!imagesObj || Object.keys(imagesObj).length === 0) {
         return (
           <img
-            src={randomImage.url}
-            alt={randomImage.name || "Product Image"}
+            src={ImageComingSoonIcon}
+            alt="product default fallback image"
             style={{
               width: 50,
               height: 50,
@@ -936,7 +905,42 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             }}
           />
         );
-      },
+      }
+
+      const imagesArray = Object.values(imagesObj).filter(
+        (img): img is ImageItem => !!img?.url
+      );
+
+      if (imagesArray.length === 0) {
+        return (
+          <img
+            src={ImageComingSoonIcon}
+            alt="product default fallback image"
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}
+          />
+        );
+      }
+
+      const firstImage = imagesArray[0];
+
+      return (
+        <img
+          src={firstImage.url}
+          alt={firstImage.name || "Product Image"}
+          style={{
+            width: 50,
+            height: 50,
+            objectFit: "cover",
+            borderRadius: 4,
+          }}
+        />
+      );
+    },
     },
     { key: "mpn", label: "MPN", customTruncate: true, truncateLength: 15 },
     {
@@ -974,7 +978,6 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
       truncateLength: 15,
       render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
-
     {
       key: "completeness_score",
       label: "Quality Score",
@@ -1388,7 +1391,19 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Brand
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...brands]
+                      .sort((a, b) =>
+                        (a.brand_name || "").localeCompare(b.brand_name || "")
+                      )
+                      .map((brand) => ({
+                        key: brand.brand_code,
+                        value: brand.brand_name,
+                      }))}
+                    value={formData.brand_code || ""}
+                    onChange={(val) => handleBrandChange(val)}
+                  />
+                  {/* <select
                     value={formData.brand_code}
                     onChange={(e) => handleBrandChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1403,13 +1418,25 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {brand.brand_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Vendor
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...vendors]
+                      .sort((a, b) =>
+                        (a.vendor_name || "").localeCompare(b.vendor_name || "")
+                      )
+                      .map((vendor) => ({
+                        key: vendor.vendor_code,
+                        value: vendor.vendor_name,
+                      }))}
+                    value={formData.vendor_code || ""}
+                    onChange={(vendorCode) => handleVendorChange(vendorCode)}
+                  />
+                  {/* <select
                     value={formData.vendor_code}
                     onChange={(e) => handleVendorChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1429,13 +1456,25 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {vendor.vendor_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...categories]
+                      .sort((a, b) =>
+                        (a.breadcrumb || "").localeCompare(b.breadcrumb || "")
+                      )
+                      .map((category) => ({
+                        key: category.category_code,
+                        value: category.breadcrumb,
+                      }))}
+                    value={formData.category_code || ""}
+                    onChange={(categoryCode) => handleCategoryChange(categoryCode)}
+                  />
+                  {/* <select
                     value={formData.category_code}
                     onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1453,13 +1492,33 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {category.breadcrumb}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Industry
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...industries]
+                      .sort((a, b) =>
+                        (a.industry_name || "").localeCompare(b.industry_name || "")
+                      )
+                      .map((industry) => ({
+                        key: industry.industry_code,
+                        value: industry.industry_name,
+                      }))}
+                    value={formData.industry_name || ""}
+                    onChange={(e) => {
+                      const industry = industries.find((i) => i.industry_name === e);
+                      setFormData({
+                        ...formData,
+                        industry_id: industry?.id,
+                        industry_name: e,
+                      })
+                    }  
+                    }
+                  />
+                  {/* <select
                     value={formData.industry_name}
                     onChange={(e) =>
                       setFormData({
@@ -1484,7 +1543,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {industry.industry_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
