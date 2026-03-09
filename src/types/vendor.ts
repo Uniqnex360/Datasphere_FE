@@ -8,6 +8,8 @@ export interface Vendor {
   vendor_website: string;
   business_type: 'Wholesaler' | 'Manufacturer' | 'Distributor' | 'Dealer' | 'Retailer' | '';
   industry: string;
+  industry_name?: string;
+  industry_id?: string;
   description: string;
   address: string;
   is_active:boolean;

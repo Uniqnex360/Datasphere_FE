@@ -42,6 +42,8 @@ import { FilterSelect } from "../components/Filter";
 import { Attribute } from "../types/attribute";
 import {ProductAttributeUpdate} from "./helperComponents/ProductAttribute";
 import { MultiSelect } from "../components/MultiSelect";
+import { SearchableSelect } from "../components/SearchableSelect";
+import { SearchableSelectObject } from "../components/SearchableSelectObject";
 
 export function Products() {
   const [products, setProducts] = useState<ProductWithVariantStatus[]>([]);
@@ -433,11 +435,13 @@ export function Products() {
     if (brand) {
       setFormData({
         ...formData,
+        brand_id: brand.id,
         brand_code: brandCode,
         brand_name: brand.brand_name,
         mfg_code: brand.mfg_code,
         mfg_name: brand.mfg_name,
       });
+      console.log("b brand", formData)
     }
   };
   const handleVendorChange = (vendorCode: string) => {
@@ -445,6 +449,7 @@ export function Products() {
     if (vendor) {
       setFormData({
         ...formData,
+        vendor_id: vendor.id,
         vendor_code: vendorCode,
         vendor_name: vendor.vendor_name,
       });
@@ -882,52 +887,16 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   }
   const columns = [
     {
-      key: "image",
-      label: "Image",
-      render: (_: any, row: Row) => {
-        const imagesObj = row?.images;
+    key: "image",
+    label: "Image",
+    render: (_: any, row: Row) => {
+      const imagesObj = row?.images;
 
-        if (!imagesObj || Object.keys(imagesObj).length === 0) {
-          return (
-            <img
-              src={ImageComingSoonIcon}
-              alt="product default fallback image"
-              style={{
-                width: 50,
-                height: 50,
-                objectFit: "cover",
-                borderRadius: 4,
-              }}
-            />
-          );
-        }
-
-        const imagesArray = Object.values(imagesObj).filter(
-          (img): img is ImageItem => !!img?.url,
-        );
-
-        if (imagesArray.length === 0) {
-          return (
-            <img
-              src={ImageComingSoonIcon}
-              alt="product default fallback image"
-              style={{
-                width: 50,
-                height: 50,
-                objectFit: "cover",
-                borderRadius: 4,
-              }}
-            />
-          );
-        }
-
-        const randomIndex = Math.floor(Math.random() * imagesArray.length);
-        const randomImage = imagesArray[randomIndex];
-
+      if (!imagesObj || Object.keys(imagesObj).length === 0) {
         return (
           <img
-            src={randomImage.url}
-            alt={randomImage.name || "Product Image"}
+            src={ImageComingSoonIcon}
+            alt="product default fallback image"
             style={{
               width: 50,
               height: 50,
@@ -936,7 +905,42 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             }}
           />
         );
-      },
+      }
+
+      const imagesArray = Object.values(imagesObj).filter(
+        (img): img is ImageItem => !!img?.url
+      );
+
+      if (imagesArray.length === 0) {
+        return (
+          <img
+            src={ImageComingSoonIcon}
+            alt="product default fallback image"
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}
+          />
+        );
+      }
+
+      const firstImage = imagesArray[0];
+
+      return (
+        <img
+          src={firstImage.url}
+          alt={firstImage.name || "Product Image"}
+          style={{
+            width: 50,
+            height: 50,
+            objectFit: "cover",
+            borderRadius: 4,
+          }}
+        />
+      );
+    },
     },
     { key: "mpn", label: "MPN", customTruncate: true, truncateLength: 15 },
     {
@@ -974,7 +978,6 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
       truncateLength: 15,
       render: (_: any, row: any) => row.brand?.brand_name || "N/A",
     },
-
     {
       key: "completeness_score",
       label: "Quality Score",
@@ -1141,170 +1144,170 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   };
   return (
     <div className="space-y-6">
-      <div className="flex flex-col h-full">
-        <div className="sticky top-0 left-0">
-          <div className="flex items-center justify-between ">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Product Master
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Manage your complete product catalog
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
-              <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                  <Search size={20} />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search categories or product types..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => setSearchTerm("")}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                )}
-              </div>
 
-              <button
-                onClick={() => {
-                  setEditingProduct(null);
-                  resetForm();
-                  setIsDrawerOpen(true);
-                }}
-                className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
-              >
-                <Plus size={20} />
-                Add Product
-              </button>
-            </div>
+
+        <div className="flex items-center justify-between ">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Product Master
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Manage your complete product catalog
+            </p>
           </div>
-          <div className="z-30 bg-white rounded-xl border border-slate-200 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <MultiSelect
-              options={industryOptions}
-              value={industryFilter}
-              onChange={setIndustryFilter}
-              placeholder="Select Industry"
-            />
-            <MultiSelect
-              options={brandOptions}
-              value={brandFilter}
-              onChange={setBrandFilter}
-              placeholder="Select Brand"
-            />
-            <MultiSelect
-              options={vendorOptions}
-              value={vendorFilter}
-              onChange={setVendorFilter}
-              placeholder="Select Vendor"
-            />
-            <FilterSelect
-                options={["Base", "Variant", "Parent"]}
-                value={variantStatusFilter}
-                onChange={setVariantStatusFilter}
-                placeholder="All Status"
-            />
-            <MultiSelect
-              options={categoryOptions}
-              value={category1Filter}
-              onChange={setCategory1Filter}
-              placeholder="Select Category"
-            />
-
-              <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+            <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <Search size={20} />
+              </div>
+              <input
+                type="text"
+                placeholder="Search categories or product types..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+              />
+              {searchTerm && (
                 <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
                 >
-                  <Download size={20} />
-                  Export
+                  <X size={20} />
                 </button>
-                <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                  <Upload size={20} />
-                  Import
-                  <input
-                    type="file"
-                    accept=".csv,.xlsx,.xls"
-                    onChange={handleImport}
-                    className="hidden"
-                  />
-                </label>
-                {/* <button
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                resetForm();
+                setIsDrawerOpen(true);
+              }}
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+            >
+              <Plus size={20} />
+              Add Product
+            </button>
+          </div>
+        </div>
+        <div className="z-[1000] sticky bg-white rounded-xl border border-slate-200 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <MultiSelect
+            options={industryOptions}
+            value={industryFilter}
+            onChange={setIndustryFilter}
+            placeholder="Select Industry"
+          />
+          <MultiSelect
+            options={brandOptions}
+            value={brandFilter}
+            onChange={setBrandFilter}
+            placeholder="Select Brand"
+          />
+          <MultiSelect
+            options={vendorOptions}
+            value={vendorFilter}
+            onChange={setVendorFilter}
+            placeholder="Select Vendor"
+          />
+          <FilterSelect
+              options={["Base", "Variant", "Parent"]}
+              value={variantStatusFilter}
+              onChange={setVariantStatusFilter}
+              placeholder="All Status"
+          />
+          <MultiSelect
+            options={categoryOptions}
+            value={category1Filter}
+            onChange={setCategory1Filter}
+            placeholder="Select Category"
+          />
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleExport}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Download size={20} />
+                Export
+              </button>
+              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+                <Upload size={20} />
+                Import
+                <input
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
+              {/* <button
+              onClick={downloadTemplate}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
+              title="Download Template"
+            >
+              <img
+                src={CustomDownloadIcon}
+                alt="Download"
+                className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
+              />
+            </button> */}
+              <button
                 onClick={downloadTemplate}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
-                title="Download Template"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                title="Download template"
               >
                 <img
                   src={CustomDownloadIcon}
-                  alt="Download"
-                  className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
+                  className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
+                  alt="Template"
                 />
-              </button> */}
-                <button
-                  onClick={downloadTemplate}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  title="Download template"
-                >
-                  <img
-                    src={CustomDownloadIcon}
-                    className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
-                    alt="Template"
-                  />
-                </button>
-              </div>
+              </button>
             </div>
           </div>
-          <div className="flex items-center justify-between px-1 py-4">
-            <p className="text-sm text-gray-500 italic">
-              {industryFilter.length > 0 ||
-              brandFilter.length > 0 ||
-              vendorFilter.length > 0 ||
-              variantStatusFilter.length > 0 ||
-              category1Filter.length > 0 ||
-              productTypeFilter ? (
-                <span>
-                  Showing <strong>{totalFilteredProduct}</strong> matching
-                  results out of {totalProduct} total products
-                </span>
-              ) : (
-                <span>
-                  Showing all <strong>{totalProduct}</strong> products
-                </span>
-              )}
-            </p>
-
-            {(searchTerm ||
-              industryFilter.length > 0 ||
-              brandFilter.length > 0 ||
-              vendorFilter.length > 0 ||
-              variantStatusFilter ||
-              category1Filter.length > 0 ||
-              productTypeFilter) && (
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setIndustryFilter([]);
-                  setBrandFilter([]);
-                  setVendorFilter([]);
-                  setVariantStatusFilter("");
-                  setCategory1Filter([]);
-                }}
-                className="text-sm text-blue-600 hover:underline font-medium"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
         </div>
+        <div className="flex items-center justify-between px-1 py-4">
+          <p className="text-sm text-gray-500 italic">
+            {industryFilter.length > 0 ||
+            brandFilter.length > 0 ||
+            vendorFilter.length > 0 ||
+            variantStatusFilter.length > 0 ||
+            category1Filter.length > 0 ||
+            productTypeFilter ? (
+              <span>
+                Showing <strong>{totalFilteredProduct}</strong> matching
+                results out of {totalProduct} total products
+              </span>
+            ) : (
+              <span>
+                Showing all <strong>{totalProduct}</strong> products
+              </span>
+            )}
+          </p>
+
+          {(searchTerm ||
+            industryFilter.length > 0 ||
+            brandFilter.length > 0 ||
+            vendorFilter.length > 0 ||
+            variantStatusFilter ||
+            category1Filter.length > 0 ||
+            productTypeFilter) && (
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setIndustryFilter([]);
+                setBrandFilter([]);
+                setVendorFilter([]);
+                setVariantStatusFilter("");
+                setCategory1Filter([]);
+              }}
+              className="text-sm text-blue-600 hover:underline font-medium"
+            >
+              Clear all filters
+            </button>
+          )}
+        </div>
+
 
         <div className="">
           <DataTable
@@ -1323,7 +1326,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             isLoading={loading}
           />
         </div>
-      </div>
+      
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -1388,7 +1391,19 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Brand
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...brands]
+                      .sort((a, b) =>
+                        (a.brand_name || "").localeCompare(b.brand_name || "")
+                      )
+                      .map((brand) => ({
+                        key: brand.brand_code,
+                        value: brand.brand_name,
+                      }))}
+                    value={formData.brand_code || ""}
+                    onChange={(val) => handleBrandChange(val)}
+                  />
+                  {/* <select
                     value={formData.brand_code}
                     onChange={(e) => handleBrandChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1403,13 +1418,25 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {brand.brand_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Vendor
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...vendors]
+                      .sort((a, b) =>
+                        (a.vendor_name || "").localeCompare(b.vendor_name || "")
+                      )
+                      .map((vendor) => ({
+                        key: vendor.vendor_code,
+                        value: vendor.vendor_name,
+                      }))}
+                    value={formData.vendor_code || ""}
+                    onChange={(vendorCode) => handleVendorChange(vendorCode)}
+                  />
+                  {/* <select
                     value={formData.vendor_code}
                     onChange={(e) => handleVendorChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1429,13 +1456,25 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {vendor.vendor_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...categories]
+                      .sort((a, b) =>
+                        (a.breadcrumb || "").localeCompare(b.breadcrumb || "")
+                      )
+                      .map((category) => ({
+                        key: category.category_code,
+                        value: category.breadcrumb,
+                      }))}
+                    value={formData.category_code || ""}
+                    onChange={(categoryCode) => handleCategoryChange(categoryCode)}
+                  />
+                  {/* <select
                     value={formData.category_code}
                     onChange={(e) => handleCategoryChange(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1453,13 +1492,33 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {category.breadcrumb}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Industry
                   </label>
-                  <select
+                  <SearchableSelectObject
+                    options={[...industries]
+                      .sort((a, b) =>
+                        (a.industry_name || "").localeCompare(b.industry_name || "")
+                      )
+                      .map((industry) => ({
+                        key: industry.industry_code,
+                        value: industry.industry_name,
+                      }))}
+                    value={formData.industry_name || ""}
+                    onChange={(e) => {
+                      const industry = industries.find((i) => i.industry_name === e);
+                      setFormData({
+                        ...formData,
+                        industry_id: industry?.id,
+                        industry_name: e,
+                      })
+                    }  
+                    }
+                  />
+                  {/* <select
                     value={formData.industry_name}
                     onChange={(e) =>
                       setFormData({
@@ -1484,7 +1543,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                           {industry.industry_name}
                         </option>
                       ))}
-                  </select>
+                  </select> */}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

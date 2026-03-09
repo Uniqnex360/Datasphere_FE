@@ -16,6 +16,8 @@ export interface Category {
   product_type: string;
   created_at?: string;
   updated_at?: string;
+  total_sub_category_count?: number,
+  total_products_count?: number,
 }
 
 export interface CategoryTreeNode {
