@@ -1190,7 +1190,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             </button>
           </div>
         </div>
-        <div className="z-[1000] sticky bg-white rounded-xl border border-slate-200 p-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <MultiSelect
             options={industryOptions}
