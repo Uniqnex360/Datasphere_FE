@@ -80,6 +80,8 @@ export function Categories() {
   const dropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [totalProudct, setTotalProduct] = useState(0);
+  const [totalCategories, setTotalCategories] = useState(0);
   const {
     isCustom: isCustomIndustry,
     handleIndustryChange,
@@ -153,6 +155,10 @@ export function Categories() {
       }
     }
   }, [parentCategoryCode]);
+
+  useEffect(() => {
+    logSelectedCategoryData();
+  }, [selectedLevels]);
   const loadIndustries = async () => {
     try {
       const data = await MasterAPI.getIndustries();
@@ -925,6 +931,35 @@ export function Categories() {
     setFormData(newFormData);
     setIsDrawerOpen(true);
   };
+  // function to show # categories and products
+  const logSelectedCategoryData = () => {
+    const entries = Object.entries(selectedLevels).filter(([_, v]) => v);
+    const path = entries.map(([_, value]) => value);
+    const lastEntry = entries[entries.length - 1];
+
+    const lastCategory = lastEntry ? lastEntry[1] : null;
+    const level = lastEntry ? Number(lastEntry[0]) : null;
+
+    const breadcrumb = path.join(" > ");
+
+    const response = async () => {
+      const total = await ProductAPI.getTotalProduct(breadcrumb);
+      console.log(total)
+      setTotalProduct(total?.total_products);
+      setTotalCategories(total?.total_child_categories)
+    };
+    response();
+    console.log(
+      breadcrumb ===
+        "Safety Supplies > Safety & Security > Signs & Facility Identification Products",
+    );
+    console.log({
+      path,
+      lastCategory,
+      level,
+      breadcrumb,
+    });
+  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 -mb-6">
@@ -1122,16 +1157,20 @@ export function Categories() {
             {selectedCategory && (
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
-                  <span className="font-medium text-gray-500">Categories</span>
+                  <span className="font-medium text-gray-500">
+                    # of End Categories
+                  </span>
                   <span className="font-semibold text-gray-900">
-                    {selectedCategory.total_sub_category_count}
+                    {totalCategories}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
-                  <span className="font-medium text-gray-500">Products</span>
+                  <span className="font-medium text-gray-500">
+                    # of Products
+                  </span>
                   <span className="font-semibold text-gray-900">
-                    {selectedCategory.total_products_count}
+                    {totalProudct}
                   </span>
                 </div>
               </>
@@ -1166,7 +1205,6 @@ export function Categories() {
 
             const hasAnyOptions =
               simpleOptions.length > 0 || pathOptions.length > 0;
-
             return (
               <div
                 key={level}
