@@ -63,7 +63,10 @@ export const ProductAPI = {
     const response = await api.delete(`/products/${code}`);
     return response.data;
   },
-
+  getTotalProduct: async (breadcrumb: string) => {
+    const response = await api.get(`products/total-product-category`, {params: {breadcrumb}})
+    return response.data;
+  },
   // === VARIANT METHODS ===
 
   createVariant: async (parentProductCode: string, variantData: any) => {
