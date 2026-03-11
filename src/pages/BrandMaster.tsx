@@ -115,6 +115,15 @@ export function BrandMaster() {
     setFilteredBrands(filtered);
   };
 
+  const isValidURL = (url: string) => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     const name = formData.brand_name?.trim() || "";
@@ -131,13 +140,12 @@ export function BrandMaster() {
     if (isDuplicate) {
       newErrors.brand_name = "A brand with this name already exists!";
     }
-    if (bLogo && !bLogo.startsWith("blob:") && !URL_REGEX.test(bLogo)) {
+    if (bLogo && !bLogo.startsWith("blob:") && !isValidURL(bLogo)) {
       newErrors.brand_logo = "Invalid URL format for Brand Logo";
     }
-    if (mLogo && !mLogo.startsWith("blob:") && URL_REGEX.test(mLogo)) {
+    if (mLogo && !mLogo.startsWith("blob:") && !isValidURL(mLogo)) {
       newErrors.mfg_logo = "Invalid URL format for Manufacturer Logo";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -184,7 +192,8 @@ export function BrandMaster() {
     setMfgLogoFile(null);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: any) => {
+    e.preventDefault();
     if (!validateForm()) return;
     setSubmitting(true);
     const name = formData.brand_name?.trim().toLowerCase();
@@ -960,6 +969,9 @@ export function BrandMaster() {
                     <div className="w-24 h-24 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center p-2 relative group">
                       <img
                         src={formData.brand_logo}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
                         alt="Logo Preview"
                         className="max-w-full max-h-full object-contain"
                         onError={(e) => {
