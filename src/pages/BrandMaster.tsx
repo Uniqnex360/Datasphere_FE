@@ -96,9 +96,9 @@ export function BrandMaster() {
     if (searchTerm) {
       filtered = filtered.filter(
         (b) =>
-          b.brand_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.brand_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.mfg_name.toLowerCase().includes(searchTerm.toLowerCase()),
+          b.brand_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          b.brand_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          b.mfg_name?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 

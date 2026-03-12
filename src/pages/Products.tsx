@@ -40,7 +40,7 @@ import {
 import { MasterAPI, ProductAPI } from "../lib/api";
 import { FilterSelect } from "../components/Filter";
 import { Attribute } from "../types/attribute";
-import {ProductAttributeUpdate} from "./helperComponents/ProductAttribute";
+import { ProductAttributeUpdate } from "./helperComponents/ProductAttribute";
 import { MultiSelect } from "../components/MultiSelect";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { SearchableSelectObject } from "../components/SearchableSelectObject";
@@ -79,12 +79,12 @@ export function Products() {
   const [industryFilter, setIndustryFilter] = useState<string[]>([]);
   const [brandOptions, setBrandOptions] = useState<string[]>([]);
   const [brandFilter, setBrandFilter] = useState<string[]>([]);
-  const [vendorOptions, setVendorOptions] = useState<string[]>([])
+  const [vendorOptions, setVendorOptions] = useState<string[]>([]);
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<string[]>([])
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
   const [category1Filter, setCategory1Filter] = useState<string[]>([]);
   const [variantStatusFilter, setVariantStatusFilter] = useState("");
-  
+
   const [regularAttributes, setRegularAttributes] = useState<Attribute[]>([]);
   const [variants, setVariants] = useState<Product[]>([]);
   const [productTypeFilter, setProductTypeFilter] = useState("");
@@ -144,6 +144,9 @@ export function Products() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [totalProduct, setTotalProduct] = useState(0);
   const [totalFilteredProduct, setTotalFilteredProduct] = useState(0);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
+    new Set(),
+  );
   useEffect(() => {
     loadData();
   }, [searchTerm, industryFilter, brandFilter, vendorFilter, category1Filter]);
@@ -258,7 +261,7 @@ export function Products() {
           vendor_filter: vendorOptions,
           category: category1Filter,
           category_filter: categoryOptions,
-        } ),
+        }),
         MasterAPI.getBrands(),
         MasterAPI.getVendors(),
         MasterAPI.getCategories(),
@@ -268,12 +271,12 @@ export function Products() {
       const productsWithStatus = await calculateVariantStatus(
         productsData || [],
       );
-      setTotalProduct(productsResponse?.total)
-      setTotalFilteredProduct(productsResponse?.filtered_total)
-      setIndustryOptions(productsResponse?.filter_meta?.industry)
-      setBrandOptions(productsResponse?.filter_meta?.brand)
-      setVendorOptions(productsResponse?.filter_meta?.vendor)
-      setCategoryOptions(productsResponse?.filter_meta?.category)
+      setTotalProduct(productsResponse?.total);
+      setTotalFilteredProduct(productsResponse?.filtered_total);
+      setIndustryOptions(productsResponse?.filter_meta?.industry);
+      setBrandOptions(productsResponse?.filter_meta?.brand);
+      setVendorOptions(productsResponse?.filter_meta?.vendor);
+      setCategoryOptions(productsResponse?.filter_meta?.category);
       setProducts(productsWithStatus);
       setBrands(brandsData || []);
       setVendors(vendorsData || []);
@@ -281,7 +284,7 @@ export function Products() {
       setCategories(prossedCategories || []);
       setIndustries(industriesData || []);
     } catch (error: any) {
-      console.log('error', error)
+      console.log("error", error);
       setToast({ message: "Failed to load data", type: "error" });
     } finally {
       setLoading(false);
@@ -441,7 +444,7 @@ export function Products() {
         mfg_code: brand.mfg_code,
         mfg_name: brand.mfg_name,
       });
-      console.log("b brand", formData)
+      console.log("b brand", formData);
     }
   };
   const handleVendorChange = (vendorCode: string) => {
@@ -488,23 +491,25 @@ export function Products() {
       resetForm();
       loadData();
     } catch (error: any) {
-      setToast({ message: error?.response?.data?.detail?.mpn || error.message, type: "error" });
+      setToast({
+        message: error?.response?.data?.detail?.mpn || error.message,
+        type: "error",
+      });
     }
   };
   const handleEdit = (product: ProductWithVariantStatus) => {
     setEditingProduct(product);
-    setFormData(
-      {...product,
-        //@ts-ignore
-        brand_code: product?.brand?.brand_code,
-        //@ts-ignore
-        brand_name: product?.brand?.brand_name,
-        //@ts-ignore
-        vendor_code: product?.vendor?.vendor_code,
-        //@ts-ignore
-        vendor_name: product?.vendor?.vendor_name
-      }
-      );
+    setFormData({
+      ...product,
+      //@ts-ignore
+      brand_code: product?.brand?.brand_code,
+      //@ts-ignore
+      brand_name: product?.brand?.brand_name,
+      //@ts-ignore
+      vendor_code: product?.vendor?.vendor_code,
+      //@ts-ignore
+      vendor_name: product?.vendor?.vendor_name,
+    });
     setErrors({});
     setActiveTab("basic");
     setIsDrawerOpen(true);
@@ -607,215 +612,218 @@ export function Products() {
     setToast({ message: "Products exported successfully", type: "success" });
   };
 
-  
-const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const rawData = await parseCSV(file);
-    let successCount = 0;
-    const errorRows: { row: number; message: string }[] = [];
+      const rawData = await parseCSV(file);
+      let successCount = 0;
+      const errorRows: { row: number; message: string }[] = [];
 
-    for (let i = 0; i < rawData.length; i++) {
-      const row = rawData[i];
+      for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
 
-      const mappedRow = {
-        sku: row?.sku,
-        product_name: row?.product_name,
-        brand_name: row?.brand,
-        model_3d_url: row["3d_model_url"],
-        ...row,
-      };
+        const mappedRow = {
+          sku: row?.sku,
+          product_name: row?.product_name,
+          brand_name: row?.brand,
+          model_3d_url: row["3d_model_url"],
+          ...row,
+        };
 
-      try {
-        await ProductAPI.upsert(mappedRow);
-        successCount++;
-      } catch (error: any) {
-        // Extract error text from response
-        let errorMessage = "Unknown error";
-        if (error?.response?.data) {
-          const data = error.response.data;
+        try {
+          await ProductAPI.upsert(mappedRow);
+          successCount++;
+        } catch (error: any) {
+          // Extract error text from response
+          let errorMessage = "Unknown error";
+          if (error?.response?.data) {
+            const data = error.response.data;
 
-          if (typeof data === "string") {
-            errorMessage = data;
-          } else if (data.detail) {
-            errorMessage = data.detail;
-          } else if (data.errors) {
-            // handle nested errors array/object
-            if (Array.isArray(data.errors)) {
-              errorMessage = data.errors.map((e: any) => e.msg || JSON.stringify(e)).join("; ");
+            if (typeof data === "string") {
+              errorMessage = data;
+            } else if (data.detail) {
+              errorMessage = data.detail;
+            } else if (data.errors) {
+              // handle nested errors array/object
+              if (Array.isArray(data.errors)) {
+                errorMessage = data.errors
+                  .map((e: any) => e.msg || JSON.stringify(e))
+                  .join("; ");
+              } else {
+                errorMessage = JSON.stringify(data.errors);
+              }
             } else {
-              errorMessage = JSON.stringify(data.errors);
+              errorMessage = JSON.stringify(data);
             }
-          } else {
-            errorMessage = JSON.stringify(data);
+          } else if (error.message) {
+            errorMessage = error.message;
           }
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
 
-        errorRows.push({
-          row: i + 2, // +2 if row 1 is header in CSV
-          message: errorMessage,
+          errorRows.push({
+            row: i + 2, // +2 if row 1 is header in CSV
+            message: errorMessage,
+          });
+        }
+      }
+
+      if (errorRows.length === 0) {
+        setToast({
+          message: `Import completed ✅ ${successCount} rows inserted.`,
+          type: "success",
+        });
+      } else if (errorRows.length > 0) {
+        const errorMessages = errorRows
+          .map((e) => `Row ${e.row}: ${e.message}`)
+          .join(" | "); // or "\n" if your toast supports multiline
+
+        setToast({
+          message: `Import finished. ✅ ${successCount} success, ❌ ${errorRows.length} failed. Errors: ${errorMessages}`,
+          type: "error",
         });
       }
-    }
-
-    if (errorRows.length === 0) {
+    } catch (err: any) {
       setToast({
-        message: `Import completed ✅ ${successCount} rows inserted.`,
-        type: "success",
-      });
-    } 
-    else if (errorRows.length > 0) {
-      const errorMessages = errorRows
-        .map((e) => `Row ${e.row}: ${e.message}`)
-        .join(" | "); // or "\n" if your toast supports multiline
-
-      setToast({
-        message: `Import finished. ✅ ${successCount} success, ❌ ${errorRows.length} failed. Errors: ${errorMessages}`,
+        message: err.message || "Failed to process file",
         type: "error",
       });
+    } finally {
+      setLoading(false);
+      e.target.value = "";
     }
-  } catch (err: any) {
-    setToast({
-      message: err.message || "Failed to process file",
-      type: "error",
-    });
-  } finally {
-    setLoading(false);
-    e.target.value = "";
-  }
-};
-  
-  const downloadTemplate = () => {
-  const template: Record<string, any> = {
-    // Product basic info
-    "Prod ID": "010-02092-00",
-    sku: "10100388",
-    product_name: `High Bay Light, 80 CRI, 4000K, 11.33 in. Dia, 8.67 in. ht, White,
-Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DLC`,
-    brand: "Cooper Lighting LLC",
-    gtin: "0753759197087",
-    ean: "0753759197087",
-    upc: "753759197087",
-    unspc: "43191501",
-    mpn: "010-02092-00",
-    industry_name: "Marine",
-    category_1: "Electronics",
-    category_2: "Marine Electronics",
-    category_3: "GPS & Chartplotters",
-    category_4: "17-inch Models",
-    category_5: "",
-    category_6: "",
-    category_7: "",
-    category_8: "",
-    taxonomy: "Marine > Electronics > GPS & Chartplotters",
-    country_of_origin: "USA",
-    warranty: "3 years",
-
-    // Dimensions & Pricing
-    weight: "4.2",
-    weight_unit: "kg",
-    length: "30",
-    width: "25",
-    height: "10",
-    dimension_unit: "cm",
-    currency: "USD",
-    base_price: "2499.99",
-    sale_price: "2299.99",
-    selling_price: "2299.99",
-    special_price: "2199.99",
-    stock_qty: "50",
-    stock_status: "In Stock",
-
-    // Vendor info
-    vendor_name: "Garmin",
-    vendor_sku: "GAR-8617",
-
-    // Images
-    image_name_1: "010-02092-00-Image-1",
-    image_url_1: "https://example.com/images/gpsmap-8617-front.jpg",
-    image_name_2: "010-02092-00-Image-2",
-    image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
-    image_name_3: "010-02092-00-Image-3",
-    image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
-    image_name_4: "010-02092-00-Image-3",
-    image_url_4: "https://example.com/images/gpsmap-8617-back.jpg",
-    image_name_5: "010-02092-00-Image-3",
-    image_url_5: "https://example.com/images/gpsmap-8617-back.jpg",
-    image_name_6: "010-02092-00-Image-3",
-    image_url_6: "https://example.com/images/gpsmap-8617-back.jpg",
-    image_name_7: "010-02092-00-Image-3",
-    image_url_7: "https://example.com/images/gpsmap-8617-back.jpg",
-    image_name_8: "010-02092-00-Image-3",
-    image_url_8: "https://example.com/images/gpsmap-8617-back.jpg",
-
-    // Videos
-    video_name_1: "010-02092-00-Video-1",
-    video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
-    video_name_2: "010-02092-00-Video-1",
-    video_url_2: "https://example.com/videos/gpsmap-8617-overview.mp4",
-    video_name_3: "010-02092-00-Video-1",
-    video_url_3: "https://example.com/videos/gpsmap-8617-overview.mp4",
-
-    // Documents
-    document_name_1: "010-02092-00-Manual",
-    document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
-    document_name_2: "010-02092-00-Manual",
-    document_url_2: "https://example.com/docs/gpsmap-8617-manual.pdf",
-    document_name_3: "010-02092-00-Manual",
-    document_url_3: "https://example.com/docs/gpsmap-8617-manual.pdf",
-    document_name_4: "010-02092-00-Manual",
-    document_url_4: "https://example.com/docs/gpsmap-8617-manual.pdf",
-    document_name_5: "010-02092-00-Manual",
-    document_url_5: "https://example.com/docs/gpsmap-8617-manual.pdf",
-
-    // 3D Model
-    "3d_model_url": "https://example.com/models/gpsmap-8617.glb",
-
-    // Descriptions
-    short_description: "17-inch marine chartplotter with Wi-Fi connectivity",
-    long_description: `Professional 17-inch marine chartplotter with worldwide basemap, built-in Wi-Fi, and premium chart support. Ideal for recreational and commercial vessels. IPX7 waterproof, NMEA 2000 and 0183 compatible.`,
-
-    // Features
-    features_1: "17-inch multi-touch widescreen display",
-    features_2: "Worldwide basemap included",
-    features_3: "Built-in Wi-Fi connectivity",
-    features_4: "NMEA 2000 and NMEA 0183 network support",
-    features_5: "Premium chart compatibility",
-    features_6: "Garmin Marine Network compatible",
-    features_7: "IPX7 waterproof rating",
-    features_8: "Auto guidance technology",
-    features_9: "Sonar support",
-    features_10: "Radar integration",
-
-    // SEO
-    meta_title: "Garmin GPSMAP 8617 17-inch Marine Chartplotter | Marine Electronics",
-    meta_description: "Professional 17-inch marine chartplotter with worldwide basemap, Wi-Fi, and premium chart support. Perfect for serious boaters and commercial vessels.",
-    search_keywords: "marine GPS, chartplotter, Garmin, navigation, marine electronics",
-
-    // Compliance
-    certification: "UL, CE, FCC",
-    safety_standard: "IPX7 waterproof",
-    hazardous_material: "None",
-    prop65_warning: "Not applicable",
   };
 
-  // --- Dynamically add 20 attribute slots ---
-  for (let i = 1; i <= 20; i++) {
-    template[`attribute_name${i}`] = "";
-    template[`attribute_value${i}`] = "";
-    template[`attribute_uom${i}`] = "";
-    template[`validation_value${i}`] = "";
-    template[`validation_uom${i}`] = "";
-  }
+  const downloadTemplate = () => {
+    const template: Record<string, any> = {
+      // Product basic info
+      "Prod ID": "010-02092-00",
+      sku: "10100388",
+      product_name: `High Bay Light, 80 CRI, 4000K, 11.33 in. Dia, 8.67 in. ht, White,
+Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DLC`,
+      brand: "Cooper Lighting LLC",
+      gtin: "0753759197087",
+      ean: "0753759197087",
+      upc: "753759197087",
+      unspc: "43191501",
+      mpn: "010-02092-00",
+      industry_name: "Marine",
+      category_1: "Electronics",
+      category_2: "Marine Electronics",
+      category_3: "GPS & Chartplotters",
+      category_4: "17-inch Models",
+      category_5: "",
+      category_6: "",
+      category_7: "",
+      category_8: "",
+      taxonomy: "Marine > Electronics > GPS & Chartplotters",
+      country_of_origin: "USA",
+      warranty: "3 years",
 
-  exportToCSV([template], "product_import_template.csv");
-};
+      // Dimensions & Pricing
+      weight: "4.2",
+      weight_unit: "kg",
+      length: "30",
+      width: "25",
+      height: "10",
+      dimension_unit: "cm",
+      currency: "USD",
+      base_price: "2499.99",
+      sale_price: "2299.99",
+      selling_price: "2299.99",
+      special_price: "2199.99",
+      stock_qty: "50",
+      stock_status: "In Stock",
+
+      // Vendor info
+      vendor_name: "Garmin",
+      vendor_sku: "GAR-8617",
+
+      // Images
+      image_name_1: "010-02092-00-Image-1",
+      image_url_1: "https://example.com/images/gpsmap-8617-front.jpg",
+      image_name_2: "010-02092-00-Image-2",
+      image_url_2: "https://example.com/images/gpsmap-8617-side.jpg",
+      image_name_3: "010-02092-00-Image-3",
+      image_url_3: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_4: "010-02092-00-Image-3",
+      image_url_4: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_5: "010-02092-00-Image-3",
+      image_url_5: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_6: "010-02092-00-Image-3",
+      image_url_6: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_7: "010-02092-00-Image-3",
+      image_url_7: "https://example.com/images/gpsmap-8617-back.jpg",
+      image_name_8: "010-02092-00-Image-3",
+      image_url_8: "https://example.com/images/gpsmap-8617-back.jpg",
+
+      // Videos
+      video_name_1: "010-02092-00-Video-1",
+      video_url_1: "https://example.com/videos/gpsmap-8617-overview.mp4",
+      video_name_2: "010-02092-00-Video-1",
+      video_url_2: "https://example.com/videos/gpsmap-8617-overview.mp4",
+      video_name_3: "010-02092-00-Video-1",
+      video_url_3: "https://example.com/videos/gpsmap-8617-overview.mp4",
+
+      // Documents
+      document_name_1: "010-02092-00-Manual",
+      document_url_1: "https://example.com/docs/gpsmap-8617-manual.pdf",
+      document_name_2: "010-02092-00-Manual",
+      document_url_2: "https://example.com/docs/gpsmap-8617-manual.pdf",
+      document_name_3: "010-02092-00-Manual",
+      document_url_3: "https://example.com/docs/gpsmap-8617-manual.pdf",
+      document_name_4: "010-02092-00-Manual",
+      document_url_4: "https://example.com/docs/gpsmap-8617-manual.pdf",
+      document_name_5: "010-02092-00-Manual",
+      document_url_5: "https://example.com/docs/gpsmap-8617-manual.pdf",
+
+      // 3D Model
+      "3d_model_url": "https://example.com/models/gpsmap-8617.glb",
+
+      // Descriptions
+      short_description: "17-inch marine chartplotter with Wi-Fi connectivity",
+      long_description: `Professional 17-inch marine chartplotter with worldwide basemap, built-in Wi-Fi, and premium chart support. Ideal for recreational and commercial vessels. IPX7 waterproof, NMEA 2000 and 0183 compatible.`,
+
+      // Features
+      features_1: "17-inch multi-touch widescreen display",
+      features_2: "Worldwide basemap included",
+      features_3: "Built-in Wi-Fi connectivity",
+      features_4: "NMEA 2000 and NMEA 0183 network support",
+      features_5: "Premium chart compatibility",
+      features_6: "Garmin Marine Network compatible",
+      features_7: "IPX7 waterproof rating",
+      features_8: "Auto guidance technology",
+      features_9: "Sonar support",
+      features_10: "Radar integration",
+
+      // SEO
+      meta_title:
+        "Garmin GPSMAP 8617 17-inch Marine Chartplotter | Marine Electronics",
+      meta_description:
+        "Professional 17-inch marine chartplotter with worldwide basemap, Wi-Fi, and premium chart support. Perfect for serious boaters and commercial vessels.",
+      search_keywords:
+        "marine GPS, chartplotter, Garmin, navigation, marine electronics",
+
+      // Compliance
+      certification: "UL, CE, FCC",
+      safety_standard: "IPX7 waterproof",
+      hazardous_material: "None",
+      prop65_warning: "Not applicable",
+    };
+
+    // --- Dynamically add 20 attribute slots ---
+    for (let i = 1; i <= 20; i++) {
+      template[`attribute_name${i}`] = "";
+      template[`attribute_value${i}`] = "";
+      template[`attribute_uom${i}`] = "";
+      template[`validation_value${i}`] = "";
+      template[`validation_uom${i}`] = "";
+    }
+
+    exportToCSV([template], "product_import_template.csv");
+  };
 
   const getVariantStatusBadge = (status: VariantStatus) => {
     const styles = {
@@ -873,6 +881,22 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
     setEditingVariant(variant);
     setShowVariantModal(true);
   };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.size === products.length) {
+      setSelectedProducts(new Set());
+    } else {
+      setSelectedProducts(new Set(products.map((p) => p.product_code)));
+    }
+  };
+
+  const toggleSelect = (code: string) => {
+    const newSet = new Set(selectedProducts);
+    if (newSet.has(code)) newSet.delete(code);
+    else newSet.add(code);
+    setSelectedProducts(newSet);
+  };
+
   interface ImageItem {
     url?: string;
     name?: string;
@@ -887,60 +911,84 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   }
   const columns = [
     {
-    key: "image",
-    label: "Image",
-    render: (_: any, row: Row) => {
-      const imagesObj = row?.images;
-
-      if (!imagesObj || Object.keys(imagesObj).length === 0) {
-        return (
-          <img
-            src={ImageComingSoonIcon}
-            alt="product default fallback image"
-            style={{
-              width: 50,
-              height: 50,
-              objectFit: "cover",
-              borderRadius: 4,
-            }}
-          />
-        );
-      }
-
-      const imagesArray = Object.values(imagesObj).filter(
-        (img): img is ImageItem => !!img?.url
-      );
-
-      if (imagesArray.length === 0) {
-        return (
-          <img
-            src={ImageComingSoonIcon}
-            alt="product default fallback image"
-            style={{
-              width: 50,
-              height: 50,
-              objectFit: "cover",
-              borderRadius: 4,
-            }}
-          />
-        );
-      }
-
-      const firstImage = imagesArray[0];
-
-      return (
-        <img
-          src={firstImage.url}
-          alt={firstImage.name || "Product Image"}
-          style={{
-            width: 50,
-            height: 50,
-            objectFit: "cover",
-            borderRadius: 4,
-          }}
+      key: "selection",
+      label: (
+        <input
+          type="checkbox"
+          checked={
+            selectedProducts.size === products.length && products.length > 0
+          }
+          onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
-      );
+      ) as any,
+      render: (_: any, row: Product) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedProducts.has(row.product_code)}
+            onChange={() => toggleSelect(row.product_code)}
+            className="w-4 h-4 rounded cursor-pointer border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      // width: "100px",
     },
+    {
+      key: "image",
+      label: "Image",
+      render: (_: any, row: Row) => {
+        const imagesObj = row?.images;
+
+        if (!imagesObj || Object.keys(imagesObj).length === 0) {
+          return (
+            <img
+              src={ImageComingSoonIcon}
+              alt="product default fallback image"
+              style={{
+                width: 50,
+                height: 50,
+                objectFit: "cover",
+                borderRadius: 4,
+              }}
+            />
+          );
+        }
+
+        const imagesArray = Object.values(imagesObj).filter(
+          (img): img is ImageItem => !!img?.url,
+        );
+
+        if (imagesArray.length === 0) {
+          return (
+            <img
+              src={ImageComingSoonIcon}
+              alt="product default fallback image"
+              style={{
+                width: 50,
+                height: 50,
+                objectFit: "cover",
+                borderRadius: 4,
+              }}
+            />
+          );
+        }
+
+        const firstImage = imagesArray[0];
+
+        return (
+          <img
+            src={firstImage.url}
+            alt={firstImage.name || "Product Image"}
+            style={{
+              width: 50,
+              height: 50,
+              objectFit: "cover",
+              borderRadius: 4,
+            }}
+          />
+        );
+      },
     },
     { key: "mpn", label: "MPN", customTruncate: true, truncateLength: 15 },
     {
@@ -1144,54 +1192,50 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
   };
   return (
     <div className="space-y-6">
-
-
-        <div className="flex items-center justify-between ">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Product Master
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Manage your complete product catalog
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
-            <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
-              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                <Search size={20} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search categories or product types..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              )}
-            </div>
-
-            <button
-              onClick={() => {
-                setEditingProduct(null);
-                resetForm();
-                setIsDrawerOpen(true);
-              }}
-              className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
-            >
-              <Plus size={20} />
-              Add Product
-            </button>
-          </div>
+      <div className="flex items-center justify-between ">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Product Master</h1>
+          <p className="text-gray-600 mt-1">
+            Manage your complete product catalog
+          </p>
         </div>
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto flex-1 justify-end">
+          <div className="relative w-full md:w-[400px] lg:w-[500px] transition-all duration-300">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <Search size={20} />
+            </div>
+            <input
+              type="text"
+              placeholder="Search categories or product types..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-12 py-3.5 border border-gray-200 rounded-full text-base shadow-sm hover:shadow-md focus:shadow-md focus:border-blue-400 focus:ring-4 focus:ring-blue-50 outline-none transition-all placeholder:text-gray-400"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              resetForm();
+              setIsDrawerOpen(true);
+            }}
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all shadow-md shadow-blue-100 font-bold whitespace-nowrap"
+          >
+            <Plus size={20} />
+            Add Product
+          </button>
+        </div>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <MultiSelect
             options={industryOptions}
             value={industryFilter}
@@ -1211,10 +1255,10 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             placeholder="Select Vendor"
           />
           <FilterSelect
-              options={["Base", "Variant", "Parent"]}
-              value={variantStatusFilter}
-              onChange={setVariantStatusFilter}
-              placeholder="All Status"
+            options={["Base", "Parent", "Variant"]}
+            value={variantStatusFilter}
+            onChange={setVariantStatusFilter}
+            placeholder="All Status"
           />
           <MultiSelect
             options={categoryOptions}
@@ -1223,25 +1267,25 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
             placeholder="Select Category"
           />
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Download size={20} />
-                Export
-              </button>
-              <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
-                <Upload size={20} />
-                Import
-                <input
-                  type="file"
-                  accept=".csv,.xlsx,.xls"
-                  onChange={handleImport}
-                  className="hidden"
-                />
-              </label>
-              {/* <button
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Download size={20} />
+              Export
+            </button>
+            <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer">
+              <Upload size={20} />
+              Import
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleImport}
+                className="hidden"
+              />
+            </label>
+            {/* <button
               onClick={downloadTemplate}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors "
               title="Download Template"
@@ -1252,81 +1296,106 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                 className="w-7 h-7 p-1 object-contain opacity-70 hover:opacity-100"
               />
             </button> */}
-              <button
-                onClick={downloadTemplate}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Download template"
-              >
-                <img
-                  src={CustomDownloadIcon}
-                  className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
-                  alt="Template"
-                />
-              </button>
-            </div>
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              title="Download template"
+            >
+              <img
+                src={CustomDownloadIcon}
+                className="block flex-shrink-0 w-7 h-7 object-contain opacity-70 hover:opacity-100"
+                alt="Template"
+              />
+            </button>
           </div>
         </div>
-        <div className="flex items-center justify-between px-1 py-4">
-          <p className="text-sm text-gray-500 italic">
-            {industryFilter.length > 0 ||
-            brandFilter.length > 0 ||
-            vendorFilter.length > 0 ||
-            variantStatusFilter.length > 0 ||
-            category1Filter.length > 0 ||
-            productTypeFilter ? (
-              <span>
-                Showing <strong>{totalFilteredProduct}</strong> matching
-                results out of {totalProduct} total products
-              </span>
-            ) : (
-              <span>
-                Showing all <strong>{totalProduct}</strong> products
-              </span>
-            )}
-          </p>
-
-          {(searchTerm ||
-            industryFilter.length > 0 ||
-            brandFilter.length > 0 ||
-            vendorFilter.length > 0 ||
-            variantStatusFilter ||
-            category1Filter.length > 0 ||
-            productTypeFilter) && (
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setIndustryFilter([]);
-                setBrandFilter([]);
-                setVendorFilter([]);
-                setVariantStatusFilter("");
-                setCategory1Filter([]);
-              }}
-              className="text-sm text-blue-600 hover:underline font-medium"
-            >
-              Clear all filters
-            </button>
+      </div>
+      <div className="flex items-center justify-between px-1 py-2">
+        <p className="text-sm text-gray-500 italic">
+          {industryFilter.length > 0 ||
+          brandFilter.length > 0 ||
+          vendorFilter.length > 0 ||
+          variantStatusFilter.length > 0 ||
+          category1Filter.length > 0 ||
+          productTypeFilter ? (
+            <span>
+              Showing <strong>{totalFilteredProduct}</strong> matching results
+              out of {totalProduct} total products
+            </span>
+          ) : (
+            <span>
+              Showing all <strong>{totalProduct}</strong> products
+            </span>
           )}
-        </div>
+        </p>
 
-
-        <div className="">
-          <DataTable
-            columns={columns}
-            data={filteredProducts}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onSort={(key) => {
-              if (sortKey === key) {
-                setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-              } else {
-                setSortKey(key);
-                setSortDirection("asc");
-              }
+        {(searchTerm ||
+          industryFilter.length > 0 ||
+          brandFilter.length > 0 ||
+          vendorFilter.length > 0 ||
+          variantStatusFilter ||
+          category1Filter.length > 0 ||
+          productTypeFilter) && (
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setIndustryFilter([]);
+              setBrandFilter([]);
+              setVendorFilter([]);
+              setVariantStatusFilter("");
+              setCategory1Filter([]);
             }}
-            isLoading={loading}
-          />
+            className="text-sm text-blue-600 hover:underline font-medium"
+          >
+            Clear all filters
+          </button>
+        )}
+      </div>
+      {/* selectr products UI */}
+      {selectedProducts.size > 0 && (
+        <div className="bg-blue-600 text-white px-6 py-2 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+              {selectedProducts.size} selected
+            </span>
+            {/* <div className="flex gap-2">
+              <button
+                onClick={() => handleBulkStatusChange(true)}
+                className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-xs font-bold"
+              >
+                Activate
+              </button>
+              <button
+                onClick={() => handleBulkStatusChange(false)}
+                className="px-3 py-1 bg-red-500 hover:bg-red-400 rounded text-xs font-bold"
+              >
+                Deactivate
+              </button>
+            </div> */}
+          </div>
+          <button
+            onClick={() => setSelectedProducts(new Set())}
+            className="text-white/80 hover:text-white"
+          >
+            Cancel
+          </button>
         </div>
-      
+      )}
+      <DataTable
+        columns={columns}
+        data={filteredProducts}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={(key) => {
+          if (sortKey === key) {
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+          } else {
+            setSortKey(key);
+            setSortDirection("asc");
+          }
+        }}
+        isLoading={loading}
+      />
 
       <Drawer
         isOpen={isDrawerOpen}
@@ -1394,7 +1463,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <SearchableSelectObject
                     options={[...brands]
                       .sort((a, b) =>
-                        (a.brand_name || "").localeCompare(b.brand_name || "")
+                        (a.brand_name || "").localeCompare(b.brand_name || ""),
                       )
                       .map((brand) => ({
                         key: brand.brand_code,
@@ -1427,7 +1496,9 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <SearchableSelectObject
                     options={[...vendors]
                       .sort((a, b) =>
-                        (a.vendor_name || "").localeCompare(b.vendor_name || "")
+                        (a.vendor_name || "").localeCompare(
+                          b.vendor_name || "",
+                        ),
                       )
                       .map((vendor) => ({
                         key: vendor.vendor_code,
@@ -1465,14 +1536,16 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <SearchableSelectObject
                     options={[...categories]
                       .sort((a, b) =>
-                        (a.breadcrumb || "").localeCompare(b.breadcrumb || "")
+                        (a.breadcrumb || "").localeCompare(b.breadcrumb || ""),
                       )
                       .map((category) => ({
                         key: category.category_code,
                         value: category.breadcrumb,
                       }))}
                     value={formData.category_code || ""}
-                    onChange={(categoryCode) => handleCategoryChange(categoryCode)}
+                    onChange={(categoryCode) =>
+                      handleCategoryChange(categoryCode)
+                    }
                   />
                   {/* <select
                     value={formData.category_code}
@@ -1501,7 +1574,9 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                   <SearchableSelectObject
                     options={[...industries]
                       .sort((a, b) =>
-                        (a.industry_name || "").localeCompare(b.industry_name || "")
+                        (a.industry_name || "").localeCompare(
+                          b.industry_name || "",
+                        ),
                       )
                       .map((industry) => ({
                         key: industry.industry_code,
@@ -1509,14 +1584,15 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                       }))}
                     value={formData.industry_name || ""}
                     onChange={(e) => {
-                      const industry = industries.find((i) => i.industry_name === e);
+                      const industry = industries.find(
+                        (i) => i.industry_name === e,
+                      );
                       setFormData({
                         ...formData,
                         industry_id: industry?.id,
                         industry_name: e,
-                      })
-                    }  
-                    }
+                      });
+                    }}
                   />
                   {/* <select
                     value={formData.industry_name}
@@ -1797,7 +1873,10 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                 <textarea
                   value={formData.long_description}
                   onChange={(e) =>
-                    setFormData({ ...formData, long_description: e.target.value })
+                    setFormData({
+                      ...formData,
+                      long_description: e.target.value,
+                    })
                   }
                   rows={6}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1976,19 +2055,22 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
           )} */}
           {activeTab === "attributes" && (
             <div className="space-y-4">
-              {formData.attributes && Object.keys(formData.attributes).length > 0 ? (
+              {formData.attributes &&
+              Object.keys(formData.attributes).length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
                   {/* Use ProductAttributeUpdate component */}
                   <ProductAttributeUpdate
                     //@ts-ignore
                     product_id={formData.product_code}
-                    data={Object.entries(formData.attributes).map(([key, attr]: any) => ({
-                      id: attr.id,
-                      attribute_code: attr.attribute_code,
-                      name: attr.name,
-                      selected_values: attr.selected_values || [], // keep existing selected values
-                      options: attr.options || [], // <-- include options always
-                    }),)}
+                    data={Object.entries(formData.attributes).map(
+                      ([key, attr]: any) => ({
+                        id: attr.id,
+                        attribute_code: attr.attribute_code,
+                        name: attr.name,
+                        selected_values: attr.selected_values || [], // keep existing selected values
+                        options: attr.options || [], // <-- include options always
+                      }),
+                    )}
                     parentFormData={formData}
                     setParentFormData={setFormData}
                   />
