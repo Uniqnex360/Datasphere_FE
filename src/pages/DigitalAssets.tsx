@@ -13,11 +13,9 @@ import {
   AlertCircle,
   LayoutGrid,
   List,
-  Video,
 } from "lucide-react";
 import { DigitalAssetAPI, MasterAPI } from "../lib/api";
 import DataTable from "../components/DataTable";
-import { FilterSelect } from "../components/Filter";
 import { MultiSelect } from "../components/MultiSelect";
 
 const CLOUDINARY_CONFIG = {
@@ -76,6 +74,10 @@ export default function DigitalAssets() {
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
+
+  const [selectedAssets, setSelectedAssets] = useState<Set<DigitalAsset>>(
+    new Set(),
+  );
 
   const loadBrandData = async () => {
     const data: BrandMeta[] = await MasterAPI.getBrandMeta();
@@ -311,7 +313,77 @@ export default function DigitalAssets() {
   //   );
   // }
 
+  const toggleSelect = (code: DigitalAsset) => {
+    const newSet = new Set(selectedAssets);
+    if (newSet.has(code)) newSet.delete(code);
+    else newSet.add(code);
+    setSelectedAssets(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAssets.size === filteredAssets.length) {
+      setSelectedAssets(new Set());
+    } else {
+      setSelectedAssets(new Set(filteredAssets.map((a) => a)));
+    }
+  };
+
+  const handleBulkStatusChange = async (status: boolean) => {
+    if (selectedAssets.size === 0) {
+      setToast({ message: "No brands selected", type: "error" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const requests = Array.from(selectedAssets).map((asset) =>
+        DigitalAssetAPI.archive(asset.id),
+      );
+
+      await Promise.all(requests);
+
+      setToast({
+        message: `Selected Assets are now ${status ? "Active" : "Inactive"}`,
+        type: "success",
+      });
+
+      loadAssets();
+      setSelectedAssets(new Set());
+    } catch (error) {
+      console.error(error);
+      setToast({ message: "Failed to update selected brands", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
+    {
+      key: "selection",
+      label: (
+        <input
+          type="checkbox"
+          checked={
+            selectedAssets.size === filteredAssets.length &&
+            filteredAssets.length > 0
+          }
+          onChange={toggleSelectAll}
+          className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+      ) as any,
+      render: (_: any, row: DigitalAsset) => (
+        <div onClick={(e) => e.stopPropagation()}>
+          <input
+            type="checkbox"
+            checked={selectedAssets.has(row)}
+            onChange={() => toggleSelect(row)}
+            className="w-4 h-4 rounded cursor-pointer border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+        </div>
+      ),
+      width: "80px",
+    },
     {
       key: "image",
       label: "Image",
@@ -607,7 +679,9 @@ export default function DigitalAssets() {
                 </span>
               )}
             </p>
-            {(searchTerm || brandFilter.length > 0 || categoryFilter.length > 0) && (
+            {(searchTerm ||
+              brandFilter.length > 0 ||
+              categoryFilter.length > 0) && (
               <button
                 onClick={() => {
                   setSearchTerm("");
@@ -646,11 +720,42 @@ export default function DigitalAssets() {
             </button>
           </div>
         ) : isGridView ? (
-          <DataTable
-            columns={columns}
-            data={filteredAssets}
-            isLoading={loading}
-          />
+          <>
+            {selectedAssets.size > 0 && (
+              <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-bold bg-white/20 px-3 py-1 rounded-full">
+                    {selectedAssets.size} selected
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleBulkStatusChange(true)}
+                      className="px-3 py-1 bg-green-500 hover:bg-green-400 rounded text-xs font-bold"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      onClick={() => handleBulkStatusChange(false)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-400 rounded text-xs font-bold"
+                    >
+                      UnArchive
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedAssets(new Set())}
+                  className="text-white/80 hover:text-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            <DataTable
+              columns={columns}
+              data={filteredAssets}
+              isLoading={loading}
+            />
+          </>
         ) : (
           <div
             ref={heighDiv}

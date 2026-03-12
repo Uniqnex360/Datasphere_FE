@@ -884,7 +884,11 @@ export function Attributes() {
         <div className="flex items-center gap-4 justify-between">
           <div className="flex flex-wrap items-center gap-4">
             <MultiSelect
-              options={categories.map((c) => c.breadcrumb)}
+              options={categories
+                .map((c) => c.breadcrumb)
+                .sort((a, b) =>
+                  a.localeCompare(b, undefined, { sensitivity: "base" }),
+                )}
               value={categoryFilter}
               onChange={setCategoryFilter}
               placeholder="Category"
