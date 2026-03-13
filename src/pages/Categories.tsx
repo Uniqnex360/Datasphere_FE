@@ -944,9 +944,9 @@ export function Categories() {
 
     const response = async () => {
       const total = await ProductAPI.getTotalProduct(breadcrumb);
-      console.log(total)
+      console.log(total);
       setTotalProduct(total?.total_products);
-      setTotalCategories(total?.total_child_categories)
+      setTotalCategories(total?.total_child_categories);
     };
     response();
     console.log(
@@ -1442,7 +1442,7 @@ export function Categories() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
+                <label className="text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span>
                     Industry <span className="text-red-500">*</span>
                   </span>
@@ -1470,7 +1470,11 @@ export function Categories() {
                   <SearchableSelect
                     options={industryOptions}
                     value={formData.industry_name || ""}
-                    onChange={(val) => handleIndustryChange(val)}
+                    onChange={(val) => {
+                      console.log("onc ahgne avalue", val);
+                      handleIndustryChange(val);
+                      console.log("form data", formData)
+                    }}
                     placeholder="Search Industry"
                     error={!!errors.industry_code}
                   />
