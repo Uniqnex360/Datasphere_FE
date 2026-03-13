@@ -27,7 +27,6 @@ import { exportToCSV, parseCSV } from "../utils/csvHelper";
 import { isValidInventoryFile } from "../utils/fileValidator";
 import { FilterSelect } from "../components/Filter";
 import CustomDownloadIcon from "../assets/download-custom.png";
-import InventoryQuntityEdit from "./helperComponents/InventoryQuntityEdit";
 
 const STATUS_OPTIONS: InventoryStatus[] = [
   "In Stock",
@@ -42,7 +41,7 @@ export default function Inventory() {
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
@@ -55,8 +54,9 @@ export default function Inventory() {
   const [selectedProduct, setSelectedProduct] =
     useState<InventoryProduct | null>(null);
   const [editQty, setEditQty] = useState<number | "">("");
-  const [editStatus, setEditStatus] = useState<InventoryStatus>("In Stock");
-
+  const [editStatus, setEditStatus] = useState<InventoryStatus>("");
+  const [total, setTotal] = useState(0)
+  const [filteredTotal, setFilteredTotal] = useState(0)
   const downloadTemplate = () => {
     const template = [
       {
@@ -66,7 +66,7 @@ export default function Inventory() {
         quantity: 50,
       },
     ];
-    exportToCSV(template, "inventory_update_template.csv");
+    exportToCSV(template, "inventory_template.csv");
   };
   useEffect(() => {
     loadInventory();
@@ -78,27 +78,32 @@ export default function Inventory() {
       loadInventory();
     }, 350);
     return () => clearTimeout(delayDebounce);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
-  useEffect(() => {
-    if (editQty <= 0) {
-      setEditStatus("Out of Stock");
-    } else if (editQty < 50) {
-      setEditStatus("Low Stock");
-    } else {
-      setEditStatus("In Stock");
-    }
-  }, [editQty]);
   const loadInventory = async (): Promise<void> => {
     try {
       setLoading(true);
+      let inventory_status;
+      if (statusFilter == "") {
+        inventory_status = null;
+      } else if (statusFilter == "In Stock") {
+        inventory_status = "in_stock";
+      } else if (statusFilter == "Low Stock") {
+        inventory_status = "low_stock";
+      } else if (statusFilter == "Out of Stock") {
+        inventory_status = "out_of_stock";
+      }
       const data = (await ProductAPI.getAll(
         0,
         100,
         searchTerm,
+        {inventory_status}
       )) as InventoryProduct[];
       //@ts-ignore
       setProducts(data?.products || []); // TODO: fix the type issue
+      setTotal(data?.total)
+      setFilteredTotal(data?.filtered_total)
+
     } catch (error) {
       setToast({ message: "Failed to load inventory", type: "error" });
     } finally {
@@ -233,58 +238,18 @@ export default function Inventory() {
   };
 
   const handleExport = () => {
-    if (filteredAndSortedProducts.length === 0) {
+    if (filteredTotal === 0) {
       setToast({ message: "No data to export", type: "error" });
       return;
     }
 
-    exportToCSV(filteredAndSortedProducts, "inventory_export.csv");
+    exportToCSV(products, "inventory_export.csv", [
+      "brand_id",
+      "vendor_id",
+    ]);
     setToast({ message: "Inventory exported successfully", type: "success" });
   };
 
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = products.filter((p) => {
-      const matchesSearch =
-        p.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (p.brand?.brand_name || p.brand_name || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || p.inventory_status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-
-    result.sort((a, b) => {
-      const aVal = (a[sortKey as keyof InventoryProduct] || "")
-        .toString()
-        .toLowerCase();
-      const bVal = (b[sortKey as keyof InventoryProduct] || "")
-        .toString()
-        .toLowerCase();
-
-      if (sortDirection === "asc") {
-        return aVal > bVal ? 1 : -1;
-      } else {
-        return aVal < bVal ? 1 : -1;
-      }
-    });
-
-    return result;
-  }, [products, searchTerm, statusFilter, sortKey, sortDirection]);
-
-  const stats = useMemo<InventoryStats>(
-    () => ({
-      total: products.length,
-      available: products.filter((p) => p.inventory_status === "In Stock")
-        .length,
-      critical: products.filter((p) => (p.available_quantity || 0) === 0)
-        .length,
-    }),
-    [products],
-  );
 
   const handleSave = async (): Promise<void> => {
     if (!selectedProduct) return;
@@ -383,8 +348,8 @@ export default function Inventory() {
         <input
           type="checkbox"
           checked={
-            selectedCodes.size === filteredAndSortedProducts.length &&
-            filteredAndSortedProducts.length > 0
+            selectedCodes.size === products.length &&
+            products.length > 0
           }
           onChange={toggleSelectAll}
           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
@@ -563,21 +528,21 @@ export default function Inventory() {
         <p className="text-sm text-gray-500 italic">
           {searchTerm || statusFilter !== "all" ? (
             <span>
-              Showing <strong>{filteredAndSortedProducts.length}</strong>{" "}
-              matching results out of {products.length} total products
+              Showing <strong>{filteredTotal}</strong>{" "}
+              matching results out of {total} total products
             </span>
           ) : (
             <span>
-              Showing all <strong>{products.length}</strong> products
+              Showing all <strong>{total}</strong> products
             </span>
           )}
         </p>
 
-        {(searchTerm || statusFilter !== "all") && (
+        {(searchTerm || statusFilter !== "") && (
           <button
             onClick={() => {
               setSearchTerm("");
-              setStatusFilter("all");
+              setStatusFilter("");
             }}
             className="text-sm text-blue-600 hover:underline font-medium"
           >
