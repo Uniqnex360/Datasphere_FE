@@ -184,7 +184,7 @@ export function VendorMaster() {
     contact_phone: "",
     vendor_website: "",
     business_type: "",
-    industry: "",
+    industry_name: "",
     description: "",
     address: "",
     city: "",
@@ -357,7 +357,7 @@ export function VendorMaster() {
           (v.business_type || "")
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          (v.industry || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.industry_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
           (v.vendor_website || "")
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
@@ -396,7 +396,7 @@ export function VendorMaster() {
     const getEmail = () => formData.contact_email?.trim() || "";
     // const getPhone = () => formData.contact_phone?.trim() || "";
     const getWebsite = () => formData.vendor_website?.trim() || "";
-    const getIndustry = () => formData.industry?.trim() || "";
+    const getIndustry = () => formData.industry_name?.trim() || "";
     const getBusinessType = () => formData.business_type?.trim() || "";
 
     const country = formData.country?.trim();
@@ -409,7 +409,7 @@ export function VendorMaster() {
       newErrors.contact_email = "Invalid email format";
     }
     if (!getIndustry()) {
-      newErrors.industry = "Industry  is required";
+      newErrors.industry_name = "Industry  is required";
     }
     if (!getBusinessType()) {
       newErrors.business_type = "Business type is required";
@@ -454,7 +454,7 @@ export function VendorMaster() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const sanitizedData: any = { ...formData };
+      const sanitizedData: any = { ...formData, industry: formData.industry_name };
       for (let i = 1; i <= 10; i++) {
         if (i > deptCount) {
           sanitizedData[`dept${i}_poc_name`] = "";
@@ -463,6 +463,7 @@ export function VendorMaster() {
           sanitizedData[`dept${i}_phone`] = "";
         }
       }
+      console.log("data", sanitizedData)
       if (sanitizedData.vendor_website) {
         sanitizedData.vendor_website = formatWebsiteUrl(
           sanitizedData.vendor_website,
@@ -509,8 +510,8 @@ export function VendorMaster() {
         await MasterAPI.create("vendors", finalPayload);
         setToast({ message: "Vendor added successfully", type: "success" });
       }
-      if (isCustomIndustry && formData.industry?.trim()) {
-        const newInd = formData.industry.trim();
+      if (isCustomIndustry && formData.industry_name?.trim()) {
+        const newInd = formData.industry_name.trim();
         setIndustryOptions((prev) =>
           prev.includes(newInd) ? prev : [...prev, newInd].sort(),
         );
@@ -628,8 +629,8 @@ export function VendorMaster() {
     }
     setDeptCount(maxDept);
 
-    const isStandard = industryOptions.includes(vendor.industry || "");
-    setIsCustomIndustry(!!vendor.industry && !isStandard);
+    const isStandard = industryOptions.includes(vendor.industry_name || "");
+    setIsCustomIndustry(!!vendor.industry_name && !isStandard);
     setIsDrawerOpen(true);
   };
   const handleDelete = async () => {
@@ -664,7 +665,7 @@ export function VendorMaster() {
       contact_phone: "",
       vendor_website: "",
       business_type: "",
-      industry: "",
+      industry_name: "",
       description: "",
       address: "",
       city: "",
@@ -713,7 +714,7 @@ export function VendorMaster() {
     console.log(filteredVendors);
     const dataToExport = filteredVendors.map(({ id, ...cleanVendor }) => ({
       ...cleanVendor,
-      industry: cleanVendor.industry || "",
+      industry_name: cleanVendor.industry_name || "",
     }));
     exportToCSV(dataToExport, "vendor_export.csv", [
       "industry_id",
@@ -737,7 +738,7 @@ export function VendorMaster() {
         "contact_phone",
         "vendor_website",
         "business_type",
-        "industry",
+        "industry_name",
         "description",
         "address",
         "country",
@@ -926,7 +927,7 @@ export function VendorMaster() {
         contact_phone: "555-1234",
         vendor_website: "https://example.com",
         business_type: "Wholesaler",
-        industry: "HVAC",
+        industry_name: "HVAC",
         description: "Sample description",
         address: "123 Main St",
         country: "United States",
@@ -1022,7 +1023,7 @@ export function VendorMaster() {
     { key: "vendor_name", label: "Vendor Name", sortable: true },
     { key: "business_type", label: "Business Type", sortable: true },
     {
-      key: "industry",
+      key: "industry_name",
       label: "Industry",
       sortable: true,
       render: (_: any, row: any) =>
@@ -1233,10 +1234,10 @@ export function VendorMaster() {
           )}
         </p>
         {(searchTerm ||
-          businessTypeFilter ||
-          industryFilter ||
-          statusFilter ||
-          countryFilter) && (
+          businessTypeFilter.length > 0 ||
+          industryFilter.length > 0 ||
+          statusFilter.length > 0 ||
+          countryFilter.length > 0) && (
           <button
             onClick={() => {
               setSearchTerm("");
@@ -1648,7 +1649,7 @@ export function VendorMaster() {
                 <label className="block text-sm font-medium text-gray-700 mb-1 flex justify-between">
                   <span className="flex items-center gap-2">
                     Industry <span className="text-red-500">*</span>
-                    {isCustomIndustry && formData.industry?.trim() && (
+                    {isCustomIndustry && formData.industry_name?.trim() && (
                       <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">
                         New
                       </span>
@@ -1659,7 +1660,7 @@ export function VendorMaster() {
                     onClick={() => {
                       setIsCustomIndustry(!isCustomIndustry);
                       if (isCustomIndustry) {
-                        setFormData({ ...formData, industry: "" });
+                        setFormData({ ...formData, industry_name: "" });
                       }
                     }}
                     className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
@@ -1674,22 +1675,22 @@ export function VendorMaster() {
                       <input
                         type="text"
                         placeholder="Type new industry name..."
-                        value={formData.industry || ""}
+                        value={formData.industry_name || ""}
                         onChange={(e) => handleIndustryChange(e.target.value)}
                         onKeyDown={(e) =>
                           e.key === "Enter" && e.currentTarget.blur()
                         }
                         className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          errors.industry ? "border-red-500" : "border-blue-400"
+                          errors.industry_name ? "border-red-500" : "border-blue-400"
                         }`}
                         autoFocus
                       />
                       <button
                         type="button"
                         onClick={() => {
-                          if (!formData.industry?.trim()) return;
+                          if (!formData.industry_name?.trim()) return;
                           setToast({
-                            message: `"${formData.industry}" is ready to be added.`,
+                            message: `"${formData.industry_name}" is ready to be added.`,
                             type: "success",
                           });
                         }}
@@ -1708,15 +1709,15 @@ export function VendorMaster() {
                 ) : (
                   <SearchableSelect
                     options={industryCUFilter}
-                    value={formData.industry || ""}
+                    value={formData.industry_name || ""}
                     onChange={(val) => handleIndustryChange(val)}
                     placeholder="Search or select from list..."
                     onAddNew={() => setIsCustomIndustry(true)}
-                    error={!!errors.industry}
+                    error={!!errors.industry_name}
                   />
                 )}
-                {errors.industry && (
-                  <p className="text-red-500 text-sm mt-1">{errors.industry}</p>
+                {errors.industry_name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.industry_name}</p>
                 )}
               </div>
               {/* Business Type */}

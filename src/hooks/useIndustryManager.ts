@@ -10,16 +10,18 @@ export function useIndustryManager(
   const [isCustom, setIsCustom] = useState(false);
 
   const handleIndustryChange = (name: string) => {
+    console.log("industry", industries);
+    console.log("input name", name);
     const existing = industries.find(
       (i) =>
         (i.name || i.industry_name || "").toLowerCase().trim() ===
         name.trim().toLowerCase(),
     );
-
+    console.log("exiging", existing);
     if (existing) {
       setFormData((prev: any) => ({
         ...prev,
-        industry: existing.name || existing.industry_name,
+        industry_name: existing.industry_name || existing.name,
         industry_id: existing.id,
       }));
 
@@ -27,7 +29,7 @@ export function useIndustryManager(
     } else {
       setFormData((prev: any) => ({
         ...prev,
-        industry: name,
+        industry_name: name,
         industry_id: null,
       }));
     }
