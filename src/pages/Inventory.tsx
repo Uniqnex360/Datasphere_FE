@@ -195,7 +195,7 @@ export default function Inventory() {
       const url = window.URL.createObjectURL(blob);
       const link: HTMLAnchorElement = document.createElement("a");
       link.href = url;
-      link.download = "industry_export.xlsx";
+      link.download = "inventory_export.xlsx";
       document.body.appendChild(link);
       link.click();
       link.remove();
