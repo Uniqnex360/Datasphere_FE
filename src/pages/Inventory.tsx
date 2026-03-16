@@ -322,8 +322,8 @@ export default function Inventory() {
       ),
     },
     {
-      key: "sku",
-      label: "SKU",
+      key: "mpn",
+      label: "MPN",
     },
     { key: "product_name", label: "Name", sortable: true },
     {
