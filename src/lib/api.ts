@@ -69,6 +69,34 @@ export const ProductAPI = {
     });
     return response.data;
   },
+  getProductInventoryDownloadTemplate: async () => {
+    const response = await api.get<Blob>(
+      "/inventory/bulk-upload-template/",
+      {
+        responseType: "blob",
+      },
+    );
+    return response;
+  },
+  InventoryBulkUplad: async (formData: FormData) => {
+    const response = await api.post(
+      "/inventory/bulk-upload/",
+      formData,
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response;
+  },
+  InventoryExport: async () => {
+    const response = await api.get<Blob>("/inventory/export/", {
+      responseType: "blob",
+    });
+    return response;
+  },
   // === VARIANT METHODS ===
 
   createVariant: async (parentProductCode: string, variantData: any) => {
@@ -367,12 +395,9 @@ export const MasterAPI = {
     return response;
   },
   IndustryExport: async () => {
-    const response = await api.get<Blob>(
-      "/master/industries/export/",
-      {
-        responseType: "blob",
-      },
-    );
+    const response = await api.get<Blob>("/master/industries/export/", {
+      responseType: "blob",
+    });
     return response;
   },
 };
