@@ -55,18 +55,27 @@ export default function Inventory() {
     useState<InventoryProduct | null>(null);
   const [editQty, setEditQty] = useState<number | "">("");
   const [editStatus, setEditStatus] = useState<InventoryStatus>("");
-  const [total, setTotal] = useState(0)
-  const [filteredTotal, setFilteredTotal] = useState(0)
-  const downloadTemplate = () => {
-    const template = [
-      {
-        sku: "PRD-EXAMPLE-123",
-        brand: "Garmin",
-        vendor: "Marine-Distrubutor-Ltd",
-        quantity: 50,
-      },
-    ];
-    exportToCSV(template, "inventory_template.csv");
+  const [total, setTotal] = useState(0);
+  const [filteredTotal, setFilteredTotal] = useState(0);
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await ProductAPI.getProductInventoryDownloadTemplate();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "inventory_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setToast({ message: "Template Download Failed", type: "error" });
+    }
   };
   useEffect(() => {
     loadInventory();
@@ -93,17 +102,13 @@ export default function Inventory() {
       } else if (statusFilter == "Out of Stock") {
         inventory_status = "out_of_stock";
       }
-      const data = (await ProductAPI.getAll(
-        0,
-        100,
-        searchTerm,
-        {inventory_status}
-      )) as InventoryProduct[];
+      const data = (await ProductAPI.getAll(0, 100, searchTerm, {
+        inventory_status,
+      })) as InventoryProduct[];
       //@ts-ignore
       setProducts(data?.products || []); // TODO: fix the type issue
-      setTotal(data?.total)
-      setFilteredTotal(data?.filtered_total)
-
+      setTotal(data?.total);
+      setFilteredTotal(data?.filtered_total);
     } catch (error) {
       setToast({ message: "Failed to load inventory", type: "error" });
     } finally {
@@ -127,101 +132,45 @@ export default function Inventory() {
     try {
       setLoading(true);
 
-      const rawData = await parseCSV(file);
+      const formData = new FormData();
+      formData.append("file", file);
 
-      if (!rawData || rawData.length === 0) {
+      const response = await ProductAPI.InventoryBulkUplad(formData);
+
+      const contentType = response.headers["content-type"];
+
+      if (
+        contentType ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
+        // It's an error Excel file
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "inventory_bulk_import_errors.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
         setToast({
-          message: "File is empty or invalid format",
+          message:
+            "Upload completed with errors. Please download the Excel to see details.",
           type: "error",
-        });
-        return;
-      }
-
-      const response = await api.post("/inventory/bulk-update", rawData);
-
-      const { success_count, errors_count, errors } = response.data;
-
-      if (errors_count === 0) {
-        setToast({
-          message: `Successfully updated ${success_count} products`,
-          type: "success",
         });
       } else {
-        // Show first 3 errors in toast
-        const previewErrors = errors
-          ?.slice(0, 3)
-          ?.map(
-            (err: any) =>
-              `Row ${err.row + 1}${err.sku ? ` (SKU: ${err.sku})` : ""}: ${
-                err.reason
-              }`,
-          )
-          .join(" | ");
+        const blob = response.data as Blob;
 
+        // Convert blob -> text -> JSON
+        const text = await blob.text(); // read blob as text
+        const data = JSON.parse(text); // parse JSON
         setToast({
-          message: `Updated ${success_count}. Failed ${errors_count}. ${previewErrors}`,
-          type: "error",
+          message: `Upload successful! Created: ${data.created} Updated: ${data.updated}`,
+          type: "success",
         });
       }
 
       loadInventory();
     } catch (error: any) {
-      console.error("Import error:", error);
-
-      // Axios error handling
-      if (error.response) {
-        const status = error.response.status;
-
-        // FastAPI validation error (422)
-        if (status === 422) {
-          const details = error.response.data.detail;
-          const message =
-            details?.[0]?.msg || "Validation error in uploaded file";
-
-          setToast({
-            message: message,
-            type: "error",
-          });
-        }
-
-        // Custom 400 errors from backend
-        else if (status === 400) {
-          setToast({
-            message: error.response.data.detail || "Invalid request",
-            type: "error",
-          });
-        }
-
-        // 500 internal server error
-        else if (status === 500) {
-          setToast({
-            message:
-              error.response.data.detail ||
-              "Server error. No data has been saved.",
-            type: "error",
-          });
-        }
-
-        // Any other HTTP error
-        else {
-          setToast({
-            message: "Unexpected error occurred during import",
-            type: "error",
-          });
-        }
-      } else if (error.request) {
-        // Network error
-        setToast({
-          message: "Network error. Please check your connection.",
-          type: "error",
-        });
-      } else {
-        // Unknown error
-        setToast({
-          message: "An unexpected error occurred",
-          type: "error",
-        });
-      }
+      setToast({ message: "Import failed", type: "error" });
     } finally {
       setLoading(false);
       e.target.value = "";
@@ -237,19 +186,25 @@ export default function Inventory() {
     }
   };
 
-  const handleExport = () => {
-    if (filteredTotal === 0) {
-      setToast({ message: "No data to export", type: "error" });
-      return;
+  const handleExport = async () => {
+    try {
+      const response = await ProductAPI.InventoryExport();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "industry_export.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setToast({ message: "Export Failed Failed", type: "error" });
     }
-
-    exportToCSV(products, "inventory_export.csv", [
-      "brand_id",
-      "vendor_id",
-    ]);
-    setToast({ message: "Inventory exported successfully", type: "success" });
   };
-
 
   const handleSave = async (): Promise<void> => {
     if (!selectedProduct) return;
@@ -348,8 +303,7 @@ export default function Inventory() {
         <input
           type="checkbox"
           checked={
-            selectedCodes.size === products.length &&
-            products.length > 0
+            selectedCodes.size === products.length && products.length > 0
           }
           onChange={toggleSelectAll}
           className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
@@ -367,6 +321,10 @@ export default function Inventory() {
         </div>
       ),
     },
+    {
+      key: "sku",
+      label: "SKU",
+    },
     { key: "product_name", label: "Name", sortable: true },
     {
       key: "brand_name",
@@ -375,14 +333,6 @@ export default function Inventory() {
       render: (_: string, row: InventoryProduct) =>
         row.brand?.brand_name || row.brand_name || "N/A",
     },
-    {
-      key: "vendor_name",
-      label: "Vendor",
-      sortable: true,
-      render: (_: string, row: InventoryProduct) =>
-        row.vendor?.vendor_name || row.vendor_name || "N/A",
-    },
-    { key: "industry_name", label: "Industry", sortable: true },
     {
       key: "category",
       label: "Category",
@@ -528,8 +478,8 @@ export default function Inventory() {
         <p className="text-sm text-gray-500 italic">
           {searchTerm || statusFilter !== "all" ? (
             <span>
-              Showing <strong>{filteredTotal}</strong>{" "}
-              matching results out of {total} total products
+              Showing <strong>{filteredTotal}</strong> matching results out of{" "}
+              {total} total products
             </span>
           ) : (
             <span>

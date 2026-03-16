@@ -547,6 +547,21 @@ export function IndustryMaster() {
           </div>
         </div>
 
+        <div className="w-ful flex justify-end">
+          {(searchTerm ||
+            statusFilter) && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("");
+                }}
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                Clear Filter
+              </button>
+            )}
+        </div>
+
         {selectedCodes.size > 0 && (
           <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
             <div className="flex items-center gap-4">
