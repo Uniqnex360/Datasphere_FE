@@ -11,7 +11,8 @@ import {
   XCircle,
   Loader2,
   Eye, // Import Eye icon
-  FolderTree, // Icon for empty state
+  FolderTree,
+  FolderMinus, // Icon for empty state
 } from "lucide-react";
 import { MasterAPI } from "../lib/api";
 import Drawer from "../components/Drawer";
@@ -260,12 +261,24 @@ export function IndustryMaster() {
     setErrors({});
   };
 
-  const handleExport = () => {
-    if (filteredIndustries.length === 0) {
-      setToast({ message: "No data to export", type: "error" });
-      return;
+  const handleExport = async () => {
+    try {
+      const response = await MasterAPI.IndustryExport();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "industry_export.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setToast({ message: "Export Failed Failed", type: "error" });
     }
-    exportToCSV(filteredIndustries, "industry_export.csv", ["id", "created_at", "updated_at"]);
   };
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,48 +287,40 @@ export function IndustryMaster() {
 
     try {
       setLoading(true);
-      const data = await parseCSV(file);
-      let successCount = 0;
-      let errorCount = 0;
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await MasterAPI.IndustryBulkUpload(formData);
 
-      for (const row of data) {
-        if (!row.industry_name) {
-          errorCount++;
-          continue;
-        }
+      const contentType = response.headers["content-type"];
 
-        const payload = {
-          industry_name: row.industry_name.trim(),
-          industry_code:
-            row.industry_code ||
-            generateEntityCode("industry", row.industry_name),
-          is_active:
-            row.is_active !== undefined
-              ? String(row.is_active).toLowerCase() === "true"
-              : true,
-        };
+      if (
+        contentType ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
+        // It's an error Excel file
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "industry_bulk_import_errors.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setToast({
+          message:
+            "Upload completed with errors. Please download the Excel to see details.",
+          type: "error",
+        });
+      } else {
+        const blob = response.data as Blob;
 
-        try {
-          const exists = industries.find(
-            (i) =>
-              i.industry_name.toLowerCase() ===
-              payload.industry_name.toLowerCase(),
-          );
-          if (!exists) {
-            await MasterAPI.create("industries", payload);
-            successCount++;
-          } else {
-            errorCount++;
-          }
-        } catch (e) {
-          errorCount++;
-        }
+        // Convert blob -> text -> JSON
+        const text = await blob.text(); // read blob as text
+        const data = JSON.parse(text); // parse JSON
+        setToast({
+          message: `Upload successful! Created: ${data.created}`,
+          type: "success",
+        });
       }
-
-      setToast({
-        message: `Imported ${successCount} industries. ${errorCount} skipped/failed.`,
-        type: successCount > 0 ? "success" : "error",
-      });
       loadData();
     } catch (e) {
       setToast({ message: "Import failed", type: "error" });
@@ -325,11 +330,24 @@ export function IndustryMaster() {
     }
   };
 
-  const downloadTemplate = () => {
-    exportToCSV(
-      [{ industry_name: "Automotive", industry_code: "", is_active: "true" }],
-      "industry_template.csv",
-    );
+  const downloadTemplate = async () => {
+    try {
+      const response = await MasterAPI.getIndustryDownloadTemplate();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "industry_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      setToast({ message: "Template Download Failed", type: "error" });
+    }
   };
 
   // Helpers for View Logic

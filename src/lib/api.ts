@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:0/api/v1";
 const api = axios.create({
   baseURL: API_URL,
@@ -64,7 +64,9 @@ export const ProductAPI = {
     return response.data;
   },
   getTotalProduct: async (breadcrumb: string) => {
-    const response = await api.get(`products/total-product-category`, {params: {breadcrumb}})
+    const response = await api.get(`products/total-product-category`, {
+      params: { breadcrumb },
+    });
     return response.data;
   },
   // === VARIANT METHODS ===
@@ -103,9 +105,12 @@ export const ProductAPI = {
 
   // Update attributes
   updateAttribute: async (payload: any) => {
-    const response = await api.patch("/products/attribute-value/update/", payload)
+    const response = await api.patch(
+      "/products/attribute-value/update/",
+      payload,
+    );
     return response.data;
-  }
+  },
 };
 export const EnrichmentAPI = {
   enrich: async (productCode: string) => {
@@ -286,9 +291,9 @@ export const MasterAPI = {
     const response = await api.get("/master/vendor/filter-meta/", { params });
     return response.data;
   },
-  getAttributes: async (skip=0, limit=100, search="", filters={}) => {
+  getAttributes: async (skip = 0, limit = 100, search = "", filters = {}) => {
     const response = await api.get("/master/attributes/", {
-      params: {skip, limit, search, ...filters}
+      params: { skip, limit, search, ...filters },
     });
     return response.data;
   },
@@ -338,6 +343,37 @@ export const MasterAPI = {
       `/master/categories/meta/${category_code}/attributes`,
     );
     return response.data;
+  },
+  getIndustryDownloadTemplate: async () => {
+    const response = await api.get<Blob>(
+      "/master/industries/bulk-upload-template/",
+      {
+        responseType: "blob",
+      },
+    );
+    return response;
+  },
+  IndustryBulkUpload: async (formData: FormData) => {
+    const response = await api.post(
+      "/master/industries/bulk-upload/",
+      formData,
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response;
+  },
+  IndustryExport: async () => {
+    const response = await api.get<Blob>(
+      "/master/industries/export/",
+      {
+        responseType: "blob",
+      },
+    );
+    return response;
   },
 };
 export const AuthAPI = {
