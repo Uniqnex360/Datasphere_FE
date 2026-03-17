@@ -1579,7 +1579,7 @@ Die-Cast Aluminum Housing, LED, 18000 lm, 11 to 14 in. Mount, Suspension, UL, DL
                         ),
                       )
                       .map((industry) => ({
-                        key: industry.industry_code,
+                        key: industry.industry_name,
                         value: industry.industry_name,
                       }))}
                     value={formData.industry_name || ""}

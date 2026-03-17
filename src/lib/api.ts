@@ -400,6 +400,34 @@ export const MasterAPI = {
     });
     return response;
   },
+  getVendorDownloadTemplate: async () => {
+    const response = await api.get<Blob>(
+      "/master/vendors/bulk-upload-template/",
+      {
+        responseType: "blob",
+      },
+    );
+    return response;
+  },
+  VendorExport: async () => {
+    const response = await api.get<Blob>("/master/vendors/export/", {
+      responseType: "blob",
+    });
+    return response;
+  },
+  VendorBulkUplad: async (formData: FormData) => {
+    const response = await api.post(
+      "/master/vendors/bulk-upload/",
+      formData,
+      {
+        responseType: "blob",
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
+    );
+    return response;
+  },
 };
 export const AuthAPI = {
   login: async (params: URLSearchParams) => {
