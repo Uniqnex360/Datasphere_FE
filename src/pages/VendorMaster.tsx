@@ -357,7 +357,9 @@ export function VendorMaster() {
           (v.business_type || "")
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          (v.industry_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (v.industry_name || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
           (v.vendor_website || "")
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
@@ -454,7 +456,10 @@ export function VendorMaster() {
     if (!validateForm()) return;
     setIsSubmitting(true);
     try {
-      const sanitizedData: any = { ...formData, industry: formData.industry_name };
+      const sanitizedData: any = {
+        ...formData,
+        industry: formData.industry_name,
+      };
       for (let i = 1; i <= 10; i++) {
         if (i > deptCount) {
           sanitizedData[`dept${i}_poc_name`] = "";
@@ -463,7 +468,7 @@ export function VendorMaster() {
           sanitizedData[`dept${i}_phone`] = "";
         }
       }
-      console.log("data", sanitizedData)
+      console.log("data", sanitizedData);
       if (sanitizedData.vendor_website) {
         sanitizedData.vendor_website = formatWebsiteUrl(
           sanitizedData.vendor_website,
@@ -706,254 +711,98 @@ export function VendorMaster() {
     ) as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
-  const handleExport = () => {
-    if (filteredVendors.length === 0) {
-      setToast({ message: "No data to export", type: "error" });
-      return;
+  const handleExport = async () => {
+    try {
+      const response = await MasterAPI.VendorExport();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "vendor_export.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setToast({ message: "Export Failed Failed", type: "error" });
     }
-    console.log(filteredVendors);
-    const dataToExport = filteredVendors.map(({ id, ...cleanVendor }) => ({
-      ...cleanVendor,
-      industry_name: cleanVendor.industry_name || "",
-    }));
-    exportToCSV(dataToExport, "vendor_export.csv", [
-      "industry_id",
-      "created_at",
-      "updated_at",
-    ]);
-    setToast({ message: "Vendors exported successfully", type: "success" });
   };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     try {
-      const data = await parseCSV(file);
-      const validData: Partial<Vendor>[] = [];
-      const importErrors: string[] = [];
-      const ignoredItems: string[] = [];
-      const validColumns = [
-        "vendor_code",
-        "vendor_name",
-        "contact_email",
-        "contact_phone",
-        "vendor_website",
-        "business_type",
-        "industry_name",
-        "description",
-        "address",
-        "country",
-        "state",
-        "city",
-        "tax_info",
-        "vendor_logo_url",
-        "dept1_poc_name",
-        "dept1_email",
-        "dept1_phone",
-        "dept2_poc_name",
-        "dept2_email",
-        "dept2_phone",
-        "dept3_poc_name",
-        "dept3_email",
-        "dept3_phone",
-        "dept4_poc_name",
-        "dept4_email",
-        "dept4_phone",
-        "dept5_poc_name",
-        "dept5_email",
-        "dept5_phone",
-      ];
-      const validation = validateImportFormat(data, validColumns);
-      if (!validation.isValid) {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await MasterAPI.VendorBulkUplad(formData);
+
+      const contentType = response.headers["content-type"];
+
+      if (
+        contentType ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ) {
+        // It's an error Excel file
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "vendor_bulk_import_errors.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
         setToast({
-          message: validation.errorMessage || "Import failed!",
-          type: "error",
-        });
-        e.target.value = "";
-        return;
-      }
-      data.forEach((row, index) => {
-        const rowErrors: string[] = [];
-        const existingVendor = vendors.find(
-          (v) =>
-            v.vendor_name.trim().toLowerCase() ===
-            row.vendor_name?.trim().toLowerCase(),
-        );
-        const duplicateInImport = validData.find(
-          (item) =>
-            item.vendor_name?.trim().toLowerCase() ===
-            row.vendor_name?.trim().toLowerCase(),
-        );
-        if (existingVendor) {
-          ignoredItems.push(
-            `Row ${index + 2}:"${row.vendor_name}"(already exists!)`,
-          );
-          return;
-        }
-        if (duplicateInImport) {
-          ignoredItems.push(
-            `Row ${index + 2}:"${row.vendor_name}"(duplicate in file!)`,
-          );
-          return;
-        }
-        const vendor_name = row.vendor_name
-          ? String(row.vendor_name).trim()
-          : "";
-        const contact_email = row.contact_email
-          ? String(row.contact_email).trim()
-          : "";
-        const contact_phone = row.contact_phone
-          ? String(row.contact_phone).trim()
-          : "";
-        if (!vendor_name) {
-          rowErrors.push("vendor_name is required");
-        }
-        if (!contact_email) {
-          rowErrors.push("contact_email is required");
-        } else if (!/\S+@\S+\.\S+/.test(contact_email)) {
-          rowErrors.push("invalid email format");
-        }
-        if (!contact_phone) {
-          rowErrors.push("contact_phone is required");
-        }
-        if (rowErrors.length > 0) {
-          importErrors.push(`Row ${index + 2}: ${rowErrors.join(", ")}`);
-        } else {
-          const vendorData: any = {};
-          validColumns.forEach((col) => {
-            if (
-              row[col] !== null &&
-              row[col] !== undefined &&
-              row[col] !== ""
-            ) {
-              let value =
-                typeof row[col] === "number" ? String(row[col]) : row[col];
-              if (typeof value === "string") {
-                value = value.trim();
-              }
-              if (col === "business_type" && typeof value === "string") {
-                value =
-                  value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-              }
-              vendorData[col] = value;
-            }
-          });
-          // if (
-          //   vendorData.vendor_code === "" ||
-          //   vendorData.vendor_code === undefined
-          // ) {
-          //   vendorData.vendor_code = generateEntityCode(
-          //     "vendor",
-          //     vendorData.vendor_name || "",
-          //   );
-          // }
-          validData.push(vendorData);
-        }
-      });
-      if (importErrors.length > 0) {
-        setToast({
-          message: `Import failed: ${importErrors.join("; ")}`,
-          type: "error",
-        });
-        return;
-      }
-      if (validData.length === 0) {
-        const totalRows = data.length;
-        const ignoredCount = ignoredItems.length;
-        setToast({
-          message: `No new vendors to import.${totalRows} total rows,${ignoredCount} ignored(already exist or duplicates)`,
-          type: "error",
-        });
-        e.target.value = "";
-        return;
-      }
-      let successCount = 0;
-      let failedCount = 0;
-      const failedItems: string[] = [];
-      for (let i = 0; i < validData.length; i++) {
-        const vendor = validData[i];
-        try {
-          await MasterAPI.create("vendors", vendor);
-          successCount++;
-        } catch (error) {
-          failedCount++;
-          const errorDetail =
-            error.response?.data?.detail ||
-            error.response?.data?.message ||
-            error.message ||
-            "Unknown error";
-          failedItems.push(`${vendor.vendor_name}:${errorDetail}`);
-        }
-      }
-      const totalRows = data.length;
-      const ignoredCount = ignoredItems.length;
-      const processedCount = validData.length;
-      if (failedCount === 0 && ignoredCount === 0) {
-        setToast({
-          message: `Import successful!${successCount} vendors added from ${totalRows} rows!`,
-          type: "success",
-        });
-      } else if (failedCount === 0 && ignoredCount > 0) {
-        setToast({
-          message: `Import completed! ${successCount} vendors added, ${ignoredCount} ignored (already exist). Total rows: ${totalRows}`,
-          type: "success",
-        });
-      } else if (successCount > 0) {
-        setToast({
-          message: ` Partial import: ${successCount} added, ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Failed: ${failedItems.join(
-            "; ",
-          )}`,
+          message:
+            "Upload completed with errors. Please download the Excel to see details.",
           type: "error",
         });
       } else {
+        const blob = response.data as Blob;
+
+        // Convert blob -> text -> JSON
+        const text = await blob.text(); // read blob as text
+        const data = JSON.parse(text); // parse JSON
         setToast({
-          message: ` Import failed: ${failedCount} failed, ${ignoredCount} ignored. Total rows: ${totalRows}. Errors: ${failedItems.join(
-            "; ",
-          )}`,
-          type: "error",
+          message: `Upload successful! Created: ${data.created} Updated: ${data.updated}`,
+          type: "success",
         });
       }
+
       loadVendors();
     } catch (error: any) {
-      setToast({ message: error.message, type: "error" });
+      setToast({ message: "Import failed", type: "error" });
+    } finally {
+      setLoading(false);
+      e.target.value = "";
     }
-    e.target.value = "";
   };
-  const downloadTemplate = () => {
-    const template = [
-      {
-        vendor_code: "",
-        vendor_name: "Example Vendor",
-        contact_email: "contact@example.com",
-        contact_phone: "555-1234",
-        vendor_website: "https://example.com",
-        business_type: "Wholesaler",
-        industry_name: "HVAC",
-        description: "Sample description",
-        address: "123 Main St",
-        country: "United States",
-        state: "New York",
-        city: "Adams",
-        tax_info: "TAX123",
-        vendor_logo_url: "",
-        dept1_poc_name: "John Doe",
-        dept1_email: "john@example.com",
-        dept1_phone: "555-1111",
-        dept2_poc_name: "",
-        dept2_email: "",
-        dept2_phone: "",
-        dept3_poc_name: "",
-        dept3_email: "",
-        dept3_phone: "",
-        dept4_poc_name: "",
-        dept4_email: "",
-        dept4_phone: "",
-        dept5_poc_name: "",
-        dept5_email: "",
-        dept5_phone: "",
-      },
-    ];
-    exportToCSV(template, "vendor_import_template.csv");
+
+  const downloadTemplate = async () => {
+    try {
+      const response = await MasterAPI.getVendorDownloadTemplate();
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link: HTMLAnchorElement = document.createElement("a");
+      link.href = url;
+      link.download = "vendor_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setToast({ message: "Template Download Failed", type: "error" });
+    }
   };
+
   const allSelectableCountries = useMemo(() => {
     const existingVendors = Array.from(
       new Set(vendors.map((v) => v.country).filter(Boolean)),
@@ -1681,7 +1530,9 @@ export function VendorMaster() {
                           e.key === "Enter" && e.currentTarget.blur()
                         }
                         className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          errors.industry_name ? "border-red-500" : "border-blue-400"
+                          errors.industry_name
+                            ? "border-red-500"
+                            : "border-blue-400"
                         }`}
                         autoFocus
                       />
@@ -1717,7 +1568,9 @@ export function VendorMaster() {
                   />
                 )}
                 {errors.industry_name && (
-                  <p className="text-red-500 text-sm mt-1">{errors.industry_name}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.industry_name}
+                  </p>
                 )}
               </div>
               {/* Business Type */}
